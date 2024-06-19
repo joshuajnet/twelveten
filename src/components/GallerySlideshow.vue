@@ -8,6 +8,7 @@ export default {
             indexVisible: 0,
             interval: null,
             paused: false,
+            gridView: false,
             scrollView: false,
         };
     },
@@ -55,9 +56,18 @@ export default {
                 video.pause();
             }
         },
+        toggleGridView() {
+            this.gridView = !this.gridView;
+            this.autoPlay(false);
+            this.takeOver(this.gridView);
+        },
         toggleScrollView() {
             this.scrollView = !this.scrollView;
-            if (this.scrollView) {
+            this.autoPlay(false);
+            this.takeOver(this.scrollView);
+        },
+        takeOver(enabled) {
+            if (enabled) {
                 document.getElementById('app').classList.add('overlay-enabled');
             } else {
                 document.getElementById('app').classList.remove('overlay-enabled');
@@ -87,7 +97,10 @@ export default {
 <template>
     <div class="p-3 shadow-inner mb-10 border-b border-zinc-100">
         <div class="flex justify-between items-center text-slate-400 mb-3">
-            <div class="font-roboto font-light text-sm cursor-pointer hover:text-sky-900" @click="toggleScrollView()">Scroll View</div>
+            <div class="flex items-center font-roboto font-light text-sm">
+                <span class="text-sm cursor-pointer hover:text-sky-900" @click="toggleScrollView()">Scroll View</span>
+                <span class="ml-3 text-lg cursor-pointer hover:text-sky-900" @click="toggleGridView()"><i class="las la-th"></i></span>
+            </div>
             <div class="flex gap-6 items-center">
                 <div
                     v-if="!paused"
@@ -146,6 +159,37 @@ export default {
             </div>
         </div>
         <transition name="fade" mode="out-in">
+            <div class="fixed top-0 bg-white w-full h-screen left-0 overflow-y-auto z-30" v-if="gridView">
+                <div class="fixed top-3 md:right-6 right-3 cursor-pointer text-xl mx-3" @click="toggleGridView()">
+                    <i class="las la-times"></i>
+                </div>
+                <div class="max-w-8xl mx-auto px-3 pt-12 pb-10 grid gap-3 2xl:grid-cols-6 xl:grid-cols-5 lg:grid-cols-4 md:grid-cols-3 grid-cols-2">
+                    <div 
+                        v-for="(slide, index) in slides" 
+                        :key="index" 
+                        class="cursor-pointer h-[25vh] flex flex-grow hover:opacity-50 transition-opacity" 
+                        @click="indexVisible = index, toggleGridView()">                       
+                        <div v-if="slide.video" class="bg-black flex items-center flex-grow">
+                            <video
+                                @click="stopVideo()"
+                                width="100%"
+                                height="100%"
+                                class="slide-video w-full h-auto"
+                                oncontextmenu="return false;"
+                                controls
+                            >
+                                <source :src="slide.video" type="video/mp4" />
+                                Your browser does not support the video tag.
+                            </video>
+                        </div>
+                        <transition name="fade" mode="out-in">
+                            <div v-if="slide.image" class="flex flex-grow bg-center bg-cover" :style="`background-image:url(${slide.image})`" /> 
+                        </transition>
+                    </div>
+                </div>
+            </div>
+        </transition>
+        <transition name="fade" mode="out-in">
             <div class="fixed top-0 bg-white w-full h-screen left-0 overflow-y-auto z-30" v-if="scrollView">
                 <div class="fixed top-3 md:right-6 right-3 cursor-pointer text-xl mx-3" @click="toggleScrollView()">
                     <i class="las la-times"></i>
@@ -182,6 +226,9 @@ export default {
     </div>
 </template>
 <style scoped="postcss">
+.grid-padded:before {
+    padding-top: 100%;
+}
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.5s ease;

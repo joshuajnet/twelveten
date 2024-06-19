@@ -15,7 +15,7 @@ import Footer from './components/Footer.vue';
             </router-view>
         </main>
 
-        <Footer />
+        <Footer v-if="$route.name != 'home'" />
     </div>
 </template>
 
