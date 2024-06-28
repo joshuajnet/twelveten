@@ -56,10 +56,18 @@ export default {
                 video.pause();
             }
         },
+        goToSlide(index) {
+            this.indexVisible = index; 
+            this.toggleGridView();
+            window.scroll({
+                top: 0,
+                left: 0,
+                behavior: 'instant'
+            });
+        },
         toggleGridView() {
             this.gridView = !this.gridView;
             this.autoPlay(false);
-            this.takeOver(this.gridView);
         },
         toggleScrollView() {
             this.scrollView = !this.scrollView;
@@ -99,9 +107,12 @@ export default {
         <div class="flex justify-between items-center text-slate-400 mb-3">
             <div class="flex items-center font-roboto font-light text-sm">
                 <span class="text-sm cursor-pointer hover:text-sky-900" @click="toggleScrollView()">Scroll View</span>
-                <span class="ml-3 text-lg cursor-pointer hover:text-sky-900" @click="toggleGridView()"><i class="las la-th"></i></span>
+                <span class="ml-3 text-lg cursor-pointer hover:text-sky-900" @click="toggleGridView()">
+                    <i class="las la-th" v-if="!gridView"></i>
+                    <i class="las la-expand" v-if="gridView"></i>
+                </span>       
             </div>
-            <div class="flex gap-6 items-center">
+            <div class="flex gap-6 items-center" v-if="!gridView">
                 <div
                     v-if="!paused"
                     class="cursor-pointer text-lg hover:text-sky-900"
@@ -119,7 +130,8 @@ export default {
             </div>
             <div class="font-roboto font-light text-sm cursor-pointer font-bold hover:text-sky-900" @click="scrollToPress()">Press Release</div>
         </div>
-        <div class="flex justify-center align-items flex-col relative" id="slideshow">
+        <!-- slide view -->
+        <div class="flex justify-center align-items flex-col relative overflow-hidden" id="slideshow" v-if="!gridView">
             <div
                 class="absolute top-0 left-0 w-1/2 h-full z-10 text-slate-400 hover:text-sky-900 cursor-pointer select-none"
                 @click="prev()"
@@ -133,7 +145,7 @@ export default {
                 <div class="text-2xl cursor-pointer absolute top-1/2 right-0"><i class="las la-angle-right"></i></div>
             </div>
             <div v-for="(slide, index) in slides" :key="index">          
-                <div :class="{ onscreen: index === indexVisible }" class="offscreen w-[calc(100%-40px)] m-auto">
+                <div :class="{ onscreen: index === indexVisible }" class="slide-item offscreen w-[calc(100%-4rem)] m-auto">
                     <div v-if="slide.video" class="xl:max-w-5xl max-w-3xl w-full mx-auto mb-2 z-20 relative">
                         <video
                             @click="autoPlay(false)"
@@ -147,28 +159,28 @@ export default {
                         </video>
                     </div>
                     <img v-if="slide.image" :src="slide.image" class="mx-auto max-image-h max-w-full mb-3" />
-                    <div class="max-w-sm text-sm">
+                    <div class="mx-auto text-center max-w-sm text-xs">
                         <div v-if="slide.author">{{ slide.author }}</div>
-                        <div v-if="slide.title" class="italic">{{ slide.title }}</div>
-                        <div v-if="slide.date" class="text-sm">{{ slide.date }}</div>
-                        <div v-if="slide.media" class="text-sm">{{ slide.media }}</div>
-                        <div v-if="slide.dimensions" class="text-sm">{{ slide.dimensions }}</div>
-                        <div v-if="slide.credit" class="text-xs">{{ slide.credit }}</div>
+                        <div v-if="slide.title || slide.date">
+                            <span v-if="slide.title" class="italic">{{ slide.title }}</span>
+                            <span v-if="slide.date">, {{ slide.date }}</span>
+                        </div>
+                        <div v-if="slide.media">{{ slide.media }}</div>
+                        <div v-if="slide.dimensions">{{ slide.dimensions }}</div>
+                        <div v-if="slide.credit">{{ slide.credit }}</div>
                     </div>
                 </div>             
             </div>
         </div>
+        <!-- grid view -->
         <transition name="fade" mode="out-in">
-            <div class="fixed top-0 bg-white w-full h-screen left-0 overflow-y-auto z-30" v-if="gridView">
-                <div class="fixed top-3 md:right-6 right-3 cursor-pointer text-xl mx-3" @click="toggleGridView()">
-                    <i class="las la-times"></i>
-                </div>
-                <div class="max-w-8xl mx-auto px-3 pt-12 pb-10 grid gap-3 2xl:grid-cols-6 xl:grid-cols-5 lg:grid-cols-4 md:grid-cols-3 grid-cols-2">
+            <div class="w-full" v-if="gridView">
+                <div class="max-w-8xl mx-auto grid gap-3 2xl:grid-cols-6 xl:grid-cols-5 lg:grid-cols-4 md:grid-cols-3 grid-cols-2">
                     <div 
                         v-for="(slide, index) in slides" 
                         :key="index" 
                         class="cursor-pointer h-[25vh] flex flex-grow hover:opacity-50 transition-opacity" 
-                        @click="indexVisible = index, toggleGridView()">                       
+                        @click="goToSlide(index)">                       
                         <div v-if="slide.video" class="bg-black flex items-center flex-grow">
                             <video
                                 @click="stopVideo()"
@@ -182,13 +194,14 @@ export default {
                                 Your browser does not support the video tag.
                             </video>
                         </div>
-                        <transition name="fade" mode="out-in">
-                            <div v-if="slide.image" class="flex flex-grow bg-center bg-cover" :style="`background-image:url(${slide.image})`" /> 
-                        </transition>
+                        <div v-if="slide.image" class="flex flex-grow bg-slate-50">
+                            <img v-lazy="slide.image" class="lazy-image object-cover w-full h-full" /> 
+                        </div>
                     </div>
                 </div>
             </div>
         </transition>
+        <!-- scroll view -->
         <transition name="fade" mode="out-in">
             <div class="fixed top-0 bg-white w-full h-screen left-0 overflow-y-auto z-30" v-if="scrollView">
                 <div class="fixed top-3 md:right-6 right-3 cursor-pointer text-xl mx-3" @click="toggleScrollView()">
@@ -209,7 +222,7 @@ export default {
                                     Your browser does not support the video tag.
                                 </video>
                             </div>
-                            <img v-if="slide.image" :src="slide.image" class=" max-w-full max-h-full mb-2" />
+                            <img v-if="slide.image" v-lazy="slide.image" class="lazy-image max-w-full max-h-full mb-2" />
                             <div class="max-w-sm text-sm">
                                 <div v-if="slide.author">{{ slide.author }}</div>
                                 <div v-if="slide.title" class="italic">{{ slide.title }}</div>
@@ -231,22 +244,27 @@ export default {
 }
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.5s ease;
+  transition: all 0.5s ease-in-out;
 }
 
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
 }
+.slide-item {
+    opacity: 1;
+    transition: opacity .5s ease-in-out;
+}
 .onscreen {
+    opacity: 1 !important;
     position: relative !important;
-    top: 0;
     left: 0 !important;
 }
 .offscreen {
+    opacity: 0;
     position: absolute;
+    left: 2rem;
     top: 0;
-    left: -999999px;
 }
 .max-image-h {
     max-height: calc(100vh - 160px);
@@ -255,4 +273,13 @@ export default {
 .max-video-h {
     max-height: calc(100vh - 360px);
 }
+.lazy-image {
+    transition: opacity .5s ease-in-out;
+}
+img[lazy=loading] {
+    opacity: 0;
+}
+img[lazy=loaded] {
+    opacity: 1;
+}    
 </style>
