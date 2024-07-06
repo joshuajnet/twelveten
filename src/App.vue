@@ -1,16 +1,28 @@
-<script setup>
+<script>
 import Header from './components/Header.vue';
 import Footer from './components/Footer.vue';
+
+export default {
+    components: {
+        Header,
+        Footer,
+    },
+    data() {
+        return {
+            menuActive: false,
+        };
+    },
+};
 </script>
 
 <template>
     <div id="app" class="relative flex grow flex-col w-full font-gentium-book text-slate-900">
-        <Header />
+        <Header @menu="menuActive = $event" />
 
         <main class="flex grow flex-col">
             <router-view v-slot="{ Component }">
                 <transition name="route" mode="out-in">
-                    <component :is="Component"></component>
+                    <component :is="Component" :menuActive="menuActive"></component>
                 </transition>
             </router-view>
         </main>

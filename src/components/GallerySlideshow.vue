@@ -158,7 +158,7 @@ export default {
                             Your browser does not support the video tag.
                         </video>
                     </div>
-                    <img v-if="slide.image" :src="slide.image" class="mx-auto max-image-h max-w-full mb-3" />
+                    <img v-if="slide.image" v-lazy="slide.image" class="lazy-image mx-auto max-image-h max-w-full mb-3" />
                     <div class="mx-auto text-center max-w-sm text-xs">
                         <div v-if="slide.author">{{ slide.author }}</div>
                         <div v-if="slide.title || slide.date">
