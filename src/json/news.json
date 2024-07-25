@@ -1,13 +1,20 @@
 [
     {
-        "id": 3,
-        "path": "23-03-2024",
+        "id": 13,
+        "path": "16-07-2024",
+        "title": "Brain Worms reviewed by Annette LePique for Newcity Art",
+        "date": "July 16th, 2024",
+        "html": "<p>Thank you Annette for writing a such a considered review:</p><p><em>&quot;Brain Worms uses the work of the exhibition's two artists, Pieter Schoolwerth and Keith Tilford, in a frighteningly effective manner to force a confrontation of what truly lies within the silenced, the feared, the fearful, the lonely, and chaotic recesses of our own minds, and what happens when these feelings are reflected back at us. What would you do when the person piloting your controls was [...] a you rendered unrecognizable, transformed by your keyboard, your data, your AI-generated body? What would you do if the parasite was you all along?&quot;</em></p><p><a href=\"https://art.newcity.com/2024/07/16/forget-it-jake-its-the-internet-a-review-of-brain-worms-at-twelve-ten-gallery/\" target=\"_blank\">Read the full review here.</a>"
+    },
+    {
+        "id": 12,
+        "path": "26-05-2024",
         "title": "Brain Worms, a two-person exhibition featuring Pieter Schoolwerth and Keith Tilford",
         "date": "May 26th, 2024",
         "html": "<p>We are thrilled to announce <em>Brain Worms</em> featuring Pieter Schoolwerth and Keith tilford.</p><p>The press release may be <a href=\"/exhibitions/brain-worms/\" target=\"_blank\">accessed online here</a>, or in <a href=\"/docs/brain-worms/brain-worms-release.pdf\" target=\"_blank\">PDF format</a>.</p><p>The exhibition will open on June 8th, with a reception from 6-9PM and will run from June 8th to July 27th, 2024. Gallery hours are 1:00PM to 6:00PM, Wednesday through Saturday or by appointment.</p>"
     },
     {
-        "id": 3,
+        "id": 11,
         "path": "23-03-2024",
         "title": "The Veil featuring Sam Bornstein, Aisling Hamrogue, Nicholas Moenich, Kate Steciw",
         "date": "March 23rd, 2024",

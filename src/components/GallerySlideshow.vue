@@ -57,12 +57,12 @@ export default {
             }
         },
         goToSlide(index) {
-            this.indexVisible = index; 
+            this.indexVisible = index;
             this.toggleGridView();
             window.scroll({
                 top: 0,
                 left: 0,
-                behavior: 'instant'
+                behavior: 'instant',
             });
         },
         toggleGridView() {
@@ -92,7 +92,7 @@ export default {
             const app = document.getElementById('app');
             const slideshow = document.getElementById('slideshow');
             window.onscroll = () => {
-                if ( window.pageYOffset >= slideshow.scrollHeight ) {
+                if (window.pageYOffset >= slideshow.scrollHeight) {
                     this.autoPlay(false);
                     this.stopVideo();
                 }
@@ -110,25 +110,22 @@ export default {
                 <span class="ml-3 text-lg cursor-pointer hover:text-sky-900" @click="toggleGridView()">
                     <i class="las la-th" v-if="!gridView"></i>
                     <i class="las la-expand" v-if="gridView"></i>
-                </span>       
+                </span>
             </div>
             <div class="flex gap-6 items-center" v-if="!gridView">
-                <div
-                    v-if="!paused"
-                    class="cursor-pointer text-lg hover:text-sky-900"
-                    @click="autoPlay(false)"
-                >
+                <div v-if="!paused" class="cursor-pointer text-lg hover:text-sky-900" @click="autoPlay(false)">
                     <i class="las la-pause"></i>
                 </div>
-                <div
-                    v-if="paused"
-                    class="cursor-pointer text-lg hover:text-sky-900"
-                    @click="autoPlay(true)"
-                >
+                <div v-if="paused" class="cursor-pointer text-lg hover:text-sky-900" @click="autoPlay(true)">
                     <i class="las la-play"></i>
                 </div>
             </div>
-            <div class="font-roboto font-light text-sm cursor-pointer font-bold hover:text-sky-900" @click="scrollToPress()">Press Release</div>
+            <div
+                class="font-roboto font-light text-sm cursor-pointer font-bold hover:text-sky-900"
+                @click="scrollToPress()"
+            >
+                Press Release
+            </div>
         </div>
         <!-- slide view -->
         <div class="flex justify-center align-items flex-col relative overflow-hidden" id="slideshow" v-if="!gridView">
@@ -144,8 +141,11 @@ export default {
             >
                 <div class="text-2xl cursor-pointer absolute top-1/2 right-0"><i class="las la-angle-right"></i></div>
             </div>
-            <div v-for="(slide, index) in slides" :key="index">          
-                <div :class="{ onscreen: index === indexVisible }" class="slide-item offscreen w-[calc(100%-4rem)] m-auto">
+            <div v-for="(slide, index) in slides" :key="index">
+                <div
+                    :class="{ onscreen: index === indexVisible }"
+                    class="slide-item offscreen w-[calc(100%-4rem)] m-auto"
+                >
                     <div v-if="slide.video" class="xl:max-w-5xl max-w-3xl w-full mx-auto mb-2 z-20 relative">
                         <video
                             @click="autoPlay(false)"
@@ -158,7 +158,11 @@ export default {
                             Your browser does not support the video tag.
                         </video>
                     </div>
-                    <img v-if="slide.image" v-lazy="slide.image" class="lazy-image mx-auto max-image-h max-w-full mb-3" />
+                    <img
+                        v-if="slide.image"
+                        v-lazy="slide.image"
+                        class="lazy-image mx-auto max-image-h max-w-full mb-3"
+                    />
                     <div class="mx-auto text-center max-w-sm text-xs">
                         <div v-if="slide.author">{{ slide.author }}</div>
                         <div v-if="slide.title || slide.date">
@@ -169,18 +173,21 @@ export default {
                         <div v-if="slide.dimensions">{{ slide.dimensions }}</div>
                         <div v-if="slide.credit">{{ slide.credit }}</div>
                     </div>
-                </div>             
+                </div>
             </div>
         </div>
         <!-- grid view -->
         <transition name="fade" mode="out-in">
             <div class="w-full" v-if="gridView">
-                <div class="max-w-8xl mx-auto grid gap-3 2xl:grid-cols-6 xl:grid-cols-5 lg:grid-cols-4 md:grid-cols-3 grid-cols-2">
-                    <div 
-                        v-for="(slide, index) in slides" 
-                        :key="index" 
-                        class="cursor-pointer h-[25vh] flex flex-grow hover:opacity-50 transition-opacity" 
-                        @click="goToSlide(index)">                       
+                <div
+                    class="max-w-8xl mx-auto grid gap-3 2xl:grid-cols-6 xl:grid-cols-5 lg:grid-cols-4 md:grid-cols-3 grid-cols-2"
+                >
+                    <div
+                        v-for="(slide, index) in slides"
+                        :key="index"
+                        class="cursor-pointer h-[25vh] flex flex-grow hover:opacity-50 transition-opacity"
+                        @click="goToSlide(index)"
+                    >
                         <div v-if="slide.video" class="bg-black flex items-center flex-grow">
                             <video
                                 @click="stopVideo()"
@@ -195,7 +202,7 @@ export default {
                             </video>
                         </div>
                         <div v-if="slide.image" class="flex flex-grow bg-slate-50">
-                            <img v-lazy="slide.image" class="lazy-image object-cover w-full h-full" /> 
+                            <img v-lazy="slide.image" class="lazy-image object-cover w-full h-full" />
                         </div>
                     </div>
                 </div>
@@ -222,7 +229,11 @@ export default {
                                     Your browser does not support the video tag.
                                 </video>
                             </div>
-                            <img v-if="slide.image" v-lazy="slide.image" class="lazy-image max-w-full max-h-full mb-2" />
+                            <img
+                                v-if="slide.image"
+                                v-lazy="slide.image"
+                                class="lazy-image max-w-full max-h-full mb-2"
+                            />
                             <div class="max-w-sm text-sm">
                                 <div v-if="slide.author">{{ slide.author }}</div>
                                 <div v-if="slide.title" class="italic">{{ slide.title }}</div>
@@ -244,16 +255,17 @@ export default {
 }
 .fade-enter-active,
 .fade-leave-active {
-  transition: all 0.5s ease-in-out;
+    transition: all 0.5s ease-in-out;
 }
 
 .fade-enter-from,
 .fade-leave-to {
-  opacity: 0;
+    opacity: 0;
 }
 .slide-item {
     opacity: 1;
-    transition: opacity .5s ease-in-out;
+    transition: opacity 0.5s ease-in-out;
+    min-height: 75vh;
 }
 .onscreen {
     opacity: 1 !important;
@@ -274,12 +286,12 @@ export default {
     max-height: calc(100vh - 360px);
 }
 .lazy-image {
-    transition: opacity .5s ease-in-out;
+    transition: opacity 0.5s ease-in-out;
 }
-img[lazy=loading] {
+img[lazy='loading'] {
     opacity: 0;
 }
-img[lazy=loaded] {
+img[lazy='loaded'] {
     opacity: 1;
-}    
+}
 </style>
