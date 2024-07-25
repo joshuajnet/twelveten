@@ -265,7 +265,7 @@ export default {
 .slide-item {
     opacity: 1;
     transition: opacity 0.5s ease-in-out;
-    min-height: 75vh;
+    min-height: 10rem;
 }
 .onscreen {
     opacity: 1 !important;
