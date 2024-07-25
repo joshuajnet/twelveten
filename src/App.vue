@@ -1,27 +1,39 @@
-<script setup>
+<script>
 import Header from './components/Header.vue';
 import Footer from './components/Footer.vue';
+
+export default {
+    components: {
+        Header,
+        Footer,
+    },
+    data() {
+        return {
+            menuActive: false,
+        };
+    },
+};
 </script>
 
 <template>
-    <div id="app" class="flex grow flex-col w-full font-gentium-book text-slate-900">
-        <Header />
+    <div id="app" class="relative flex grow flex-col w-full font-gentium-book text-slate-900">
+        <Header @menu="menuActive = $event" />
 
         <main class="flex grow flex-col">
             <router-view v-slot="{ Component }">
                 <transition name="route" mode="out-in">
-                    <component :is="Component"></component>
+                    <component :is="Component" :menuActive="menuActive"></component>
                 </transition>
             </router-view>
         </main>
 
-        <Footer />
+        <Footer v-if="$route.name != 'home'" />
     </div>
 </template>
 
 <style>
 main a {
-    @apply text-sky-900 underline;
+    @apply text-sky-900 underline transition-all cursor-pointer;
 }
 main a:hover {
     @apply text-slate-900;
@@ -32,14 +44,12 @@ main p {
 /* route transitions */
 .route-enter-from {
     opacity: 0;
-    transform: translateY(100px);
 }
 .route-enter-active {
     transition: all 0.3s ease-out;
 }
 .route-leave-to {
     opacity: 0;
-    transform: translateY(-100px);
 }
 .route-leave active {
     transition: all 0.3s ease-in;
