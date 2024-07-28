@@ -4,8 +4,8 @@ import { ref } from 'vue';
 
 <template>
     <div class="container mx-auto py-4 px-3 flex flex-col grow">
-        <div class="grid md:grid-cols-4 grid-cols-2 gap-6 mb-6">
-            <div v-if="true==false">
+        <div class="grid md:grid-cols-4 grid-cols-2 gap-6 mb-6" v-if="true == false">
+            <div>
                 <h3 class="text-xl font-bold mb-3">Current</h3>
                 <router-link :to="{ name: 'brain-worms' }">
                     <img
@@ -15,7 +15,7 @@ import { ref } from 'vue';
                     />
                 </router-link>
             </div>
-            <div>
+            <div v-if="true == false">
                 <h3 class="text-xl font-bold mb-3">Upcoming</h3>
                 <router-link :to="{ name: 'brain-worms' }">
                     <img
@@ -28,6 +28,13 @@ import { ref } from 'vue';
         </div>
         <h3 class="text-xl font-bold mb-3">Past</h3>
         <div class="grid md:grid-cols-4 grid-cols-2 gap-6">
+            <router-link :to="{ name: 'brain-worms' }">
+                <img
+                    src="/images/brain-worms/brain-worms-nomark-min.png"
+                    class="max-w-full w-auto h-auto mx-auto"
+                    style="max-height: calc(100vh - 200px)"
+                />
+            </router-link>
             <router-link :to="{ name: 'the-veil' }">
                 <img
                     src="/images/veil/veil-2-nomark-min.png"
