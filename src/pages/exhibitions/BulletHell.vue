@@ -20,35 +20,21 @@ export default {
         <div>
             <GallerySlideshow :slides="slides" />
         </div>
-        <div class="container mx-auto grid md:grid-cols-2 gap-6 px-3">
-            <img
-                src="/images/bullethell/bullethell-nomark-min.png"
-                class="max-w-full w-auto h-auto mx-auto"
-            />
+        <div class="container mx-auto grid md:grid-cols-2 gap-3 px-3">
+            <img src="/images/bullethell/bullethell-nomark-min.png" class="max-w-full w-auto h-auto mx-auto" />
             <div id="press-release">
-                <div class="grid md:grid-cols-2 grid-cols-1 gap-6 mb-6">
-                    <div class="flex justify-between">
-                        <div>
-                            <div class="text-lg mb-3 font-gloock">
-                                Sam Dickey<br />
-                                Helmut Hammen<br />
-                                Trey Rozell
-                            </div>
-                            <em>Bullet Hell</em><br />
-                            curated by David Mitchell
+                <div class="grid md:grid-cols-2 grid-cols-1 gap-3 mb-6">
+                    <div>
+                        <div class="text-lg mb-3 font-gloock">
+                            Sam Dickey<br />
+                            Helmut Hammen<br />
+                            Trey Rozell
                         </div>
-                        <a
-                            href="/docs/bullethell/bullethell-press-release.pdf"
-                            class="md:hidden ml-auto"
-                            target="_blank"
-                            >PDF</a
-                        >
+                        <em>Bullet Hell</em><br />
+                        curated by David Mitchell
                     </div>
                     <div class="md:text-right text-left">
-                        <a
-                            href="/docs/bullethell/bullethell-press-release.pdf"
-                            class="md:block hidden mb-6"
-                            target="_blank"
+                        <a href="/docs/bullethell/bullethell-press-release.pdf" class="block mb-3" target="_blank"
                             >PDF</a
                         >
                         Nov. 17th &mdash; Jan. 12th, 2024<br />
@@ -56,7 +42,7 @@ export default {
                         Hours: Wed - Sat, 1PM &mdash; 6PM<br />
                     </div>
                 </div>
-                <div>
+                <div class="text-justify">
                     <p class="mb-3">
                         They march you up with a paper target on your chest and a blindfold, so you can’t see the five
                         men in a line, all aiming down sights. Lockstep heels make a metronome of the firing squad, the

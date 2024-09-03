@@ -32,36 +32,16 @@ export default {
                 <p class="text-sm"><em>Map of the Bomb</em> premiere trailer.</p>
             </div>
             <div id="press-release">
-                <div class="grid md:grid-cols-2 grid-cols-1 gap-6 mb-6">
-                    <div class="flex justify-between">
-                        <div class="text-lg mb-3 font-roboto font-extrabold uppercase">
-                            Amanda Beech<br />
-                            Delphic Future
-                        </div>
-                        <div class="text-right">
-                            <a
-                                href="/docs/delphic-future/delphic-future-press-release.pdf"
-                                class="md:hidden ml-auto block"
-                                target="_blank"
-                                >PDF</a>
-                            <a
-                            href="/documents/beech-von-sternberg-interview"
-                            class="md:hidden ml-auto block"
-                            target="_blank"
-                            >In Conversation</a>
-                        </div>
+                <div class="grid md:grid-cols-2 grid-cols-1 gap-3 mb-6">
+                    <div class="text-lg font-roboto font-extrabold uppercase">
+                        Amanda Beech<br />
+                        Delphic Future
                     </div>
                     <div class="md:text-right text-left">
-                        <a
-                            href="/docs/delphic-future/delphic-future-press-release.pdf"
-                            class="md:block hidden"
-                            target="_blank"
+                        <a href="/docs/delphic-future/delphic-future-press-release.pdf" class="block" target="_blank"
                             >PDF</a
                         >
-                        <a
-                            href="/documents/beech-von-sternberg-interview"
-                            class="md:block hidden mb-6"
-                            target="_blank"
+                        <a href="/documents/beech-von-sternberg-interview" class="block mb-3" target="_blank"
                             >In Conversation</a
                         >
                         Feb. 4th &mdash; Mar. 23rd, 2024<br />
@@ -70,7 +50,7 @@ export default {
                         Hours: Wed - Sat, 1PM &mdash; 6PM<br />
                     </div>
                 </div>
-                <div>
+                <div class="text-justify">
                     <p class="mb-3">
                         Twelve Ten Gallery is pleased to present new paintings and drawings by Amanda Beech, accompanied
                         by an installation of the video work <em>Covenant Transport Move or Die</em> (2015) and a
@@ -110,22 +90,22 @@ export default {
                         developed a rudimentary algorithmic procedure which operated over an iterative and combinatorial
                         process called the Ars (art). The Ars was composed of sets of abstracted symbols and was
                         illustrated by a series of intricate circular diagrams and tables, with instructions that
-                        indicated the rules for querying the system. Significantly, Llull saw this system as rectifying a
-                        major deficit in the practices of Scholasticism, which could only elucidate given syllogisms.
+                        indicated the rules for querying the system. Significantly, Llull saw this system as rectifying
+                        a major deficit in the practices of Scholasticism, which could only elucidate given syllogisms.
                         The Ars, however, could be used not only to identify truths but also to construct new
                         propositions.
                     </p>
                     <p>
                         Llull's diagrammatic machines surface in Beech's work in several guises: as both imagery in her
-                        works on paper and as a method for determining the course of her new film <em>Map of the Bomb</em>. Not
-                        only is Llull's invention the lever for this work, but also the book <em>Plotto</em>, written by the dime
-                        store author William Wallace Cook in the 1920's. Cook's method became an influential device for
-                        genre fiction and films, and Alfred Hitchcock, among many others, was known to use it. For
-                        Beech, it is not just the creative impetus that these logics offer, but the formal, ideological
-                        and methodological constraints through which they are structured, indicating not just the all
-                        too clear problem of claims to objectivity, but more crucially, to argue that creativity need
-                        not be divorced from rationality. It is in the development of such methodological devices that
-                        art gains purchase on the world as a technique.
+                        works on paper and as a method for determining the course of her new film
+                        <em>Map of the Bomb</em>. Not only is Llull's invention the lever for this work, but also the
+                        book <em>Plotto</em>, written by the dime store author William Wallace Cook in the 1920's.
+                        Cook's method became an influential device for genre fiction and films, and Alfred Hitchcock,
+                        among many others, was known to use it. For Beech, it is not just the creative impetus that
+                        these logics offer, but the formal, ideological and methodological constraints through which
+                        they are structured, indicating not just the all too clear problem of claims to objectivity, but
+                        more crucially, to argue that creativity need not be divorced from rationality. It is in the
+                        development of such methodological devices that art gains purchase on the world as a technique.
                     </p>
                     <p>
                         With this in mind, Beech is keenly aware that the use of these devices is not transparent; for
@@ -138,8 +118,24 @@ export default {
                     </p>
                 </div>
                 <div class="mt-10">
-                    <p class="italic"><span class="font-bold">Amanda Beech</span> is an artist and writer. Her work entangles narratives of power, cause and contingency from philosophical theory, science, literature and real political events. Here the  material conditions of thought, myth and fiction that seem necessary for an account of human agency are explored as forms of ideological and rhetorical force. In video, painting, print and sculpture her work proposes art as a form of intelligence and power beyond the ideals of capitalism and the limits that art has set for itself by means of its critiques.</p>
-                    <p class="italic">She has exhibited widely in various Biennales and has written texts for anthologies and museum catalogs. She has edited and contributed to numerous books including <span class="font-bold">Construction Site for Possible Worlds</span>, 2019, Urbanomic/MIT Press and <span class="font-bold">Cold War, Cold World</span>, Urbanomic, 2015. Her recent writing includes an essay on Jean Francois Lyotard’s exhibition "Les Immateriaux for Beyond Matter", ZKM, Karlsruhe. Forthcoming work includes a new book on art, aesthetics and philosophy; <span class="font-bold">The Intolerable Image</span>, from MIT. </p>
+                    <p class="italic">
+                        <span class="font-bold">Amanda Beech</span> is an artist and writer. Her work entangles
+                        narratives of power, cause and contingency from philosophical theory, science, literature and
+                        real political events. Here the material conditions of thought, myth and fiction that seem
+                        necessary for an account of human agency are explored as forms of ideological and rhetorical
+                        force. In video, painting, print and sculpture her work proposes art as a form of intelligence
+                        and power beyond the ideals of capitalism and the limits that art has set for itself by means of
+                        its critiques.
+                    </p>
+                    <p class="italic">
+                        She has exhibited widely in various Biennales and has written texts for anthologies and museum
+                        catalogs. She has edited and contributed to numerous books including
+                        <span class="font-bold">Construction Site for Possible Worlds</span>, 2019, Urbanomic/MIT Press
+                        and <span class="font-bold">Cold War, Cold World</span>, Urbanomic, 2015. Her recent writing
+                        includes an essay on Jean Francois Lyotard’s exhibition "Les Immateriaux for Beyond Matter",
+                        ZKM, Karlsruhe. Forthcoming work includes a new book on art, aesthetics and philosophy;
+                        <span class="font-bold">The Intolerable Image</span>, from MIT.
+                    </p>
                 </div>
             </div>
         </div>

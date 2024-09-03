@@ -4,6 +4,7 @@ import Home from './pages/Home.vue';
 import About from './pages/About.vue';
 import Exhibitions from './pages/Exhibitions.vue';
 import Speedrunners from './pages/exhibitions/Speedrunners.vue';
+import StarEeyed from './pages/exhibitions/StarEeyed.vue';
 import BulletHell from './pages/exhibitions/BulletHell.vue';
 import DelphicFuture from './pages/exhibitions/DelphicFuture.vue';
 import TheVeil from './pages/exhibitions/TheVeil.vue';
@@ -53,14 +54,14 @@ export default createRouter({
         {
             path: '/the-veil',
             redirect: {
-                name: 'the-veil'
-            }
+                name: 'the-veil',
+            },
         },
         {
             path: '/exhibitions/the-vei',
             redirect: {
-                name: 'the-veil'
-            }
+                name: 'the-veil',
+            },
         },
         {
             path: '/exhibitions/the-veil',
@@ -71,6 +72,11 @@ export default createRouter({
             path: '/exhibitions/brain-worms',
             name: 'brain-worms',
             component: BrainWorms,
+        },
+        {
+            path: '/exhibitions/halpern-stareeyed',
+            name: 'star-e-eyed',
+            component: StarEeyed,
         },
         {
             path: '/news',

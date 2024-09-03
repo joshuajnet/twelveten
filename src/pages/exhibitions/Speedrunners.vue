@@ -21,16 +21,13 @@ export default {
             <GallerySlideshow :slides="slides" />
         </div>
         <div class="container mx-auto grid md:grid-cols-2 gap-6 px-3">
-            <img
-                src="/images/speedrunners/speedrunners-flier.svg"
-                class="max-w-full w-auto h-auto mx-auto"
-            />
+            <img src="/images/speedrunners/speedrunners-flier.svg" class="max-w-full w-auto h-auto mx-auto" />
             <div id="press-release">
                 <div class="flex justify-between">
                     <h2 class="text-3xl font-bold italic mb-3">Speedrunners</h2>
                     <a href="/docs/speedrunners/speedrunners-press-release.pdf" target="_blank">PDF</a>
                 </div>
-                <div class="grid md:grid-cols-2 grid-cols-1 gap-6 mb-6">
+                <div class="grid md:grid-cols-2 grid-cols-1 gap-3 mb-6">
                     <div class="text-lg">
                         Isabelle Frances McGuire<br />
                         Ryan Nault<br />
@@ -43,7 +40,7 @@ export default {
                         Hours: Wed - Sat, 1PM &mdash; 6PM<br />
                     </div>
                 </div>
-                <div>
+                <div class="text-justify">
                     <p class="italic mb-3">
                         You have entered game space. We have allotted you certain functions in game space with limited
                         parameters. While you may use the jump button, we do not support climbing. Please note that
