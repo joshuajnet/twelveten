@@ -94,4 +94,9 @@ export default createRouter({
             component: Error404,
         },
     ],
+    scrollBehavior() {
+        return new Promise((resolve) => {
+            resolve({ left: 0, top: 0 });
+        });
+    },
 });

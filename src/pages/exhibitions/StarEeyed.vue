@@ -40,6 +40,7 @@ export default {
                         </a>
                         September 28th &mdash; October 26th, 2024<br />
                         Opening: September 28th, 6PM &mdash; 9PM<br />
+                        Artist Talk: October 5th, 4PM &mdash; 6PM<br />
                         Hours: Wed - Sat, 1PM &mdash; 6PM<br />
                     </div>
                 </div>
