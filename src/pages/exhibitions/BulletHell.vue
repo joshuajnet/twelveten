@@ -42,7 +42,7 @@ export default {
                         Hours: Wed - Sat, 1PM &mdash; 6PM<br />
                     </div>
                 </div>
-                <div class="text-justify">
+                <div class="text-justify max-w-screen-sm mx-auto">
                     <p class="mb-3">
                         They march you up with a paper target on your chest and a blindfold, so you can’t see the five
                         men in a line, all aiming down sights. Lockstep heels make a metronome of the firing squad, the

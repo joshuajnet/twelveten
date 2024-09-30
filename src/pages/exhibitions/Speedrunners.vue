@@ -40,7 +40,7 @@ export default {
                         Hours: Wed - Sat, 1PM &mdash; 6PM<br />
                     </div>
                 </div>
-                <div class="text-justify">
+                <div class="text-justify max-w-screen-sm mx-auto">
                     <p class="italic mb-3">
                         You have entered game space. We have allotted you certain functions in game space with limited
                         parameters. While you may use the jump button, we do not support climbing. Please note that

@@ -40,7 +40,7 @@ export default {
                         Hours: Wed - Sat, 1PM &mdash; 6PM<br />
                     </div>
                 </div>
-                <div class="text-justify">
+                <div class="text-justify max-w-screen-sm mx-auto">
                     <p class="mb-3">
                         There is a story from Greek antiquity of a contest between two painters, Zeuxis and Parrhasius.
                         Zeuxis is said to have painted grapes so convincing that the birds alighted on the painting and

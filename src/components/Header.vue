@@ -10,15 +10,14 @@ export default {
     },
     methods: {
         toggleMenu() {
-            this.menuActive = !this.menuActive; 
+            this.menuActive = !this.menuActive;
             this.$emit('menu', this.menuActive);
         },
         closeMenu() {
             this.menuActive = false;
             this.$emit('menu', this.menuActive);
         },
-
-    }, 
+    },
 };
 </script>
 
@@ -27,44 +26,56 @@ export default {
         <div class="container mx-auto py-8 px-3 md:justify-between flex md:flex-row flex-col md:items-center">
             <div class="justify-between flex items-center">
                 <router-link :to="{ name: 'home' }" @click="closeMenu()">
-                    <h1 class="text-4xl mb-0 font-germania-one text-sky-900" :class="{'text-white shadow-text' :$route.name == 'home'}">Twelve Ten</h1>
+                    <h1
+                        class="text-4xl mb-0 font-germania-one text-sky-900"
+                        :class="{ 'text-white shadow-text': $route.name == 'home' }"
+                    >
+                        Twelve Ten
+                    </h1>
                 </router-link>
 
-                <div class="md:hidden block text-xl" :class="{'text-white shadow-text' :$route.name == 'home'}" @click="toggleMenu()">
+                <div
+                    class="md:hidden block text-xl"
+                    :class="{ 'text-white shadow-text': $route.name == 'home' }"
+                    @click="toggleMenu()"
+                >
                     <span v-if="!menuActive"><i class="las la-bars"></i></span>
                     <span v-if="menuActive"><i class="las la-times"></i></span>
                 </div>
             </div>
 
-            <div 
-                class="md:flex flex md:gap-6 gap-3 md:flex-row flex-col md:mt-0 mt-3 md:text-xl text-sky-900 transition-all" 
-                :class="[{'text-white shadow-text' :$route.name == 'home'},{ hidden: !menuActive }]"
+            <div
+                class="md:flex flex md:gap-6 gap-3 md:flex-row flex-col md:mt-0 mt-3 md:text-xl text-sky-900 transition-all"
+                :class="[{ 'text-white shadow-text': $route.name == 'home' }, { hidden: !menuActive }]"
             >
-                <router-link 
+                <router-link
                     class="hover:text-sky-600"
-                    :to="{ name: 'exhibitions' }" 
+                    :class="{ 'text-sky-600': $route.name == 'exhibitions' }"
+                    :to="{ name: 'exhibitions' }"
                     @click="closeMenu()"
                 >
                     Exhibitions
                 </router-link>
                 <router-link
                     class="hover:text-sky-600"
-                    :to="{ name: 'news' }" 
+                    :class="{ 'text-sky-600': $route.name == 'news' }"
+                    :to="{ name: 'news' }"
                     @click="closeMenu()"
                 >
                     News
                 </router-link>
                 <router-link
                     class="hover:text-sky-600"
-                    :to="{ name: 'about' }" 
-                    @mouseenter="hoverActive()" 
+                    :class="{ 'text-sky-600': $route.name == 'about' }"
+                    :to="{ name: 'about' }"
+                    @click="closeMenu()"
                 >
                     About
                 </router-link>
                 <a
                     class="hover:text-sky-600 flex items-center"
-                    href="https://www.instagram.com/twelvetengallery/" 
-                    target="_blank" 
+                    href="https://www.instagram.com/twelvetengallery/"
+                    target="_blank"
                 >
                     <i class="lab la-instagram"></i>
                     <span class="md:hidden ml-2">Instagram</span>
@@ -76,6 +87,7 @@ export default {
 
 <style scoped>
 .shadow-text {
-    text-shadow: 2px 2px 6px rgba(0,0,0,.05),-2px -2px 6px rgba(0,0,0,.05), 2px -2px 6px rgba(0,0,0,.2), -2px 2px 6px rgba(0,0,0,.05);
+    text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.05), -2px -2px 6px rgba(0, 0, 0, 0.05), 2px -2px 6px rgba(0, 0, 0, 0.2),
+        -2px 2px 6px rgba(0, 0, 0, 0.05);
 }
 </style>

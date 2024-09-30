@@ -44,7 +44,7 @@ export default {
                         Hours: Wed - Sat, 1PM &mdash; 6PM<br />
                     </div>
                 </div>
-                <div class="text-justify">
+                <div class="text-justify max-w-screen-sm mx-auto">
                     <p class="mb-3">
                         Twelve Ten Gallery is pleased to present new fiber works by Tali Halpern. For their debut solo
                         exhibition at the gallery, Halpern has created a new series that employs a wide range of

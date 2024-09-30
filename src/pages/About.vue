@@ -16,13 +16,16 @@ import MailSignUp from '../components/MailSignUp.vue';
                     ></iframe>
                 </div>
             </div>
-            <div class="md:w-1/2">
+            <div class="max-w-screen-sm">
                 <div class="mb-4 text-2xl">Twelve Ten is a contemporary art gallery located in Chicago.</div>
                 <h3 class="text-xl font-medium text-sky-900">Twelve Ten Gallery</h3>
                 <div class="mb-4">
                     1210 West Thorndale Ave., <br />
                     Chicago IL, 60660<br />
-                    <em>Just West of the Red Line Thorndale train stop in Edgewater</em><br /><br />
+                    <em
+                        >Just West of the Red Line Thorndale train stop in Edgewater. Accessible as a ground floor
+                        storefront</em
+                    ><br /><br />
 
                     Hours: Wednesday &mdash; Saturday, 1:00 &mdash; 6:00 PM, or by appointment.<br />
                 </div>
@@ -33,7 +36,10 @@ import MailSignUp from '../components/MailSignUp.vue';
                 </div>
                 <div class="pb-4 mb-6 border-b">
                     <h3 class="text-xl font-medium text-sky-900">Follow us</h3>
-                    <a href="https://www.instagram.com/twelvetengallery/" target="_blank" class="no-underline flex items-center"
+                    <a
+                        href="https://www.instagram.com/twelvetengallery/"
+                        target="_blank"
+                        class="no-underline flex items-center"
                         ><i class="lab la-instagram text-lg no-underline"></i> Instagram
                     </a>
                 </div>

@@ -1,11 +1,13 @@
 <script>
 import { ref } from 'vue';
 import MailSignUp from '../components/MailSignUp.vue';
+import Press from '../components/Press.vue';
 import newsData from '../json/news.json';
 
 export default {
     components: {
         MailSignUp,
+        Press,
     },
     computed: {
         selectedItem() {
@@ -30,11 +32,10 @@ export default {
 
 <template>
     <div class="container mx-auto text-sm py-4 px-3">
-        <div class="md:flex md:justify-between gap-6">
-            <div class="w-full max-w-2xl mb-10 posts">
-                <router-link :to="{ name: 'news' }" class="!no-underline">
-                    <h2 class="text-xl font-bold mb-3">News</h2>
-                </router-link>
+        <div class="grid md:grid-cols-2 md:gap-6 lg:grid-cols-3 lg:gap-10">
+            <Press v-if="$route.name != 'news-item'" />
+            <div class="text-justify posts" :class="{ 'md:col-span-2': $route.name == 'news-item' }">
+                <h2 class="text-xl font-bold mb-3">Gallery News</h2>
                 <div class="border-t py-3" v-if="selectedItem">
                     <router-link :to="{ name: 'news-item', params: { path: selectedItem.path } }" class="!no-underline">
                         <h3 class="text-lg font-medium text-sky-900" v-if="selectedItem.title">
@@ -52,9 +53,7 @@ export default {
                     <div v-html="item.html" v-if="item.html"></div>
                 </div>
             </div>
-            <div>
-                <MailSignUp />
-            </div>
+            <MailSignUp />
         </div>
     </div>
 </template>
