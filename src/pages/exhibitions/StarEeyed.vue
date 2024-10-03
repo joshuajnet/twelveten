@@ -1,7 +1,7 @@
 <script>
 import { ref } from 'vue';
 import GallerySlideshow from '../../components/GallerySlideshow.vue';
-import slideshowData from '../../json/brainworms-slideshow.json';
+import slideshowData from '../../json/star-e-eyed-slideshow.json';
 
 export default {
     components: {
@@ -17,8 +17,8 @@ export default {
 
 <template>
     <div class="flex flex-col grow">
-        <div v-if="true == false">
-            <GallerySlideshow :slides="slides" />
+        <div>
+            <GallerySlideshow :slides="slides" :worksAvailable="true" />
         </div>
         <div class="container mx-auto grid md:grid-cols-2 gap-6 px-3">
             <img src="/images/star-e-eyed/halpern-nomark-min.jpg" class="max-w-full w-auto h-auto mx-auto" />

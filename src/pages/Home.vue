@@ -20,9 +20,14 @@ export default {
             <div class="absolute top-[-4px] right-[-4px] left-[-4px] bottom-[-4px] bg-sky-900">
                 <div class="absolute w-full h-full overlay" />
                 <img
-                    src="/images/star-e-eyed/splash-min.jpg"
+                    src="/images/star-e-eyed/halpern-install2.jpg"
                     :class="{ 'blur-bg': menuActive }"
-                    class="home-bg object-cover w-full h-full"
+                    class="md:block hidden home-bg object-cover w-full h-full"
+                />
+                <img
+                    src="/images/star-e-eyed/halpern-star.jpg"
+                    :class="{ 'blur-bg': menuActive }"
+                    class="md:hidden home-bg object-cover w-full h-full"
                 />
             </div>
             <div class="relative z-10 container mx-auto items-center text-sm pt-8 px-3 flex flex-col grow">

@@ -2,6 +2,10 @@
 export default {
     props: {
         slides: Object,
+        worksAvailable: {
+            type: Boolean,
+            default: false,
+        },
     },
     data() {
         return {
@@ -10,9 +14,16 @@ export default {
             paused: false,
             gridView: false,
             scrollView: false,
+            availableView: false,
+            visibleSlides: [],
         };
     },
     mounted() {
+        for (let slide of this.slides) {
+            if (!slide.hidden) {
+                this.visibleSlides.push(slide);
+            }
+        }
         this.autoPlay(true);
         this.scrollStop();
     },
@@ -20,7 +31,7 @@ export default {
         next() {
             this.autoPlay(false);
             this.stopVideo();
-            if (this.indexVisible < this.slides.length - 1) {
+            if (this.indexVisible < this.visibleSlides.length - 1) {
                 this.indexVisible += 1;
             } else {
                 this.indexVisible = 0;
@@ -32,7 +43,7 @@ export default {
             if (this.indexVisible > 0) {
                 this.indexVisible -= 1;
             } else {
-                this.indexVisible = this.slides.length - 1;
+                this.indexVisible = this.visibleSlides.length - 1;
             }
         },
         autoPlay(play) {
@@ -43,7 +54,7 @@ export default {
             }
             this.paused = false;
             this.interval = setInterval(() => {
-                if (this.indexVisible < this.slides.length - 1) {
+                if (this.indexVisible < this.visibleSlides.length - 1) {
                     this.indexVisible += 1;
                 } else {
                     this.indexVisible = 0;
@@ -98,6 +109,34 @@ export default {
                 }
             };
         },
+        toggleAvailable() {
+            this.autoPlay(false);
+            this.visibleSlides = [];
+            if (this.availableView) {
+                for (let slide of this.slides) {
+                    if (!slide.hidden) {
+                        this.visibleSlides.push(slide);
+                    }
+                }
+                this.indexVisible = 0;
+                this.gridView = false;
+                this.availableView = false;
+            } else {
+                for (let slide of this.slides) {
+                    if (slide.available) {
+                        this.visibleSlides.push(slide);
+                    }
+                }
+                this.gridView = true;
+                this.availableView = true;
+            }
+        },
+        createMailTo(slide) {
+            let url = `https://twelvetengallery.com${slide.image}`;
+            let encodeSubject = encodeURIComponent(`Inquiry into work by ${slide.author}`);
+            let encodeBody = encodeURIComponent(`Please provide me more information on the related work ${url}`);
+            return `mailto:mail@twelvetengallery.com?subject=${encodeSubject}&body=${encodeBody}`;
+        },
     },
 };
 </script>
@@ -120,11 +159,17 @@ export default {
                     <i class="las la-play"></i>
                 </div>
             </div>
-            <div
-                class="font-roboto font-light text-sm cursor-pointer font-bold hover:text-sky-900"
-                @click="scrollToPress()"
-            >
-                Press Release
+            <div class="font-roboto font-light text-sm">
+                <span v-if="worksAvailable">
+                    <span v-if="!availableView" @click="toggleAvailable()" class="cursor-pointer hover:text-sky-900"
+                        >Works Available</span
+                    >
+                    <span v-if="availableView" @click="toggleAvailable()" class="cursor-pointer hover:text-sky-900"
+                        >Installation</span
+                    >
+                    |
+                </span>
+                <span @click="scrollToPress()" class="cursor-pointer hover:text-sky-900">Press Release</span>
             </div>
         </div>
         <!-- slide view -->
@@ -142,7 +187,7 @@ export default {
                 <div class="text-2xl cursor-pointer absolute top-1/2 right-0"><i class="las la-angle-right"></i></div>
             </div>
             <div class="loader"></div>
-            <div v-for="(slide, index) in slides" :key="index">
+            <div v-for="(slide, index) in visibleSlides" :key="index">
                 <div
                     :class="{ onscreen: index === indexVisible }"
                     class="slide-item offscreen w-[calc(100%-4rem)] m-auto"
@@ -173,6 +218,14 @@ export default {
                         <div v-if="slide.media">{{ slide.media }}</div>
                         <div v-if="slide.dimensions">{{ slide.dimensions }}</div>
                         <div v-if="slide.credit">{{ slide.credit }}</div>
+                        <div v-if="slide.available" class="relative z-20">
+                            <a
+                                :href="createMailTo(slide)"
+                                class="py-1 px-3 inline-block cursor-pointer hover:text-sky-600 !no-underline border hover:shadow mt-3 font-roboto font-light"
+                            >
+                                <i class="las la-envelope mr-1"></i> Inquire
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -183,13 +236,12 @@ export default {
                 <div
                     class="max-w-8xl mx-auto grid gap-3 2xl:grid-cols-6 xl:grid-cols-5 lg:grid-cols-4 md:grid-cols-3 grid-cols-2"
                 >
-                    <div
-                        v-for="(slide, index) in slides"
-                        :key="index"
-                        class="cursor-pointer h-[25vh] flex flex-grow hover:opacity-50 transition-opacity"
-                        @click="goToSlide(index)"
-                    >
-                        <div v-if="slide.video" class="bg-black flex items-center flex-grow">
+                    <div v-for="(slide, index) in visibleSlides" :key="index" class="h-[25vh] flex flex-grow relative">
+                        <div
+                            v-if="slide.video"
+                            class="bg-black flex items-center flex-grow hover:opacity-50 transition-opacity cursor-pointer"
+                            @click="goToSlide(index)"
+                        >
                             <video
                                 @click="stopVideo()"
                                 width="100%"
@@ -202,8 +254,20 @@ export default {
                                 Your browser does not support the video tag.
                             </video>
                         </div>
-                        <div v-if="slide.image" class="flex flex-grow bg-slate-50">
+                        <div
+                            v-if="slide.image"
+                            class="flex flex-grow bg-slate-50 hover:opacity-50 transition-opacity cursor-pointer"
+                            @click="goToSlide(index)"
+                        >
                             <img v-lazy="slide.image" class="lazy-image object-cover w-full h-full" />
+                        </div>
+                        <div v-if="availableView" class="absolute bottom-3 right-3">
+                            <a
+                                :href="createMailTo(slide)"
+                                class="py-1 px-3 inline-block cursor-pointer bg-white/80 hover:text-sky-600 !no-underline border hover:shadow mt-3 font-roboto font-light text-xs"
+                            >
+                                <i class="las la-envelope mr-1"></i> Inquire
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -216,7 +280,7 @@ export default {
                     <i class="las la-times"></i>
                 </div>
                 <div class="max-w-8xl mx-auto px-3 pt-12 pb-10">
-                    <div v-for="(slide, index) in slides" :key="index">
+                    <div v-for="(slide, index) in visibleSlides" :key="index">
                         <div class="mb-10 flex flex-col">
                             <div v-if="slide.video" class="xl:max-w-5xl max-w-3xl w-full mb-2">
                                 <video
@@ -242,6 +306,14 @@ export default {
                                 <div v-if="slide.media" class="text-sm">{{ slide.media }}</div>
                                 <div v-if="slide.dimensions" class="text-sm">{{ slide.dimensions }}</div>
                                 <div v-if="slide.credit" class="text-xs">{{ slide.credit }}</div>
+                                <div v-if="slide.available" class="relative z-20">
+                                    <a
+                                        :href="createMailTo(slide)"
+                                        class="py-1 px-3 inline-block cursor-pointer hover:text-sky-600 !no-underline border hover:shadow mt-3 font-roboto font-light"
+                                    >
+                                        <i class="las la-envelope mr-1"></i> Inquire
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>

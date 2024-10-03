@@ -5,22 +5,22 @@ import { ref } from 'vue';
 <template>
     <div class="container mx-auto py-4 px-3 flex flex-col grow">
         <div class="grid md:grid-cols-4 grid-cols-2 gap-6 mb-6">
-            <div v-if="true == false">
+            <div>
                 <h3 class="text-xl font-bold mb-3">Current</h3>
-                <router-link :to="{ name: 'brain-worms' }">
+                <router-link :to="{ name: 'star-e-eyed' }">
                     <img
-                        src="/images/brain-worms/brain-worms-nomark-min.png"
-                        class="max-w-full w-auto h-auto mx-auto"
+                        v-lazy="{ src: '/images/star-e-eyed/halpern-nomark-min.jpg' }"
+                        class="lazy-image max-w-full w-auto h-auto mx-auto"
                         style="max-height: calc(100vh - 200px)"
                     />
                 </router-link>
             </div>
-            <div>
+            <div v-if="true == false">
                 <h3 class="text-xl font-bold mb-3">Upcoming</h3>
                 <router-link :to="{ name: 'star-e-eyed' }">
                     <img
-                        src="/images/star-e-eyed/halpern-nomark-min.jpg"
-                        class="max-w-full w-auto h-auto mx-auto"
+                        v-lazy="{ src: '/images/star-e-eyed/halpern-nomark-min.jpg' }"
+                        class="lazy-image max-w-full w-auto h-auto mx-auto"
                         style="max-height: calc(100vh - 200px)"
                     />
                 </router-link>
@@ -30,39 +30,51 @@ import { ref } from 'vue';
         <div class="grid md:grid-cols-4 grid-cols-2 gap-6">
             <router-link :to="{ name: 'brain-worms' }">
                 <img
-                    src="/images/brain-worms/brain-worms-nomark-min.png"
-                    class="max-w-full w-auto h-auto mx-auto"
+                    v-lazy="{ src: '/images/brain-worms/brain-worms-nomark-min.png' }"
+                    class="lazy-image max-w-full w-auto h-auto mx-auto"
                     style="max-height: calc(100vh - 200px)"
                 />
             </router-link>
             <router-link :to="{ name: 'the-veil' }">
                 <img
-                    src="/images/veil/veil-2-nomark-min.png"
-                    class="max-w-full w-auto h-auto mx-auto"
+                    v-lazy="{ src: '/images/veil/veil-2-nomark-min.png' }"
+                    class="lazy-image max-w-full w-auto h-auto mx-auto"
                     style="max-height: calc(100vh - 200px)"
                 />
             </router-link>
             <router-link :to="{ name: 'delphic-future' }">
                 <img
-                    src="/images/delphic-future/delphic-future-nomark-min.png"
-                    class="max-w-full w-auto h-auto mx-auto"
+                    v-lazy="{ src: '/images/delphic-future/delphic-future-nomark-min.png' }"
+                    class="lazy-image max-w-full w-auto h-auto mx-auto"
                     style="max-height: calc(100vh - 200px)"
                 />
             </router-link>
             <router-link :to="{ name: 'bullet-hell' }">
                 <img
-                    src="/images/bullethell/bullethell-nomark-min.png"
-                    class="max-w-full w-auto h-auto mx-auto"
+                    v-lazy="{ src: '/images/bullethell/bullethell-nomark-min.png' }"
+                    class="lazy-image max-w-full w-auto h-auto mx-auto"
                     style="max-height: calc(100vh - 200px)"
                 />
             </router-link>
             <router-link :to="{ name: 'speedrunners' }">
                 <img
-                    src="../assets/speedrunners-flier.svg"
-                    class="max-w-full w-auto h-auto mx-auto"
+                    v-lazy="{ src: '/images/speedrunners/speedrunners-flier.svg' }"
+                    class="lazy-image max-w-full w-auto h-auto mx-auto"
                     style="max-height: calc(100vh - 200px)"
                 />
             </router-link>
         </div>
     </div>
 </template>
+
+<style scoped="postcss">
+.lazy-image {
+    transition: opacity 0.5s ease-in-out;
+}
+img[lazy='loading'] {
+    opacity: 0;
+}
+img[lazy='loaded'] {
+    opacity: 1;
+}
+</style>
