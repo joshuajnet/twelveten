@@ -18,7 +18,7 @@ export default {
     <router-link :to="{ name: 'star-e-eyed' }" class="flex flex-grow !no-underline">
         <div class="fixed top-0 left-0 w-full h-full flex flex-grow bg-cover bg-center">
             <div class="absolute top-[-4px] right-[-4px] left-[-4px] bottom-[-4px] bg-sky-900">
-                <div class="absolute w-full h-full overlay" />
+                <!--<div class="absolute w-full h-full overlay" />-->
                 <img
                     src="/images/star-e-eyed/halpern-install2.jpg"
                     :class="{ 'blur-bg': menuActive }"
@@ -32,7 +32,7 @@ export default {
             </div>
             <div class="relative z-10 container mx-auto items-center text-sm pt-8 px-3 flex flex-col grow">
                 <div
-                    class="mt-auto flex w-full md:flex-row flex-col md:gap-6 md:justify-between text-white shadow-text"
+                    class="mt-auto flex w-full md:flex-row flex-col md:gap-6 md:justify-between md:text-sky-900"
                 >
                     <div class="text-lg md:mb-0 mb-3">
                         <div class="text-lg mb-1 font-roboto font-bold uppercase">
@@ -46,7 +46,7 @@ export default {
                         Hours: Wed - Sat, 1PM &mdash; 6PM<br />
                     </div>
                 </div>
-                <Footer class="relative z-10 text-white !flex-grow-0 !flex-shrink" />
+                <Footer class="relative z-10 !flex-grow-0 !flex-shrink" />
             </div>
         </div>
     </router-link>

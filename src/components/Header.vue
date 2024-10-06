@@ -28,7 +28,6 @@ export default {
                 <router-link :to="{ name: 'home' }" @click="closeMenu()">
                     <h1
                         class="text-4xl mb-0 font-germania-one text-sky-900"
-                        :class="{ 'text-white shadow-text': $route.name == 'home' }"
                     >
                         Twelve Ten
                     </h1>
@@ -36,7 +35,6 @@ export default {
 
                 <div
                     class="md:hidden block text-xl"
-                    :class="{ 'text-white shadow-text': $route.name == 'home' }"
                     @click="toggleMenu()"
                 >
                     <span v-if="!menuActive"><i class="las la-bars"></i></span>
@@ -45,8 +43,8 @@ export default {
             </div>
 
             <div
-                class="md:flex flex md:gap-6 gap-3 md:flex-row flex-col md:mt-0 mt-3 md:text-xl text-sky-900 transition-all"
-                :class="[{ 'text-white shadow-text': $route.name == 'home' }, { hidden: !menuActive }]"
+                class="md:flex flex md:gap-6 gap-3 md:flex-row flex-col md:mt-0 mt-3 md:text-xl md:text-sky-900 transition-all"
+                :class="[{ 'text-white': $route.name == 'home' }, { hidden: !menuActive }]"
             >
                 <router-link
                     class="hover:text-sky-600"
