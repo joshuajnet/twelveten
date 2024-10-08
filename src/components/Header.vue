@@ -28,6 +28,7 @@ export default {
                 <router-link :to="{ name: 'home' }" @click="closeMenu()">
                     <h1
                         class="text-4xl mb-0 font-germania-one text-sky-900"
+                        :class="{ 'text-white': menuActive && $route.name == 'home' }"
                     >
                         Twelve Ten
                     </h1>
@@ -38,7 +39,9 @@ export default {
                     @click="toggleMenu()"
                 >
                     <span v-if="!menuActive"><i class="las la-bars"></i></span>
-                    <span v-if="menuActive"><i class="las la-times"></i></span>
+                    <span v-if="menuActive"><i class="las la-times"
+                        :class="{ 'text-white': menuActive && $route.name == 'home' }"
+                    ></i></span>
                 </div>
             </div>
 
