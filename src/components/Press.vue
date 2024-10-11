@@ -3,6 +3,20 @@
         <h2 class="text-xl font-bold mb-3">Press</h2>
         <div class="border-t py-3">
             <div class="mb-6">
+                <h3 class="text-lg italic">Newcity Art</h3>
+                <a
+                    href="https://art.newcity.com/2024/10/10/weaving-online-life-a-review-of-tali-halpern-at-twelve-ten/"
+                    target="_blank"
+                    class="!no-underline"
+                >
+                    <h3 class="text-lg font-medium text-sky-900">
+                        Weaving Online Life: A Review of Tali Halpern at Twelve Ten
+                    </h3>
+                </a>
+                <h4 class="italic">October 10th, 2024</h4>
+                <p>by Jennifer Smart</p>
+            </div>
+            <div class="mb-6">
                 <h3 class="text-lg italic">Chicago Reader</h3>
                 <a
                     href="https://chicagoreader.com/arts-culture/tali-halpern-twelve-ten-gallery/"
