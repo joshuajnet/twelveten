@@ -15,11 +15,11 @@ import { ref } from 'vue';
                     />
                 </router-link>
             </div>
-            <div v-if="true == false">
+            <div>
                 <h3 class="text-xl font-bold mb-3">Upcoming</h3>
-                <router-link :to="{ name: 'star-e-eyed' }">
+                <router-link :to="{ name: 'coldbomb' }">
                     <img
-                        v-lazy="{ src: '/images/star-e-eyed/halpern-nomark-min.jpg' }"
+                        v-lazy="{ src: '/images/coldbomb/loebs-nomark2.jpg' }"
                         class="lazy-image max-w-full w-auto h-auto mx-auto"
                         style="max-height: calc(100vh - 200px)"
                     />

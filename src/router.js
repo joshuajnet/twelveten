@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import Home from './pages/Home.vue';
 import About from './pages/About.vue';
 import Exhibitions from './pages/Exhibitions.vue';
+import ColdBomb from './pages/exhibitions/ColdBomb.vue';
 import Speedrunners from './pages/exhibitions/Speedrunners.vue';
 import StarEeyed from './pages/exhibitions/StarEeyed.vue';
 import BulletHell from './pages/exhibitions/BulletHell.vue';
@@ -77,6 +78,11 @@ export default createRouter({
             path: '/exhibitions/halpern-stareeyed',
             name: 'star-e-eyed',
             component: StarEeyed,
+        },
+        {
+            path: '/exhibitions/coldbomb',
+            name: 'coldbomb',
+            component: ColdBomb,
         },
         {
             path: '/news',
