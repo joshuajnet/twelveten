@@ -39,9 +39,9 @@ export default {
                 </div>
                 <div class="text-justify max-w-screen-sm mx-auto">
                     <p class="mb-3">
-                        Yoke the world in a circle. Set the circle on a mark from Greenwich and impose the law of the
-                        clock. The circle on its axis becomes a line, a cut, a basis from which all other measures may
-                        be drawn.
+                        Yoke the world in a circle. The circle on its axis becomes a line, a cut, a basis from which all
+                        other measures may be drawn. Set the circle at an observatory in Greenwich and impose the law of
+                        the clock.
                     </p>
                     <p class="mb-3">
                         The prime meridian. An executive COUP. The declaration &amp; regulation of the degree 0. A cold
@@ -62,7 +62,7 @@ export default {
                         Fact: Tails.<br />
                         Fact: It stands on an edge.
                     </p>
-                    <p class="mb-3">Picture the morning star.</p>
+                    <p class="mb-3">Observe the morning star.</p>
                     <p class="mb-3">An eclipse, by what swerve of the atom?</p>
                     <p class="mb-3">
                         <em>&mdash; Joshua Johnson, October 2024</em>
