@@ -32,7 +32,7 @@ export default {
                     </div>
                     <div class="md:text-right text-left">
                         <a href="/docs/coldbomb/coldbomb-press-release.pdf" class="block mb-3" target="_blank"> PDF </a>
-                        November 9th &mdash; December 14th, 2024<br />
+                        November 9th &mdash; December 21st, 2024<br />
                         Opening: November 9th, 6PM &mdash; 9PM<br />
                         Hours: Wed - Sat, 1PM &mdash; 6PM<br />
                     </div>
