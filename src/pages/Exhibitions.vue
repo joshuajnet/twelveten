@@ -15,8 +15,8 @@ import { ref } from 'vue';
                     />
                 </router-link>
             </div>
-            <div>
-                <h3 class="text-xl font-bold mb-3" v-if="true === false">Upcoming</h3>
+            <div v-if="true === false">
+                <h3 class="text-xl font-bold mb-3">Upcoming</h3>
                 <router-link :to="{ name: 'coldbomb' }">
                     <img
                         v-lazy="{ src: '/images/coldbomb/loebs-nomark2.jpg' }"

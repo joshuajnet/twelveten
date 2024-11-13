@@ -20,12 +20,12 @@ export default {
             <div class="absolute top-[-4px] right-[-4px] left-[-4px] bottom-[-4px] bg-sky-900">
                 <!--<div class="absolute w-full h-full overlay" />-->
                 <img
-                    src="/images/coldbomb/loebs-splash.jpg"
+                    src="/images/coldbomb/JASONLOEBS-07-min.jpg"
                     :class="{ 'blur-bg': menuActive }"
                     class="md:block hidden home-bg object-cover w-full h-full"
                 />
                 <img
-                    src="/images/coldbomb/loebs-splash-mobile.jpg"
+                    src="/images/coldbomb/JASONLOEBS-41-min.jpg"
                     :class="{ 'blur-bg': menuActive }"
                     class="md:hidden home-bg object-cover w-full h-full"
                 />

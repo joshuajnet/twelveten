@@ -1,7 +1,7 @@
 <script>
 import { ref } from 'vue';
 import GallerySlideshow from '../../components/GallerySlideshow.vue';
-import slideshowData from '../../json/star-e-eyed-slideshow.json';
+import slideshowData from '../../json/coldbomb-slideshow.json';
 
 export default {
     components: {
@@ -17,7 +17,7 @@ export default {
 
 <template>
     <div class="flex flex-col grow">
-        <div v-if="true === false">
+        <div>
             <GallerySlideshow :slides="slides" :worksAvailable="true" />
         </div>
         <div class="container mx-auto grid md:grid-cols-2 gap-6 px-3">
@@ -76,11 +76,11 @@ export default {
                     <div class="mt-10">
                         <p class="italic">
                             <span class="font-bold">Jason Loebs</span> lives and works in New York. He attended the
-                            Whitney Independent Study Program in 2011, received his MFA from the Art Institute of
-                            Chicago in 2007, and a certificate from the Pennsylvania Academy of the Fine Arts in 2004.
-                            Recent solo exhibitions include Kangaroo Stele, Éclair, Berlin; Stele Trail, Ludlow 38, New
-                            York; Private Matters, Maxwell Graham / Essex Street, New York; and TITLE STACK SINK
-                            RELEASE, Kunsthalle Fribourg, Fribourg.
+                            Whitney Independent Study Program in 2011, received his MFA from the School of the Art
+                            Institute of Chicago in 2007, and a certificate from the Pennsylvania Academy of the Fine
+                            Arts in 2004. Recent solo exhibitions include Kangaroo Stele, Éclair, Berlin; Stele Trail,
+                            Ludlow 38, New York; Private Matters, Maxwell Graham / Essex Street, New York; and TITLE
+                            STACK SINK RELEASE, Kunsthalle Fribourg, Fribourg.
                         </p>
                     </div>
                 </div>
