@@ -1,6 +1,17 @@
 <template>
     <div class="text-justify mb-10">
         <h2 class="text-xl font-bold mb-3">Press</h2>
+        <div class="mb-6">
+            <h3 class="text-lg italic">Contemporary Art Daily</h3>
+            <a
+                href="https://www.contemporaryartdaily.com/project/jason-loebs-at-twelve-ten-gallery-chicago-44175"
+                target="_blank"
+                class="!no-underline"
+            >
+                <h3 class="text-lg font-medium text-sky-900">Jason Loebs at Twelve Ten Gallery</h3>
+            </a>
+            <h4 class="italic">December 24th, 2024</h4>
+        </div>
         <div class="border-t py-3">
             <div class="mb-6">
                 <h3 class="text-lg italic">Newcity Art</h3>
