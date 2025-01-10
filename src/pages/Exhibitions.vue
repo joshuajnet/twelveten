@@ -7,9 +7,9 @@ import { ref } from 'vue';
         <div class="grid md:grid-cols-4 grid-cols-2 gap-6 mb-6">
             <div v-if="true === false">
                 <h3 class="font-roboto text-xl mb-3">Current</h3>
-                <router-link :to="{ name: 'coldbomb' }">
+                <router-link :to="{ name: 'ryleans' }">
                     <img
-                        v-lazy="{ src: '/images/coldbomb/loebs-nomark2.jpg' }"
+                        v-lazy="{ src: '/images/ryleans/ryleans-flier-nomark.jpg' }"
                         class="lazy-image max-w-full w-auto h-auto mx-auto"
                         style="max-height: calc(100vh - 200px)"
                     />
@@ -17,15 +17,13 @@ import { ref } from 'vue';
             </div>
             <div>
                 <h3 class="font-roboto text-xl mb-3">Upcoming</h3>
-
-                <div>
-                    <div class="text-xl">The Ryleans</div>
-                    <div class="text-sm mb-3">February 15th &mdash; March 29th 2025</div>
-                    <div class="mb-1">Noelle Africh</div>
-                    <div class="mb-1 leading-4">Ellis &amp; Parker von Sternberg</div>
-                    <div class="mb-1">Jonathan Worcester</div>
-                    Ziyi Zhang
-                </div>
+                <router-link :to="{ name: 'ryleans' }">
+                    <img
+                        v-lazy="{ src: '/images/ryleans/ryleans-flier-nomark.jpg' }"
+                        class="lazy-image max-w-full w-auto h-auto mx-auto"
+                        style="max-height: calc(100vh - 200px)"
+                    />
+                </router-link>
             </div>
         </div>
         <h3 class="font-roboto text-xl mb-3">Past</h3>

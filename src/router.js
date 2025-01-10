@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import Home from './pages/Home.vue';
 import About from './pages/About.vue';
 import Exhibitions from './pages/Exhibitions.vue';
+import TheRyleans from './pages/exhibitions/TheRyleans.vue';
 import ColdBomb from './pages/exhibitions/ColdBomb.vue';
 import Speedrunners from './pages/exhibitions/Speedrunners.vue';
 import StarEeyed from './pages/exhibitions/StarEeyed.vue';
@@ -83,6 +84,11 @@ export default createRouter({
             path: '/exhibitions/coldbomb',
             name: 'coldbomb',
             component: ColdBomb,
+        },
+        {
+            path: '/exhibitions/ryleans',
+            name: 'ryleans',
+            component: TheRyleans,
         },
         {
             path: '/news',
