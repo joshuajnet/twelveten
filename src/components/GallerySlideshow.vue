@@ -218,7 +218,7 @@ export default {
                         <div v-if="slide.media">{{ slide.media }}</div>
                         <div v-if="slide.dimensions">{{ slide.dimensions }}</div>
                         <div v-if="slide.credit">{{ slide.credit }}</div>
-                        <div v-if="slide.available" class="relative z-20">
+                        <div v-if="slide.available && worksAvailable" class="relative z-20">
                             <a
                                 :href="createMailTo(slide)"
                                 class="py-1 px-3 inline-block cursor-pointer hover:text-sky-600 !no-underline border hover:shadow mt-3 font-roboto font-light"
