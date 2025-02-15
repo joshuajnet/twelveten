@@ -5,7 +5,7 @@ import { ref } from 'vue';
 <template>
     <div class="container mx-auto py-4 px-3 flex flex-col grow">
         <div class="grid md:grid-cols-4 grid-cols-2 gap-6 mb-6">
-            <div v-if="true === false">
+            <div>
                 <h3 class="font-roboto text-xl mb-3">Current</h3>
                 <router-link :to="{ name: 'ryleans' }">
                     <img
@@ -15,7 +15,7 @@ import { ref } from 'vue';
                     />
                 </router-link>
             </div>
-            <div>
+            <div v-if="true === false">
                 <h3 class="font-roboto text-xl mb-3">Upcoming</h3>
                 <router-link :to="{ name: 'ryleans' }">
                     <img
