@@ -1,7 +1,7 @@
 <script>
 import { ref } from 'vue';
 import GallerySlideshow from '../../components/GallerySlideshow.vue';
-import slideshowData from '../../json/coldbomb-slideshow.json';
+import slideshowData from '../../json/ryleans-slideshow.json';
 
 export default {
     components: {
@@ -17,7 +17,7 @@ export default {
 
 <template>
     <div class="flex flex-col grow">
-        <div v-if="true === false">
+        <div>
             <GallerySlideshow :slides="slides" :worksAvailable="true" />
         </div>
         <div class="container mx-auto grid md:grid-cols-2 gap-6 px-3">
@@ -43,7 +43,7 @@ export default {
                 <div class="text-justify max-w-screen-sm mx-auto">
                     <p class="mb-3">
                         Twelve Ten Gallery is pleased to present “The Ryleans” featuring work by Noelle Africh, Ellis
-                        &amp; Parker von Sternberg, Jonathan Worcester and Ziyi Zhang .
+                        &amp; Parker von Sternberg, Jonathan Worcester and Ziyi Zhang.
                     </p>
                     <p class="mb-3">
                         The American analytic philosopher Wilfrid Sellars proposed a mythical community of people who

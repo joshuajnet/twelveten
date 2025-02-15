@@ -20,19 +20,19 @@ export default {
             <div class="absolute top-[-4px] right-[-4px] left-[-4px] bottom-[-4px] bg-sky-900">
                 <!--<div class="absolute w-full h-full overlay" />-->
                 <img
-                    src="/images/ryleans/ryleans-splash.svg"
+                    src="/images/ryleans/TWELVETEN_2_11-02-min.jpg"
                     :class="{ 'blur-bg': menuActive }"
                     class="md:block hidden home-bg object-cover w-full h-full"
                 />
                 <img
-                    src="/images/ryleans/ryleans-splash-mobile.svg"
+                    src="/images/ryleans/TWELVETEN_2_11-24-min.jpg"
                     :class="{ 'blur-bg': menuActive }"
                     class="md:hidden home-bg object-cover w-full h-full"
                 />
             </div>
             <div class="relative z-10 container mx-auto items-center text-sm pt-8 px-3 flex flex-col grow">
                 <div
-                    class="mt-auto flex w-full md:flex-row flex-col md:gap-6 md:justify-between text-white !hover:text-white"
+                    class="mt-auto flex w-full md:flex-row flex-col md:gap-6 md:justify-between text-sky-900 !hover:text-sky-900"
                 >
                     <div class="text-lg">
                         <div class="text-base">
