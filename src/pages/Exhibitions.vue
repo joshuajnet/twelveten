@@ -15,14 +15,12 @@ import { ref } from 'vue';
                     />
                 </router-link>
             </div>
-            <div v-if="true === false">
+            <div>
                 <h3 class="font-roboto text-xl mb-3">Upcoming</h3>
-                <router-link :to="{ name: 'ryleans' }">
-                    <img
-                        v-lazy="{ src: '/images/ryleans/ryleans-flier-nomark.jpg' }"
-                        class="lazy-image max-w-full w-auto h-auto mx-auto"
-                        style="max-height: calc(100vh - 200px)"
-                    />
+                <router-link :to="{ name: 'as-above-so-below' }" class="no-underline text-2xl">
+                    Trey Rozell<br />
+                    As above, so below<br />
+                    <Span class="text-base">April 12th &mdash; May 24th, 2025</Span>
                 </router-link>
             </div>
         </div>
