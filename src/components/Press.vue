@@ -3,6 +3,16 @@
         <h2 class="text-xl font-bold mb-3">Press</h2>
         <div class="border-t py-3">
             <div class="mb-6">
+                <h3 class="text-lg italic">New Art Examiner</h3>
+                <a href="https://www.thenewartexaminer.org/2025/03/05/6388/" target="_blank" class="!no-underline">
+                    <h3 class="text-lg font-medium text-sky-900">
+                        “The Ryleans”: An Art Exhibition or a Course in Twentieth-Century Philosophy?
+                    </h3>
+                </a>
+                <h4 class="italic">March 5th, 2025</h4>
+                <p>by Michel Segard</p>
+            </div>
+            <div class="mb-6">
                 <h3 class="text-lg italic">Contemporary Art Daily</h3>
                 <a
                     href="https://www.contemporaryartdaily.com/project/jason-loebs-at-twelve-ten-gallery-chicago-44175"
