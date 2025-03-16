@@ -83,9 +83,9 @@ export default {
                         the artist’s use of the patterned canvases that slowly proliferate the main wall. If the
                         monochromatic works call attention to the context outside of the frame, the works with Rozell’s
                         irregular shapes begin to develop a more traditional pictorial field. Recalling cartoon clouds
-                        or flowers, Rozell troubles not only the iconographic ambiguities, but also their cultural
-                        lexicon: are these the expressive marks of authorship in the romantic-auratic sense, or
-                        imitations of the mechanical processes of reproduction that mark pop art?
+                        or flowers, Rozell’s use of the forms troubles not only iconographic ambiguities, but also the
+                        cultural lexicon: are these the expressive marks of authorship in the romantic-auratic sense, or
+                        imitations of the mechanical processes of reproduction that signal pop art?
                     </p>
                     <p class="mb-3">
                         The exhibition title, “As above, so below” derives from an eighth-century hermetic alchemical
