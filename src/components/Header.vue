@@ -44,7 +44,7 @@ export default {
 
             <div
                 class="md:flex flex md:gap-6 gap-3 md:flex-row flex-col md:mt-0 mt-3 md:text-xl md:text-sky-900 transition-all"
-                :class="[{ hidden: !menuActive }]"
+                :class="[{ hidden: !menuActive }, { 'text-white': menuActive && $route.name == 'home' }]"
             >
                 <router-link
                     class="hover:text-sky-600"
