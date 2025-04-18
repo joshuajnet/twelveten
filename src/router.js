@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import Home from './pages/Home.vue';
 import About from './pages/About.vue';
 import Exhibitions from './pages/Exhibitions.vue';
+import TerrorElement from './pages/exhibitions/TerrorElement.vue';
 import AsAboveSoBelow from './pages/exhibitions/AsAboveSoBelow.vue';
 import TheRyleans from './pages/exhibitions/TheRyleans.vue';
 import ColdBomb from './pages/exhibitions/ColdBomb.vue';
@@ -43,6 +44,11 @@ export default createRouter({
             path: '/exhibitions/rozell-as-above-so-below',
             name: 'as-above-so-below',
             component: AsAboveSoBelow,
+        },
+        {
+            path: '/exhibitions/terror-element',
+            name: 'terror-element',
+            component: TerrorElement,
         },
         {
             path: '/exhibitions/speedrunners',

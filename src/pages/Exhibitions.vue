@@ -5,19 +5,8 @@ import { ref } from 'vue';
 <template>
     <div class="container mx-auto py-4 px-3 flex flex-col grow">
         <div class="grid md:grid-cols-4 grid-cols-2 gap-6 mb-6">
-            <div v-if="true === false">
-                <h3 class="font-roboto text-xl mb-3">Current</h3>
-                <router-link :to="{ name: 'ryleans' }">
-                    <img
-                        v-lazy="{ src: '/images/ryleans/ryleans-flier-nomark.jpg' }"
-                        class="lazy-image max-w-full w-auto h-auto mx-auto"
-                        style="max-height: calc(100vh - 200px)"
-                        alt="The Ryleans. February 15th — March 29th, 2025"
-                    />
-                </router-link>
-            </div>
             <div>
-                <h3 class="font-roboto text-xl mb-3">Upcoming</h3>
+                <h3 class="font-roboto text-xl mb-3">Current</h3>
                 <router-link :to="{ name: 'as-above-so-below' }" class="no-underline text-2xl">
                     <img
                         v-lazy="{ src: '/images/as-above-so-below/trey-flier-nomark.jpg' }"
@@ -25,6 +14,17 @@ import { ref } from 'vue';
                         style="max-height: calc(100vh - 200px)"
                         alt="Trey Rozell: As above, so below. April 12th — May 24th, 2025"
                     />
+                </router-link>
+            </div>
+            <div>
+                <h3 class="font-roboto text-xl mb-3">Upcoming</h3>
+                <router-link :to="{ name: 'terror-element' }" class="no-underline text-2xl">
+                    <div class="text-lg">
+                        Anna Engelhardt<br />
+                        Mark Cinkevich<br />
+                        <span class="text-base italic">Terror Element</span><br />
+                        <span class="text-sm">June 7th &mdash; July 19th, 2025</span>
+                    </div>
                 </router-link>
             </div>
         </div>

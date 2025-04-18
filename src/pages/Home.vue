@@ -20,12 +20,12 @@ export default {
             <div class="absolute top-[-4px] right-[-4px] left-[-4px] bottom-[-4px] bg-sky-900">
                 <!--<div class="absolute w-full h-full overlay" />-->
                 <img
-                    src="/images/as-above-so-below/trey-large-bg.jpg"
+                    src="/images/as-above-so-below/TR_WIDE_IT1-6-min.jpg"
                     :class="{ 'blur-bg': menuActive }"
                     class="md:block hidden home-bg object-cover w-full h-full"
                 />
                 <img
-                    src="/images/as-above-so-below/trey-bg-story.png"
+                    src="/images/as-above-so-below/TR_DUAL-2A-min.jpg"
                     :class="{ 'blur-bg': menuActive }"
                     class="md:hidden home-bg object-cover w-full h-full"
                 />
