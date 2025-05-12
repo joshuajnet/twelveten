@@ -19,12 +19,12 @@ import { ref } from 'vue';
             <div>
                 <h3 class="font-roboto text-xl mb-3">Upcoming</h3>
                 <router-link :to="{ name: 'terror-element' }" class="no-underline text-2xl">
-                    <div class="text-lg">
-                        Anna Engelhardt<br />
-                        Mark Cinkevich<br />
-                        <span class="text-base italic">Terror Element</span><br />
-                        <span class="text-sm">June 7th &mdash; July 19th, 2025</span>
-                    </div>
+                    <img
+                        v-lazy="{ src: '/images/terror-element/terror-element-nomark.jpg' }"
+                        class="lazy-image max-w-full w-auto h-auto mx-auto"
+                        style="max-height: calc(100vh - 200px)"
+                        alt="Anna Engelhardt, Mark Cinkevich: Terror Element. June 7th - July 19th, 2025"
+                    />
                 </router-link>
             </div>
         </div>
