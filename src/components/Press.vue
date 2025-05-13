@@ -3,6 +3,20 @@
         <h2 class="text-xl font-bold mb-3">Press</h2>
         <div class="border-t py-3">
             <div class="mb-6">
+                <h3 class="text-lg italic">Newcity Art</h3>
+                <a
+                    href="https://art.newcity.com/2025/05/12/a-game-not-for-the-feign-of-art-a-review-of-trey-rozells-as-above-so-below-at-twelve-ten/"
+                    target="_blank"
+                    class="!no-underline"
+                >
+                    <h3 class="text-lg font-medium text-sky-900">
+                        A Game Not for the Feign of Art: A Review of Trey Rozell’s “As above, so below” at Twelve Ten
+                    </h3>
+                </a>
+                <h4 class="italic">May 12th, 2025</h4>
+                <p>by Curtis Anthony Bozif</p>
+            </div>
+            <div class="mb-6">
                 <h3 class="text-lg italic">New Art Examiner</h3>
                 <a href="https://www.thenewartexaminer.org/2025/03/05/6388/" target="_blank" class="!no-underline">
                     <h3 class="text-lg font-medium text-sky-900">
