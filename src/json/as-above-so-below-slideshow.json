@@ -1,9 +1,75 @@
 [
     {
-        "image": "/images/as-above-so-below/TR_WIDE_IT4-2-min.jpg",
+        "image": "/images/as-above-so-below/TR_WIDE_IT5-2-min.jpg",
         "author": "Trey Rozell",
         "title": "Installation view",
-        "date": "May 3rd, 2025",
+        "date": "May 10th, 2025",
+        "dimensions": null,
+        "media": null,
+        "credit": "Photo: Mikey Mosher",
+        "hidden": false,
+        "available": false
+    },
+    {
+        "image": "/images/as-above-so-below/TR_WIDE_IT5-1-min.jpg",
+        "author": "Trey Rozell",
+        "title": "Installation view",
+        "date": "May 10th, 2025",
+        "dimensions": null,
+        "media": null,
+        "credit": "Photo: Mikey Mosher",
+        "hidden": false,
+        "available": false
+    },
+    {
+        "image": "/images/as-above-so-below/TR_FULLWALL_IT-5-min.jpg",
+        "author": "Trey Rozell",
+        "title": "Installation view",
+        "date": "May 10th, 2025",
+        "dimensions": null,
+        "media": null,
+        "credit": "Photo: Mikey Mosher",
+        "hidden": false,
+        "available": false
+    },
+    {
+        "image": "/images/as-above-so-below/TR_WIDE_IT5-3-min.jpg",
+        "author": "Trey Rozell",
+        "title": "Installation view",
+        "date": "May 10th, 2025",
+        "dimensions": null,
+        "media": null,
+        "credit": "Photo: Mikey Mosher",
+        "hidden": false,
+        "available": false
+    },
+    {
+        "image": "/images/as-above-so-below/TR_WIDE_IT5-6-edit-min.jpg",
+        "author": "Trey Rozell",
+        "title": "Installation view",
+        "date": "May 10th, 2025",
+        "dimensions": null,
+        "media": null,
+        "credit": "Photo: Mikey Mosher",
+        "hidden": false,
+        "available": false
+    },
+    {
+        "image": "/images/as-above-so-below/TR_WIDE_IT5-5-edit-min.jpg",
+        "author": "Trey Rozell",
+        "title": "Installation view",
+        "date": "May 10th, 2025",
+        "dimensions": null,
+        "media": null,
+        "credit": "Photo: Mikey Mosher",
+        "hidden": false,
+        "available": false
+    },
+    {
+        "image": "/images/as-above-so-below/TR_WIDE_IT5-7-min.jpg",
+        "author": "Trey Rozell",
+        "title": "Installation view",
+        "date": "May 10th, 2025",
         "dimensions": null,
         "media": null,
         "credit": "Photo: Mikey Mosher",
@@ -12,17 +78,6 @@
     },
     {
         "image": "/images/as-above-so-below/TR_WIDE_IT4-1-min.jpg",
-        "author": "Trey Rozell",
-        "title": "Installation view",
-        "date": "May 3rd, 2025",
-        "dimensions": null,
-        "media": null,
-        "credit": "Photo: Mikey Mosher",
-        "hidden": false,
-        "available": false
-    },
-    {
-        "image": "/images/as-above-so-below/TR_FULLWALL_IT-4-min.jpg",
         "author": "Trey Rozell",
         "title": "Installation view",
         "date": "May 3rd, 2025",
@@ -44,29 +99,7 @@
         "available": false
     },
     {
-        "image": "/images/as-above-so-below/TR_WIDE_IT4-6-edit-min.jpg",
-        "author": "Trey Rozell",
-        "title": "Installation view",
-        "date": "May 3rd, 2025",
-        "dimensions": null,
-        "media": null,
-        "credit": "Photo: Mikey Mosher",
-        "hidden": false,
-        "available": false
-    },
-    {
         "image": "/images/as-above-so-below/TR_WIDE_IT4-5-edit-min.jpg",
-        "author": "Trey Rozell",
-        "title": "Installation view",
-        "date": "May 3rd, 2025",
-        "dimensions": null,
-        "media": null,
-        "credit": "Photo: Mikey Mosher",
-        "hidden": false,
-        "available": false
-    },
-    {
-        "image": "/images/as-above-so-below/TR_WIDE_IT4-7-min.jpg",
         "author": "Trey Rozell",
         "title": "Installation view",
         "date": "May 3rd, 2025",
@@ -89,17 +122,6 @@
     },
     {
         "image": "/images/as-above-so-below/TR_WIDE_IT3-2-min.jpg",
-        "author": "Trey Rozell",
-        "title": "Installation view",
-        "date": "April 26th, 2025",
-        "dimensions": null,
-        "media": null,
-        "credit": "Photo: Mikey Mosher",
-        "hidden": false,
-        "available": false
-    },
-    {
-        "image": "/images/as-above-so-below/TR_WIDE_IT3-1-min.jpg",
         "author": "Trey Rozell",
         "title": "Installation view",
         "date": "April 26th, 2025",
@@ -143,65 +165,10 @@
         "available": false
     },
     {
-        "image": "/images/as-above-so-below/TR_WIDE_IT3-5-edit-min.jpg",
-        "author": "Trey Rozell",
-        "title": "Installation view",
-        "date": "April 26th, 2025",
-        "dimensions": null,
-        "media": null,
-        "credit": "Photo: Mikey Mosher",
-        "hidden": false,
-        "available": false
-    },
-    {
-        "image": "/images/as-above-so-below/TR_WIDE_IT3-7-min.jpg",
-        "author": "Trey Rozell",
-        "title": "Installation view",
-        "date": "April 26th, 2025",
-        "dimensions": null,
-        "media": null,
-        "credit": "Photo: Mikey Mosher",
-        "hidden": false,
-        "available": false
-    },
-    {
-        "image": "/images/as-above-so-below/TR_WIDE_IT3-9-min.jpg",
-        "author": "Trey Rozell",
-        "title": "Installation view",
-        "date": "April 26th, 2025",
-        "dimensions": null,
-        "media": null,
-        "credit": "Photo: Mikey Mosher",
-        "hidden": false,
-        "available": false
-    },
-    {
         "image": "/images/as-above-so-below/TR_WIDE_IT2-2-min.jpg",
         "author": "Trey Rozell",
         "title": "Installation view",
         "date": "April 19th, 2025",
-        "dimensions": null,
-        "media": null,
-        "credit": "Photo: Mikey Mosher",
-        "hidden": false,
-        "available": false
-    },
-    {
-        "image": "/images/as-above-so-below/TR_WIDE_IT2-1-min.jpg",
-        "author": "Trey Rozell",
-        "title": "Installation view",
-        "date": "April 19th, 2025",
-        "dimensions": null,
-        "media": null,
-        "credit": "Photo: Mikey Mosher",
-        "hidden": false,
-        "available": false
-    },
-    {
-        "image": "/images/as-above-so-below/TR_FULLWALL_IT-2-min.jpg",
-        "author": "Trey Rozell",
-        "title": "Installation view",
-        "date": "April 12th, 2025",
         "dimensions": null,
         "media": null,
         "credit": "Photo: Mikey Mosher",
@@ -232,28 +199,6 @@
     },
     {
         "image": "/images/as-above-so-below/TR_WIDE_IT2-5-edit-min.jpg",
-        "author": "Trey Rozell",
-        "title": "Installation view",
-        "date": "April 19th, 2025",
-        "dimensions": null,
-        "media": null,
-        "credit": "Photo: Mikey Mosher",
-        "hidden": false,
-        "available": false
-    },
-    {
-        "image": "/images/as-above-so-below/TR_WIDE_IT2-7-min.jpg",
-        "author": "Trey Rozell",
-        "title": "Installation view",
-        "date": "April 19th, 2025",
-        "dimensions": null,
-        "media": null,
-        "credit": "Photo: Mikey Mosher",
-        "hidden": false,
-        "available": false
-    },
-    {
-        "image": "/images/as-above-so-below/TR_WIDE_IT2-9-min.jpg",
         "author": "Trey Rozell",
         "title": "Installation view",
         "date": "April 19th, 2025",

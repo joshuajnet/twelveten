@@ -20,7 +20,7 @@ export default {
             <div class="absolute top-[-4px] right-[-4px] left-[-4px] bottom-[-4px] bg-sky-900">
                 <!--<div class="absolute w-full h-full overlay" />-->
                 <img
-                    src="/images/as-above-so-below/TR_WIDE_IT4-6-edit-min.jpg"
+                    src="/images/as-above-so-below/TR_WIDE_IT5-3-min.jpg"
                     :class="{ 'blur-bg': menuActive }"
                     class="md:block hidden home-bg object-cover w-full h-full"
                 />
