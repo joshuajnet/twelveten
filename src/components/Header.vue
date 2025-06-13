@@ -27,24 +27,28 @@ export default {
             <div class="justify-between flex items-center">
                 <router-link :to="{ name: 'home' }" @click="closeMenu()">
                     <h1
-                        class="text-4xl mb-0 font-germania-one text-sky-900"
+                        class="text-4xl mb-0 font-germania-one text-black"
                         :class="[{ 'text-white': menuActive && $route.name == 'home' }]"
                     >
                         Twelve Ten
                     </h1>
                 </router-link>
 
-                <div class="md:hidden block text-xl" @click="toggleMenu()">
+                <div
+                    class="md:hidden block text-xl"
+                    @click="toggleMenu()"
+                    :class="{ 'text-white': $route.name == 'home' }"
+                >
                     <span v-if="!menuActive"><i class="las la-bars"></i></span>
                     <span v-if="menuActive"
-                        ><i class="las la-times" :class="{ 'text-white': menuActive && $route.name == 'home' }"></i
+                        ><i class="las la-times" :class="{ 'text-white': $route.name == 'home' }"></i
                     ></span>
                 </div>
             </div>
 
             <div
                 class="md:flex flex md:gap-6 gap-3 md:flex-row flex-col md:mt-0 mt-3 md:text-xl md:text-sky-900 transition-all"
-                :class="[{ hidden: !menuActive }, { 'text-white': menuActive && $route.name == 'home' }]"
+                :class="[{ hidden: !menuActive }, { '!text-white': $route.name == 'home' }]"
             >
                 <router-link
                     class="hover:text-sky-600"
