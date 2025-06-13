@@ -27,8 +27,8 @@ export default {
             <div class="justify-between flex items-center">
                 <router-link :to="{ name: 'home' }" @click="closeMenu()">
                     <h1
-                        class="text-4xl mb-0 font-germania-one text-black"
-                        :class="[{ 'text-white': menuActive && $route.name == 'home' }]"
+                        class="text-4xl mb-0 font-germania-one text-sky-900"
+                        :class="[{ '!text-black': $route.name == 'home' }]"
                     >
                         Twelve Ten
                     </h1>

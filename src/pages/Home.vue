@@ -40,9 +40,9 @@ export default {
                         <span class="text-xl">TERROR ELEMENT</span>
                     </div>
                     <div class="md:block hidden md:text-right md:mt-auto">
-                        June 7th &mdash; April 19th, 2025<br />
+                        June 7th &mdash; July 19th, 2025<br />
                         Opening &nbsp;&nbsp; June 7th, 6PM &mdash; 9PM<br />
-                        Hours &nbsp;&nbsp; Wed - Sat, 1PM &mdash; 6PM<br />
+                        Hours &nbsp;&nbsp; Wed &mdash; Sat, 1PM &mdash; 6PM<br />
                     </div>
                 </div>
                 <Footer class="relative z-10 !flex-grow-0 !flex-shrink" />
