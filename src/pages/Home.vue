@@ -20,19 +20,19 @@ export default {
             <div class="absolute top-[-4px] right-[-4px] left-[-4px] bottom-[-4px] bg-sky-900">
                 <!--<div class="absolute w-full h-full overlay" />-->
                 <img
-                    src="/images/terror-element/terror-element-still.png"
+                    src="/images/terror-element/TWELVETEN_AE-MC-07-min.jpg"
                     :class="{ 'blur-bg': menuActive }"
                     class="md:block hidden home-bg object-cover w-full h-full"
                 />
                 <img
-                    src="/images/terror-element/terror-element-still.png"
+                    src="/images/terror-element/TWELVETEN_AE-MC-41-min.jpg"
                     :class="{ 'blur-bg': menuActive }"
                     class="md:hidden home-bg object-cover w-full h-full"
                 />
             </div>
             <div class="relative z-10 container mx-auto items-center text-sm py-8 px-3 flex flex-col grow">
                 <div
-                    class="mt-auto flex w-full md:flex-row flex-col md:gap-6 md:justify-between text-white !hover:text-white"
+                    class="mt-auto flex w-full md:flex-row flex-col md:gap-6 md:justify-between text-black !hover:text-black"
                 >
                     <div class="text-lg !leading-6">
                         Anna Engelhardt<br />

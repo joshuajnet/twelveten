@@ -1,7 +1,7 @@
 <script>
 import { ref } from 'vue';
 import GallerySlideshow from '../../components/GallerySlideshow.vue';
-import slideshowData from '../../json/as-above-so-below-slideshow.json';
+import slideshowData from '../../json/terror-element-slideshow.json';
 
 export default {
     components: {
@@ -17,7 +17,7 @@ export default {
 
 <template>
     <div class="flex flex-col grow">
-        <div v-if="true === false">
+        <div>
             <GallerySlideshow :slides="slides" :worksAvailable="true" />
         </div>
         <div class="container mx-auto grid md:grid-cols-2 gap-6 px-3">
