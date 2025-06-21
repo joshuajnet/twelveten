@@ -116,7 +116,7 @@
                 <a href="https://artguide.artforum.com/artguide/twelve-ten-gallery-23694/the-veil-229369" target="_blank" class="!no-underline">
                     <h3 class="text-lg font-medium text-sky-900">"Must See" The Veil at Twelve Ten Gallery</h3>
                 </a>
-                <h4 class="italic">May the, 2024</h4>
+                <h4 class="italic">May 9th, 2024</h4>
             </div>
             <div class="mb-6">
                 <h3 class="text-lg italic">Art Viewer</h3>
