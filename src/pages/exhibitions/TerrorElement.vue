@@ -18,7 +18,7 @@ export default {
 <template>
     <div class="flex flex-col grow">
         <div>
-            <GallerySlideshow :slides="slides" :worksAvailable="true" />
+            <GallerySlideshow :slides="slides" :worksAvailable="false" />
         </div>
         <div class="container mx-auto grid md:grid-cols-2 gap-6 px-3">
             <img src="/images/terror-element/terror-element-nomark.jpg" class="max-w-full w-auto h-auto mx-auto" />
