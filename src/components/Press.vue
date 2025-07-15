@@ -5,6 +5,35 @@
             <div class="mb-6">
                 <h3 class="text-lg italic">Newcity Art</h3>
                 <a
+                    href="https://art.newcity.com/2025/07/15/simulating-reality-a-review-of-terror-element-at-twelve-ten/"
+                    target="_blank"
+                    class="!no-underline"
+                >
+                    <h3 class="text-lg font-medium text-sky-900">
+                        Simulating Reality: A Review of “Terror Element” at Twelve Ten
+                    </h3>
+                </a>
+                <h4 class="italic">July 15th, 2025</h4>
+                <p>by Teddy Sandler</p>
+            </div>
+            <div class="mb-6">
+                <h3 class="text-lg italic">Portable Gray</h3>
+                <a
+                    href="https://www.journals.uchicago.edu/doi/full/10.1086/737001"
+                    target="_blank"
+                    class="!no-underline"
+                >
+                    <h3 class="text-lg font-medium text-sky-900">
+                        Map of the Bomb (2022) by Amanda Beech Film premiere at the Music Box Theatre 3733 N Southport
+                        Ave, Chicago, IL February 6, 2024
+                    </h3>
+                </a>
+                <h4 class="italic">Volume 8, Number 1 Spring 2025</h4>
+                <p>by Anna Searle Jones</p>
+            </div>
+            <div class="mb-6">
+                <h3 class="text-lg italic">Newcity Art</h3>
+                <a
                     href="https://art.newcity.com/2025/05/12/a-game-not-for-the-feign-of-art-a-review-of-trey-rozells-as-above-so-below-at-twelve-ten/"
                     target="_blank"
                     class="!no-underline"
@@ -113,7 +142,11 @@
             </div>
             <div class="mb-6">
                 <h3 class="text-lg italic">Art Forum</h3>
-                <a href="https://artguide.artforum.com/artguide/twelve-ten-gallery-23694/the-veil-229369" target="_blank" class="!no-underline">
+                <a
+                    href="https://artguide.artforum.com/artguide/twelve-ten-gallery-23694/the-veil-229369"
+                    target="_blank"
+                    class="!no-underline"
+                >
                     <h3 class="text-lg font-medium text-sky-900">"Must See" The Veil at Twelve Ten Gallery</h3>
                 </a>
                 <h4 class="italic">May 9th, 2024</h4>
