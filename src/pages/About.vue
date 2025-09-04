@@ -12,7 +12,7 @@ import MailSignUp from '../components/MailSignUp.vue';
                     <iframe
                         class="w-full h-full"
                         frameborder="0"
-                        src="https://www.google.com/maps/embed/v1/place?q=1210+West+Thorndale+Avenue,+Chicago,+IL,+USA&key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8"
+                        src="https://www.google.com/maps/embed/v1/place?q=1104+West+Thorndale+Avenue,+Chicago,+IL,+USA&key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8"
                     ></iframe>
                 </div>
             </div>
@@ -20,14 +20,15 @@ import MailSignUp from '../components/MailSignUp.vue';
                 <div class="mb-4 text-2xl">Twelve Ten is a contemporary art gallery located in Chicago.</div>
                 <h3 class="text-xl font-medium text-sky-900">Twelve Ten Gallery</h3>
                 <div class="mb-4">
-                    1210 West Thorndale Ave., <br />
+                    1104 West Thorndale Ave., <br />
                     Chicago IL, 60660<br />
                     <em
-                        >Just West of the Red Line Thorndale train stop in Edgewater. Accessible as a ground floor
+                        >Just East of the Red Line Thorndale train stop in Edgewater. Accessible as a ground floor
                         storefront</em
                     ><br /><br />
 
-                    Hours: Wednesday &mdash; Saturday, 1:00 &mdash; 6:00 PM, or by appointment.<br />
+                    Hours: Temporarily closed for relocation. Re-opening November 2025.<br />
+                    <!--Hours: Wednesday &mdash; Saturday, 1:00 &mdash; 6:00 PM, or by appointment.<br />-->
                 </div>
                 <div class="pb-4 mb-6 border-b">
                     <h3 class="text-xl font-medium text-sky-900">Joshua Johnson</h3>
