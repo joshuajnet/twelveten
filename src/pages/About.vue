@@ -20,7 +20,7 @@ import MailSignUp from '../components/MailSignUp.vue';
                 <div class="mb-4 text-2xl">Twelve Ten is a contemporary art gallery located in Chicago.</div>
                 <h3 class="text-xl font-medium text-sky-900">Twelve Ten Gallery</h3>
                 <div class="mb-4">
-                    1104 West Thorndale Ave., <br />
+                    1104 West Thorndale Ave. <br />
                     Chicago IL, 60660<br />
                     <em
                         >Just East of the Red Line Thorndale train stop in Edgewater. Accessible as a ground floor
