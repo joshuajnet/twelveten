@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import Home from './pages/Home.vue';
 import About from './pages/About.vue';
 import Exhibitions from './pages/Exhibitions.vue';
+import DarlingManeuver from './pages/exhibitions/DarlingManeuver.vue';
 import TerrorElement from './pages/exhibitions/TerrorElement.vue';
 import AsAboveSoBelow from './pages/exhibitions/AsAboveSoBelow.vue';
 import TheRyleans from './pages/exhibitions/TheRyleans.vue';
@@ -14,6 +15,8 @@ import DelphicFuture from './pages/exhibitions/DelphicFuture.vue';
 import TheVeil from './pages/exhibitions/TheVeil.vue';
 import BrainWorms from './pages/exhibitions/BrainWorms.vue';
 import BeechInterview from './pages/documents/BeechInterview.vue';
+import Fairs from './pages/Fairs.vue';
+import NadaMiami2025 from './pages/fairs/NadaMiami2025.vue';
 import News from './pages/News.vue';
 import Error404 from './pages/Error404.vue';
 
@@ -39,6 +42,11 @@ export default createRouter({
             path: '/exhibitions',
             name: 'exhibitions',
             component: Exhibitions,
+        },
+        {
+            path: '/exhibitions/leitch-darling-maneuver',
+            name: 'darling-maneuver',
+            component: DarlingManeuver,
         },
         {
             path: '/exhibitions/rozell-as-above-so-below',
@@ -101,6 +109,16 @@ export default createRouter({
             path: '/exhibitions/ryleans',
             name: 'ryleans',
             component: TheRyleans,
+        },
+        {
+            path: '/fairs',
+            name: 'fairs',
+            component: Fairs,
+        },
+        {
+            path: '/fairs/nada-miami-2025',
+            name: 'nada-miami-2025',
+            component: NadaMiami2025,
         },
         {
             path: '/news',

@@ -15,9 +15,14 @@ export default {
 </script>
 
 <template>
-    <router-link :to="{ name: 'about' }" class="flex flex-grow !no-underline">
+    <router-link :to="{ name: 'nada-miami-2025' }" class="flex flex-grow !no-underline">
         <div class="fixed top-0 left-0 w-full h-full flex flex-grow bg-cover bg-center">
             <div class="absolute top-[-4px] right-[-4px] left-[-4px] bottom-[-4px] bg-black">
+                <div class="flex w-full h-full justify-center items-center text-white hover:sky-700">
+                    Tali Halpern<br />
+                    NADA Miami<br />
+                    December 2nd &mdash; 6th, 2025
+                </div>
                 <!--<div class="absolute w-full h-full overlay" />
                 <img
                     src="/images/terror-element/TWELVETEN_AE-MC-07-min.jpg"
@@ -35,11 +40,13 @@ export default {
                     class="mt-auto flex w-full md:flex-row flex-col md:gap-6 md:justify-between text-white !hover:text-black"
                 >
                     <div class="text-3xl">
-                        <em class="text-xl">New Location</em><br />
-                        1104 Thorndale Ave<br />
-                        <span class="md:hidden">November 2025</span>
+                        <router-link :to="{ name: 'about' }" class="!no-underline !text-white">
+                            <em class="text-xl">New Location</em><br />
+                            1104 Thorndale Ave<br />
+                            <span class="md:hidden">January 2026</span>
+                        </router-link>
                     </div>
-                    <div class="md:block hidden md:text-right md:mt-auto text-3xl">November 2025</div>
+                    <div class="md:block hidden md:text-right md:mt-auto text-3xl">January 2026</div>
                 </div>
                 <Footer class="relative z-10 !flex-grow-0 !flex-shrink" />
             </div>

@@ -1,8 +1,15 @@
 [
     {
         "id": 20,
+        "path": "2-11-2025",
+        "title": "2025 Fall and Winter Updates",
+        "date": "November 2nd, 2025",
+        "html": "<p>Twelve Ten Gallery has been on an extended hiatus while we relocate to 1104 Thorndale Ave. Featuring a fresh build-out and a larger, updated exhibition space, the new location will also offer a dedicated classroom and event space as we continue our partnership with the <a href=\"https://thebrooklyninstitute.com/\" target=\"_blank\">Brooklyn Institute for Social Research</a> and expand programming. Conveniently located right next to the Thorndale Redline stop, our new location will also be accessible as a ground floor storefront, just down the way from our previous space.</p><p>Due to ongoing construction work we now expect to open beginning January 2026.</p><p>We are thrilled to inaugerate the new space with a solo exhibition featuring work by New York based artist <a href=\"/exhibitions/leitch-darling-maneuver\">Collin Leitch</a> on January 10th, 2026.</p><p>We are also excited to announce our participation in <a href=\"https://www.newartdealers.org/fairs/nada-miami-2025/introduction\" target=\"_blank\">NADA Miami 2025</a> featuring Chicago based artist <a href=\"/fairs/nada-miami-2025\">Tali Halpern</a> from December 2-6, 2025.</p><p>Finally, we are honored to have been accepted as a <a href=\"https://www.newartdealers.org/members\">NADA member</a> this year, and look forward to contributing to the vibrant community that NADA has fostered.</p>"
+    },
+    {
+        "id": 20,
         "path": "4-9-2025",
-        "title": "Moving to 1104 Thorndale.",
+        "title": "Moving to 1104 Thorndale",
         "date": "September 4th, 2025",
         "html": "<p>Twelve Ten Gallery is temporarily closed while we relocate to our new space at 1104 West Thorndale Ave. We will return November 2025 with new programming. Stay tuned!</p>"
     },

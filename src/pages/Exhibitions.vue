@@ -16,15 +16,14 @@ import { ref } from 'vue';
                     />
                 </router-link>
             </div>
-            <div v-if="true === false">
+            <div>
                 <h3 class="font-roboto text-xl mb-3">Upcoming</h3>
-                <router-link :to="{ name: 'terror-element' }" class="no-underline text-2xl">
-                    <img
-                        v-lazy="{ src: '/images/terror-element/terror-element-nomark.jpg' }"
-                        class="lazy-image max-w-full w-auto h-auto mx-auto"
-                        style="max-height: calc(100vh - 200px)"
-                        alt="Anna Engelhardt, Mark Cinkevich: Terror Element. June 7th - July 19th, 2025"
-                    />
+                <router-link :to="{ name: 'darling-maneuver' }" class="no-underline text-2xl">
+                    <div class="text-lg">
+                        Collin Leitch<br />
+                        <span class="text-base italic">The Darling Maneuver</span><br />
+                        <span class="text-sm">January 10th &mdash; February 14th, 2026</span>
+                    </div>
                 </router-link>
             </div>
         </div>

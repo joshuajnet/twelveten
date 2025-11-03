@@ -60,6 +60,14 @@ export default {
                 </router-link>
                 <router-link
                     class="hover:text-sky-600"
+                    :class="{ 'text-sky-600': $route.name == 'fairs' }"
+                    :to="{ name: 'fairs' }"
+                    @click="closeMenu()"
+                >
+                    Fairs
+                </router-link>
+                <router-link
+                    class="hover:text-sky-600"
                     :class="{ 'text-sky-600': $route.name == 'news' }"
                     :to="{ name: 'news' }"
                     @click="closeMenu()"

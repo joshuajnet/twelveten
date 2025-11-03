@@ -27,7 +27,7 @@ import MailSignUp from '../components/MailSignUp.vue';
                         storefront</em
                     ><br /><br />
 
-                    Hours: Temporarily closed for relocation. Re-opening November 2025.<br />
+                    Hours: Temporarily closed for relocation. Re-opening January 2026.<br />
                     <!--Hours: Wednesday &mdash; Saturday, 1:00 &mdash; 6:00 PM, or by appointment.<br />-->
                 </div>
                 <div class="pb-4 mb-6 border-b">
@@ -43,6 +43,10 @@ import MailSignUp from '../components/MailSignUp.vue';
                         class="no-underline flex items-center"
                         ><i class="lab la-instagram text-lg no-underline"></i> Instagram
                     </a>
+                </div>
+                <div class="pb-4 mb-6 border-b">
+                    Twelve Ten Gallery is a member of the
+                    <a href="https://www.newartdealers.org/" target="_blank">New Art Dealers Alliance</a>.
                 </div>
                 <MailSignUp class="mb-10" />
             </div>
