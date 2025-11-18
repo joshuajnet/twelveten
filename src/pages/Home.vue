@@ -18,7 +18,7 @@ export default {
     <router-link :to="{ name: 'nada-miami-2025' }" class="flex flex-grow !no-underline">
         <div class="fixed top-0 left-0 w-full h-full flex flex-grow bg-cover bg-center">
             <div class="absolute top-[-4px] right-[-4px] left-[-4px] bottom-[-4px] bg-black">
-                <div class="flex w-full h-full justify-center items-center text-white hover:sky-700">
+                <div class="flex w-full h-full justify-center items-center text-white hover:sky-700 text-xl">
                     Tali Halpern<br />
                     NADA Miami<br />
                     December 2nd &mdash; 6th, 2025

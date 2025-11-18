@@ -24,9 +24,9 @@ export default {
             <div id="press-release">
                 <div class="grid md:grid-cols-2 grid-cols-1 gap-3 mb-6 mx-auto">
                     <div class="flex justify-between">
-                        <div class="text-base">
-                            Tali Halpern<br />
-                            <span class="text-lg">NADA Miami 2025</span>
+                        <div class="text-lg">
+                            <strong>Tali Halpern</strong><br />
+                            <em>NADA Miami 2025</em>
                         </div>
                     </div>
                     <div class="md:text-right text-left">
@@ -65,14 +65,14 @@ export default {
                         computerized loom to weave tapestries sourced from their archive of texts, selfies, and
                         performances. Their work resonates with feminist and queer legacies, invoking artists like
                         Miriam Schapiro, Cindy Sherman and Tracey Emin while also drawing from drag, meme culture, and
-                        identity theory.
+                        theories of gender performativity.
                     </p>
                     <p>
                         Halpern embraces mutable roles as both saint and seducer, merging sacred imagery with the
                         self-conscious gaze of digital culture. Their work navigates the performance of microcelebrity,
                         blending pop iconography with intimate acts of self-fashioning to create a texture of soft
                         glamour and digital nostalgia. Through collage and fragmentation, they explore the unstable
-                        terrain of identity in a world that insists on clear boundaries and binary legibility.
+                        terrain of subjectification in a world that insists on clear boundaries and binary legibility.
                     </p>
                     <p class="mb-3" s>
                         Halpern’s practice threads together queer embodiment, textile history, and the aesthetics of
@@ -87,11 +87,7 @@ export default {
                             among others. Tali’s work explores the complexities of queerness, sexuality, gender and its
                             aesthetics through weaving, painting, drawing, collage, artist sketchbooks, makeup, drag and
                             installation. Their practice is informed by collage and exploring the layers of
-                            intersectionality in art, identity, and existence. They are a nonbinary Jewish artist,
-                            raised Orthodox in East Lakeview, Chicago’s predominantly gay neighborhood. They have been a
-                            part of the queer techno scene in Chicago for eight years, where they perform, document, and
-                            display elaborate makeup looks. With this documentation and through the use of self
-                            portraiture they explore drag and gender performativity.
+                            intersectionality in art, identity, and existence.
                         </p>
                     </div>
                 </div>
