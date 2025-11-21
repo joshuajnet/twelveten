@@ -86,8 +86,7 @@ export default {
                             exhibited at Twelve Ten Gallery (Chicago), BravinLee (New York), and de boer (Los Angeles)
                             among others. Tali’s work explores the complexities of queerness, sexuality, gender and its
                             aesthetics through weaving, painting, drawing, collage, artist sketchbooks, makeup, drag and
-                            installation. Their practice is informed by collage and exploring the layers of
-                            intersectionality in art, identity, and existence.
+                            installation.
                         </p>
                     </div>
                 </div>
