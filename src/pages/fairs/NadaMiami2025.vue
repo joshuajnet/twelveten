@@ -48,7 +48,7 @@ export default {
                         digital conditions of contemporary self-representation.
                     </p>
                     <img
-                        src="/images/nada-miami-2025/TALI_HALPERN_NADA-11.jpg"
+                        src="/images/nada-miami-2025/TALI_HALPERN_NADA-11-min.jpg"
                         class="max-w-full w-auto h-auto mx-auto"
                     />
 
