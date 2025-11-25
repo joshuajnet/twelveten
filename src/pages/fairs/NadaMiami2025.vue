@@ -31,12 +31,11 @@ export default {
                     </div>
                     <div class="md:text-right text-left">
                         <a
-                            v-if="true === false"
-                            href="/docs/terror-element/terror-element-press-release.pdf"
+                            href="/docs/nada-miami-2025/tali-halpern-nada-miami-preview.pdf"
                             class="block mb-3"
                             target="_blank"
                         >
-                            PDF
+                            Preview PDF
                         </a>
                         December 2nd &mdash; 6th, 2025<br />
                         Ice Palace Studios, 1400 North Miami Avenue<br />
@@ -48,11 +47,14 @@ export default {
                         woven self-portraits that explore the tension between historical forms of image-making and the
                         digital conditions of contemporary self-representation.
                     </p>
-                    <img src="/images/star-e-eyed/halpern-loved-detail.jpg" class="max-w-full w-auto h-auto mx-auto" />
+                    <img
+                        src="/images/nada-miami-2025/TALI_HALPERN_NADA-11.jpg"
+                        class="max-w-full w-auto h-auto mx-auto"
+                    />
 
                     <p class="font-roboto text-xs text-center mt-2">
-                        Tali Halpern, <em>loved then cast aside</em>, 2024.<br />
-                        Handwoven fabrics on a TC2, cotton, wool, thread, grommets and rhinestones (detail).
+                        Tali Halpern, <em>teenage apocalypse 2</em>, 2025.<br />
+                        Handwoven fabrics, cotton, wool, silk, bleach, rhinestone, beads (detail).
                     </p>
                     <p class="mb-3">
                         Halpern’s process, translating pixel-based imagery into thread via a digital Jacquard loom,
@@ -82,11 +84,19 @@ export default {
                     <div class="mt-10">
                         <p class="italic mb-3">
                             <span class="font-bold">Tali Halpern</span> (b. 1994, Chicago, IL) lives and works in
-                            Chicago. MFA Studio of the Art Institute, BFA Hampshire College. Their works have been
-                            exhibited at Twelve Ten Gallery (Chicago), BravinLee (New York), and de boer (Los Angeles)
-                            among others. Tali’s work explores the complexities of queerness, sexuality, gender and its
-                            aesthetics through weaving, painting, drawing, collage, artist sketchbooks, makeup, drag and
-                            installation.
+                            Chicago. Tali’s work explores the complexities of queerness, sexuality, desirability,
+                            gender, and its aesthetics as well as topics surrounding addiction and recovery through a
+                            mixed media fiber practice. Their work is informed by collage, exploring the layers of
+                            intersectionality in art, identity, spirituality and existence. Fiber is a soft medium in
+                            contrast with the often challenging themes in their work. Neither static nor flat, they are
+                            tactile and in direct relationship to the body. They use self-portraiture as witness to
+                            flesh, feelings, addictions, traumas, growth, and joy. Then through collage, they piece and
+                            mend the broken, unite the solitary, and combine completely different facets into one, in an
+                            attempt to heal. In sharing work about vulnerabilities, often deemed taboo and shameful by
+                            society, they reject shame while offering solace and connection to viewers alienated by
+                            similar struggles. Their works have been exhibited at Twelve Ten Gallery (Chicago), Tiger
+                            Strikes Asteroid (Chicago) and de boer (Los Angeles), among others. MFA School of the Art
+                            Institute of Chicago, BFA Hampshire College.
                         </p>
                     </div>
                 </div>
