@@ -48,13 +48,14 @@ export default {
                         digital conditions of contemporary self-representation.
                     </p>
                     <img
-                        src="/images/nada-miami-2025/TALI_HALPERN_NADA-11-min.jpg"
+                        src="/images/nada-miami-2025/TALI_HALPERN_NADA-08-min.jpg"
                         class="max-w-full w-auto h-auto mx-auto"
                     />
 
                     <p class="font-roboto text-xs text-center mt-2">
                         Tali Halpern, <em>teenage apocalypse 2</em>, 2025.<br />
-                        Handwoven fabrics, cotton, wool, silk, bleach, rhinestone, beads (detail).
+                        Handwoven fabrics, cotton, wool, silk, bleach, rhinestone, beads.<br />
+                        72 x 34 in. (182/88 x 86.36 cm)
                     </p>
                     <p class="mb-3">
                         Halpern’s process, translating pixel-based imagery into thread via a digital Jacquard loom,
@@ -85,18 +86,11 @@ export default {
                         <p class="italic mb-3">
                             <span class="font-bold">Tali Halpern</span> (b. 1994, Chicago, IL) lives and works in
                             Chicago. Tali’s work explores the complexities of queerness, sexuality, desirability,
-                            gender, and its aesthetics as well as topics surrounding addiction and recovery through a
+                            gender, and their aesthetics as well as topics surrounding addiction and recovery through a
                             mixed media fiber practice. Their work is informed by collage, exploring the layers of
-                            intersectionality in art, identity, spirituality and existence. Fiber is a soft medium in
-                            contrast with the often challenging themes in their work. Neither static nor flat, they are
-                            tactile and in direct relationship to the body. They use self-portraiture as witness to
-                            flesh, feelings, addictions, traumas, growth, and joy. Then through collage, they piece and
-                            mend the broken, unite the solitary, and combine completely different facets into one, in an
-                            attempt to heal. In sharing work about vulnerabilities, often deemed taboo and shameful by
-                            society, they reject shame while offering solace and connection to viewers alienated by
-                            similar struggles. Their works have been exhibited at Twelve Ten Gallery (Chicago), Tiger
-                            Strikes Asteroid (Chicago) and de boer (Los Angeles), among others. MFA School of the Art
-                            Institute of Chicago, BFA Hampshire College.
+                            intersectionality in art, identity, and existence. Their works have been exhibited at Twelve
+                            Ten Gallery (Chicago), Tiger Strikes Asteroid (Chicago) and de boer (Los Angeles), among
+                            others. MFA School of the Art Institute of Chicago, BFA Hampshire College.
                         </p>
                     </div>
                 </div>
