@@ -1,7 +1,7 @@
 <script>
 import { ref } from 'vue';
 import GallerySlideshow from '../../components/GallerySlideshow.vue';
-import slideshowData from '../../json/terror-element-slideshow.json';
+import slideshowData from '../../json/nada-miami-2025-slideshow.json';
 
 export default {
     components: {
@@ -17,8 +17,8 @@ export default {
 
 <template>
     <div class="flex flex-col grow">
-        <div v-if="true === false">
-            <GallerySlideshow :slides="slides" :worksAvailable="false" />
+        <div>
+            <GallerySlideshow :slides="slides" :worksAvailable="true" />
         </div>
         <div class="container max-w-screen-sm mx-auto grid md:grid-cols-1 gap-6 px-3">
             <div id="press-release">
@@ -26,7 +26,8 @@ export default {
                     <div class="flex justify-between">
                         <div class="text-lg">
                             <strong>Tali Halpern</strong><br />
-                            <em>NADA Miami 2025</em>
+                            <em>NADA Miami 2025</em><br />
+                            Booth D206
                         </div>
                     </div>
                     <div class="md:text-right text-left">
@@ -46,16 +47,6 @@ export default {
                         For their participation in NADA Miami Projects Tali Halpern will present a focused series of
                         woven self-portraits that explore the tension between historical forms of image-making and the
                         digital conditions of contemporary self-representation.
-                    </p>
-                    <img
-                        src="/images/nada-miami-2025/TALI_HALPERN_NADA-08-min.jpg"
-                        class="max-w-full w-auto h-auto mx-auto"
-                    />
-
-                    <p class="font-roboto text-xs text-center mt-2">
-                        Tali Halpern, <em>teenage apocalypse 2</em>, 2025.<br />
-                        Handwoven fabrics, cotton, wool, silk, bleach, rhinestone, beads.<br />
-                        72 x 34 in. (182/88 x 86.36 cm)
                     </p>
                     <p class="mb-3">
                         Halpern’s process, translating pixel-based imagery into thread via a digital Jacquard loom,
