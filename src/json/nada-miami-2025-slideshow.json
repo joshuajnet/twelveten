@@ -96,7 +96,7 @@
         "media": "Handwoven fabrics, cotton, wool, silk, bleach, rhinestone, beads",
         "credit": "Photo: Mikey Mosher",
         "hidden": false,
-        "available": false
+        "available": true
     },
     {
         "image": "/images/nada-miami-2025/TALI_HALPERN_NADA-02-min.jpg",
@@ -118,7 +118,7 @@
         "media": "Handwoven fabrics, cotton, wool, silk, bleach, rhinestone, beads",
         "credit": "Photo: Mikey Mosher",
         "hidden": false,
-        "available": false
+        "available": true
     },
     {
         "image": "/images/star-e-eyed/halpern-anxious.jpg",
@@ -151,7 +151,7 @@
         "media": "Handwoven fabrics, cotton, wool, thread, grommets and rhinestones",
         "credit": null,
         "hidden": false,
-        "available": false
+        "available": true
     },
     {
         "image": "/images/star-e-eyed/halpern-star.jpg",
@@ -173,7 +173,7 @@
         "media": "Handwoven fabrics, wool, beads and rhinestones",
         "credit": null,
         "hidden": false,
-        "available": false
+        "available": true
     },
     {
         "image": "/images/star-e-eyed/halpern-star-fringe.jpg",
@@ -184,7 +184,7 @@
         "media": "Handwoven fabrics, wool, beads and rhinestones",
         "credit": null,
         "hidden": false,
-        "available": false
+        "available": true
     },
     {
         "image": "/images/nada-miami-2025/dreams-of-desire-nada.jpg",
