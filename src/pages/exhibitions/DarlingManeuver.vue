@@ -90,10 +90,11 @@ export default {
                         <p class="italic mb-3">
                             <span class="font-bold">Collin Leitch</span> (b. 1993) received a B.A. from Bard College in
                             2016. Recent exhibitions include the two-person show <em>Point Free</em> with Kayla Jones at
-                            Ciera (2024, New York), solo exhibitions <em>World Edit</em> at Shoot the Lobster (2022, New
-                            York) and <em>Camera Rider</em> at Team Gallery (2019, New York). He has also participated
-                            in group exhibitions at R &amp; Company (New York), As It Stands (Los Angeles), Freddy (New
-                            York) and King’s Leap (New York), among many others. His films have been screened at
+                            Cierah (2024, New York), solo exhibitions <em>World Edit</em> at Shoot the Lobster (2022,
+                            New York) and <em>Camera Rider</em> at Team Gallery (2019, New York). He has also
+                            participated in group exhibitions at R &amp; Company (New York), As It Stands (Los Angeles),
+                            Freddy (New York) and King’s Leap (New York), among many others. His films have been
+                            screened at
                             <em>Channels Video Art Festival</em>
                             in Melbourne and a variety of New York spaces, including LUBOV, Mery Gates and Microscope
                             Gallery.
