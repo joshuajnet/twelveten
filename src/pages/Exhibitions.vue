@@ -19,11 +19,12 @@ import { ref } from 'vue';
             <div>
                 <h3 class="font-roboto text-xl mb-3">Upcoming</h3>
                 <router-link :to="{ name: 'darling-maneuver' }" class="no-underline text-2xl">
-                    <div class="text-lg">
-                        Collin Leitch<br />
-                        <span class="text-base italic">The Darling Maneuver</span><br />
-                        <span class="text-sm">January 10th &mdash; February 14th, 2026</span>
-                    </div>
+                    <img
+                        v-lazy="{ src: '/images/darling-maneuver/leitch-thumb-01.jpg' }"
+                        class="lazy-image max-w-full w-auto h-auto mx-auto"
+                        style="max-height: calc(100vh - 200px)"
+                        alt="Collin Leitch: The Darling Maneuver. January 10th - February 14th, 2026"
+                    />
                 </router-link>
             </div>
         </div>
