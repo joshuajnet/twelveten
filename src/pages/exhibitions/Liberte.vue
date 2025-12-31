@@ -20,7 +20,7 @@ export default {
         <div v-if="true === false">
             <GallerySlideshow :slides="slides" :worksAvailable="false" />
         </div>
-        <div class="container mx-auto grid md:grid-cols-1 max-w-lg gap-6 px-3">
+        <div class="container mx-auto grid md:grid-cols-1 max-w-xl gap-6 px-3">
             <img
                 v-if="true === false"
                 v-lazy="{ src: '/images/darling-maneuver/leitch-thumb-01.jpg' }"
@@ -45,7 +45,7 @@ export default {
                             PDF
                         </a>
                         February 21st &mdash; March 28th, 2026<br />
-                        Opening: Feb 21st, 6PM &mdash; 9PM<br />
+                        Opening: February 21st, 6PM &mdash; 9PM<br />
                         Hours: Wed - Sat, 1PM — 6PM
                     </div>
                 </div>
