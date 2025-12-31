@@ -27,7 +27,7 @@ import MailSignUp from '../components/MailSignUp.vue';
                         storefront</em
                     ><br /><br />
 
-                    Hours: Temporarily closed for relocation. Re-opening January 2026.<br />
+                    Hours: Wed - Sat, 1PM — 6PM<br />
                     <!--Hours: Wednesday &mdash; Saturday, 1:00 &mdash; 6:00 PM, or by appointment.<br />-->
                 </div>
                 <div class="pb-4 mb-6 border-b">

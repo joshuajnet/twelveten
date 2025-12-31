@@ -27,6 +27,13 @@ import { ref } from 'vue';
                     />
                 </router-link>
             </div>
+            <router-link :to="{ name: 'schippa-wildfong-liberte' }" class="no-underline text-2xl mt-8">
+                <div class="text-lg">
+                    Micah Schippa-Wildfong<br />
+                    <span class="text-base italic">LIBERTÉ</span><br />
+                    <span class="text-sm">February 21st &mdash; March 28th, 2026</span>
+                </div>
+            </router-link>
         </div>
         <h3 class="font-roboto text-xl mb-3">Past</h3>
         <div class="grid md:grid-cols-4 grid-cols-2 gap-6">

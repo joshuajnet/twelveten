@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import Home from './pages/Home.vue';
 import About from './pages/About.vue';
 import Exhibitions from './pages/Exhibitions.vue';
+import Liberte from './pages/exhibitions/Liberte.vue';
 import DarlingManeuver from './pages/exhibitions/DarlingManeuver.vue';
 import TerrorElement from './pages/exhibitions/TerrorElement.vue';
 import AsAboveSoBelow from './pages/exhibitions/AsAboveSoBelow.vue';
@@ -42,6 +43,11 @@ export default createRouter({
             path: '/exhibitions',
             name: 'exhibitions',
             component: Exhibitions,
+        },
+        {
+            path: '/exhibitions/schippa-wildfong-liberte',
+            name: 'schippa-wildfong-liberte',
+            component: Liberte,
         },
         {
             path: '/exhibitions/leitch-darling-maneuver',
