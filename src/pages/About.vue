@@ -24,7 +24,7 @@ import MailSignUp from '../components/MailSignUp.vue';
                     Chicago IL, 60660<br />
                     <em
                         >Just East of the Red Line Thorndale train stop in Edgewater. Accessible as a ground floor
-                        storefront</em
+                        storefront.</em
                     ><br /><br />
 
                     Hours: Wednesday &mdash; Saturday, 1:00 &mdash; 6:00 PM, or by appointment.<br />
@@ -35,7 +35,9 @@ import MailSignUp from '../components/MailSignUp.vue';
                     <a href="mailto:joshua@twelvetengallery.com">joshua@twelvetengallery.com</a><br /><br />
                     <h3 class="text-xl font-medium text-sky-900">Audrey Nicolaides</h3>
                     Manager<br />
-                    <a href="mailto:joshua@twelvetengallery.com">audrey@twelvetengallery.com</a>
+                    <a href="mailto:audrey@twelvetengallery.com">audrey@twelvetengallery.com</a><br /><br />
+                    For general inquiries, please email us at
+                    <a href="mailto:mail@twelvetengallery.com">mail@twelvetengallery.com</a>.
                 </div>
                 <div class="pb-4 mb-6 border-b">
                     <h3 class="text-xl font-medium text-sky-900">Follow us</h3>
