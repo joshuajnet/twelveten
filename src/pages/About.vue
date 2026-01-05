@@ -27,13 +27,15 @@ import MailSignUp from '../components/MailSignUp.vue';
                         storefront</em
                     ><br /><br />
 
-                    Hours: Wed - Sat, 1PM — 6PM<br />
-                    <!--Hours: Wednesday &mdash; Saturday, 1:00 &mdash; 6:00 PM, or by appointment.<br />-->
+                    Hours: Wednesday &mdash; Saturday, 1:00 &mdash; 6:00 PM, or by appointment.<br />
                 </div>
                 <div class="pb-4 mb-6 border-b">
                     <h3 class="text-xl font-medium text-sky-900">Joshua Johnson</h3>
                     Director<br />
-                    <a href="mailto:mail@twelvetengallery.com">mail@twelvetengallery.com</a>
+                    <a href="mailto:joshua@twelvetengallery.com">joshua@twelvetengallery.com</a><br /><br />
+                    <h3 class="text-xl font-medium text-sky-900">Audrey Nicolaides</h3>
+                    Manager<br />
+                    <a href="mailto:joshua@twelvetengallery.com">audrey@twelvetengallery.com</a>
                 </div>
                 <div class="pb-4 mb-6 border-b">
                     <h3 class="text-xl font-medium text-sky-900">Follow us</h3>

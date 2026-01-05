@@ -1,6 +1,13 @@
 [
     {
-        "id": 20,
+        "id": 22,
+        "path": "5-1-2026",
+        "title": "New Year, New Location! Collin Leitch: The Darling Maneuver",
+        "date": "January 5th, 2026",
+        "html": "<p>Twelve Ten Gallery is delighted to begin the New Year at our new location, 1104 Thorndale Ave. <a href=\"/exhibitions/leitch-darling-maneuver\">Collin Leitch's exhibition, \"The Darling Maneuver\"</a> opens on January 10th, 2026 from 6-9PM. Normal gallery hours will resume the following week Wed-Sat 1-6PM.</p>"
+    },
+    {
+        "id": 21,
         "path": "2-11-2025",
         "title": "2025 Fall and Winter Updates",
         "date": "November 2nd, 2025",
