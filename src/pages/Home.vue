@@ -20,19 +20,19 @@ export default {
             <div class="absolute top-[-4px] right-[-4px] left-[-4px] bottom-[-4px] bg-sky-900">
                 <!--<div class="absolute w-full h-full overlay" />-->
                 <img
-                    src="/images/darling-maneuver/collin-bg.jpg"
+                    src="/images/darling-maneuver/TWELVETEN_COLLIN_-01.jpg"
                     :class="{ 'blur-bg': menuActive }"
                     class="md:block hidden home-bg object-cover w-full h-full"
                 />
                 <img
-                    src="/images/darling-maneuver/collin-bg.jpg"
+                    src="/images/darling-maneuver/TWELVETEN_COLLIN_-15.jpg"
                     :class="{ 'blur-bg': menuActive }"
                     class="md:hidden home-bg object-cover w-full h-full"
                 />
             </div>
-            <div class="relative z-10 container mx-auto items-center text-sm py-8 px-3 flex flex-col grow">
+            <div class="relative z-10 container mx-auto items-center text-sm py-8 mb-6 px-3 flex flex-col grow">
                 <div
-                    class="mt-auto flex w-full md:flex-row flex-col md:gap-6 md:justify-between text-white !hover:text-black"
+                    class="mt-auto flex w-full md:flex-row flex-col md:gap-6 md:justify-between text-sky-900 !hover:text-black"
                 >
                     <div class="text-xl">
                         Collin Leitch<br />
