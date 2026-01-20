@@ -181,10 +181,10 @@
         "title": "Plan D",
         "date": "2026",
         "dimensions": "86x7.5x1.75 in. (218.44x19.05x4.445 cm)",
-        "media": "Poplar and acrylic",
+        "media": "Poplar and acrylic (detail)",
         "credit": "Photo: Mikey Mosher",
         "hidden": false,
-        "available": true
+        "available": false
     },
     {
         "image": "/images/darling-maneuver/TWELVETEN_COLLIN_-02.jpg",
