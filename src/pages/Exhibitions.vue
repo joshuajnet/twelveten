@@ -5,19 +5,8 @@ import { ref } from 'vue';
 <template>
     <div class="container mx-auto py-4 px-3 flex flex-col grow">
         <div class="grid md:grid-cols-4 grid-cols-2 gap-6 mb-6">
-            <div v-if="true === false">
-                <h3 class="font-roboto text-xl mb-3">Current</h3>
-                <router-link :to="{ name: 'terror-element' }" class="no-underline text-2xl">
-                    <img
-                        v-lazy="{ src: '/images/terror-element/terror-element-nomark.jpg' }"
-                        class="lazy-image max-w-full w-auto h-auto mx-auto"
-                        style="max-height: calc(100vh - 200px)"
-                        alt="Anna Engelhardt, Mark Cinkevich: Terror Element. June 7th - July 19th, 2025"
-                    />
-                </router-link>
-            </div>
             <div>
-                <h3 class="font-roboto text-xl mb-3">Upcoming</h3>
+                <h3 class="font-roboto text-xl mb-3">Current</h3>
                 <router-link :to="{ name: 'darling-maneuver' }" class="no-underline text-2xl">
                     <img
                         v-lazy="{ src: '/images/darling-maneuver/leitch-thumb-01.jpg' }"
@@ -27,7 +16,22 @@ import { ref } from 'vue';
                     />
                 </router-link>
             </div>
-            <router-link :to="{ name: 'schippa-wildfong-liberte' }" class="no-underline text-2xl mt-8">
+            <div>
+                <h3 class="font-roboto text-xl mb-3">Upcoming</h3>
+                <router-link :to="{ name: 'schippa-wildfong-liberte' }" class="no-underline text-2xl">
+                    <img
+                        v-lazy="{ src: '/images/liberte/micah-nomark.jpg' }"
+                        class="lazy-image max-w-full w-auto h-auto mx-auto"
+                        style="max-height: calc(100vh - 200px)"
+                        alt="Micah Schippa-Wildfong: LIBERTÉ. February 21st - March 28th, 2026"
+                    />
+                </router-link>
+            </div>
+            <router-link
+                v-if="true === false"
+                :to="{ name: 'schippa-wildfong-liberte' }"
+                class="no-underline text-2xl mt-8"
+            >
                 <div class="text-lg">
                     Micah Schippa-Wildfong<br />
                     <span class="text-base italic">LIBERTÉ</span><br />
