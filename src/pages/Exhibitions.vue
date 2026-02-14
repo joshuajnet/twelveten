@@ -7,17 +7,6 @@ import { ref } from 'vue';
         <div class="grid md:grid-cols-4 grid-cols-2 gap-6 mb-6">
             <div>
                 <h3 class="font-roboto text-xl mb-3">Current</h3>
-                <router-link :to="{ name: 'darling-maneuver' }" class="no-underline text-2xl">
-                    <img
-                        v-lazy="{ src: '/images/darling-maneuver/leitch-thumb-01.jpg' }"
-                        class="lazy-image max-w-full w-auto h-auto mx-auto"
-                        style="max-height: calc(100vh - 200px)"
-                        alt="Collin Leitch: The Darling Maneuver. January 10th - February 14th, 2026"
-                    />
-                </router-link>
-            </div>
-            <div>
-                <h3 class="font-roboto text-xl mb-3">Upcoming</h3>
                 <router-link :to="{ name: 'schippa-wildfong-liberte' }" class="no-underline text-2xl">
                     <img
                         v-lazy="{ src: '/images/liberte/micah-nomark.jpg' }"
@@ -27,20 +16,30 @@ import { ref } from 'vue';
                     />
                 </router-link>
             </div>
-            <router-link
-                v-if="true === false"
-                :to="{ name: 'schippa-wildfong-liberte' }"
-                class="no-underline text-2xl mt-8"
-            >
-                <div class="text-lg">
-                    Micah Schippa-Wildfong<br />
-                    <span class="text-base italic">LIBERTÉ</span><br />
-                    <span class="text-sm">February 21st &mdash; March 28th, 2026</span>
-                </div>
-            </router-link>
+            <div>
+                <h3 class="font-roboto text-xl mb-3">Upcoming</h3>
+                <router-link
+                    :to="{ name: 'africh-signal' }"
+                    class="no-underline text-2xl mt-8"
+                >
+                    <div class="text-lg">
+                        Noelle Africh<br />
+                        <span class="text-base italic">Signal</span><br />
+                        <span class="text-sm">April 4th &mdash; May 9th, 2026</span>
+                    </div>
+                </router-link>
+            </div>
         </div>
         <h3 class="font-roboto text-xl mb-3">Past</h3>
         <div class="grid md:grid-cols-4 grid-cols-2 gap-6">
+            <router-link :to="{ name: 'darling-maneuver' }" class="no-underline text-2xl">
+                <img
+                    v-lazy="{ src: '/images/darling-maneuver/leitch-thumb-01.jpg' }"
+                    class="lazy-image max-w-full w-auto h-auto mx-auto"
+                    style="max-height: calc(100vh - 200px)"
+                    alt="Collin Leitch: The Darling Maneuver. January 10th - February 14th, 2026"
+                />
+            </router-link>
             <router-link :to="{ name: 'terror-element' }" class="no-underline text-2xl">
                 <img
                     v-lazy="{ src: '/images/terror-element/terror-element-nomark.jpg' }"

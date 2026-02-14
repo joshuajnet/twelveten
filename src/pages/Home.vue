@@ -20,27 +20,27 @@ export default {
             <div class="absolute top-[-4px] right-[-4px] left-[-4px] bottom-[-4px] bg-sky-900">
                 <!--<div class="absolute w-full h-full overlay" />-->
                 <img
-                    src="/images/darling-maneuver/TWELVETEN_COLLIN_-01.jpg"
+                    src="/images/liberte/prints20.jpg"
                     :class="{ 'blur-bg': menuActive }"
                     class="md:block hidden home-bg object-cover w-full h-full"
                 />
                 <img
-                    src="/images/darling-maneuver/TWELVETEN_COLLIN_-15.jpg"
+                    src="/images/liberte/prints20.jpg"
                     :class="{ 'blur-bg': menuActive }"
                     class="md:hidden home-bg object-cover w-full h-full"
                 />
             </div>
             <div class="relative z-10 container mx-auto items-center text-sm py-8 mb-6 px-3 flex flex-col grow">
                 <div
-                    class="mt-auto flex w-full md:flex-row flex-col md:gap-6 md:justify-between text-sky-900 !hover:text-black"
+                    class="mt-auto flex w-full md:flex-row flex-col md:gap-6 md:justify-between text-white !hover:text-black"
                 >
                     <div class="text-xl">
-                        Collin Leitch<br />
-                        <em>The Darling Maneuver</em>
+                        Micah Schippa-Wildfong<br />
+                        <em>LIBERTÉ</em>
                     </div>
                     <div class="md:block hidden md:text-right md:mt-auto">
-                        Jan 10th &mdash; Feb 14th, 2026<br />
-                        Opening &nbsp;&nbsp; Jan 10th, 6PM &mdash; 9PM<br />
+                        Feb 21st &mdash; Mar 28th, 2026<br />
+                        Opening &nbsp;&nbsp; Feb 21st, 6PM &mdash; 9PM<br />
                         Hours &nbsp;&nbsp; Wed &mdash; Sat, 1PM &mdash; 6PM<br />
                     </div>
                 </div>

@@ -2,6 +2,20 @@
     <div class="text-justify mb-10">
         <h2 class="text-xl font-bold mb-3">Press</h2>
         <div class="border-t py-3">
+        <div class="mb-6">
+                <h3 class="text-lg italic">Newcity Art</h3>
+                <a
+                    href="https://art.newcity.com/2026/02/03/collin-leitch-frames-nature-through-the-machine-in-the-darling-maneuver/"
+                    target="_blank"
+                    class="!no-underline"
+                >
+                    <h3 class="text-lg font-medium text-sky-900">
+                        Collin Leitch Frames Nature Through the Machine in “The Darling Maneuver”
+                    </h3>
+                </a>
+                <h4 class="italic">February 3rd, 2026</h4>
+                <p>by Jefferson Godard</p>
+            </div>
             <div class="mb-6">
                 <h3 class="text-lg italic">Newcity Art</h3>
                 <a

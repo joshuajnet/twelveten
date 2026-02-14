@@ -107,11 +107,7 @@ export default {
                     </ul>
                     <div class="mt-10">
                         <p class="italic mb-3">
-                            <span class="font-bold">Micah Schippa-Wildfong</span> (b. 1988) is an American artist,
-                            writer and musician living and working in Chicago. They have recently exhibited at
-                            Salzburger Kunstverein (Salzburg), The Museum of Contemporary Art Chicago (Chicago), Romance
-                            (Pittsburgh), Mickey (Chicago) and Pech (Vienna). They have upcoming exhibitions with Mutter
-                            (Amsterdam) and DISPLAY (Parma) later this year.
+                            <span class="font-bold">Micah Schippa-Wildfong</span> (b. 1988) is an American artist, writer, and musician living and working in Chicago. Recent solo exhibitions include "LIBERTÉ", Twelve Ten Gallery (Chicago, IL), "People Are Glorious", Triangolo Gallery (Cremona, IT), "In Another Room I Am Drinking Eggs from a Boot", Pech (Vienna, AT), "Civilization of Happiness", Mickey (Chicago, IL), and "all fish in the night become birds", ROMANCE, (Pittsburgh, PA). They have participated in group exhibitions and performances at The Gray Center for Arts and Inquiry (Chicago, IL), the Museum of Contemporary Art (Chicago, IL), Baader-Meinhof (Omaha, NB), Apparatus Projects (Chicago, IL), Scherben (Berlin, DE), and Salzburger Kunstverein (Salzburg, AT) among many others. They have upcoming exhibitions with Mutter (Amsterdam, NL) and DISPLAY (Parma, IT) later this year.
                         </p>
                     </div>
                 </div>
