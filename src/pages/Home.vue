@@ -15,7 +15,7 @@ export default {
 </script>
 
 <template>
-    <router-link :to="{ name: 'darling-maneuver' }" class="flex flex-grow !no-underline">
+    <router-link :to="{ name: 'schippa-wildfong-liberte' }" class="flex flex-grow !no-underline">
         <div class="fixed top-0 left-0 w-full h-full flex flex-grow bg-cover bg-center">
             <div class="absolute top-[-4px] right-[-4px] left-[-4px] bottom-[-4px] bg-sky-900">
                 <!--<div class="absolute w-full h-full overlay" />-->
@@ -61,7 +61,10 @@ export default {
     filter: blur(2px);
 }
 .shadow-text {
-    text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.05), -2px -2px 6px rgba(0, 0, 0, 0.05), 2px -2px 6px rgba(0, 0, 0, 0.2),
+    text-shadow:
+        2px 2px 6px rgba(0, 0, 0, 0.05),
+        -2px -2px 6px rgba(0, 0, 0, 0.05),
+        2px -2px 6px rgba(0, 0, 0, 0.2),
         -2px 2px 6px rgba(0, 0, 0, 0.05);
 }
 </style>
