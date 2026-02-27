@@ -1,7 +1,7 @@
 <script>
 import { ref } from 'vue';
 import GallerySlideshow from '../../components/GallerySlideshow.vue';
-import slideshowData from '../../json/terror-element-slideshow.json';
+import slideshowData from '../../json/liberte-slideshow.json';
 
 export default {
     components: {
@@ -17,14 +17,14 @@ export default {
 
 <template>
     <div class="flex flex-col grow">
-        <div v-if="true === false">
-            <GallerySlideshow :slides="slides" :worksAvailable="false" />
+        <div>
+            <GallerySlideshow :slides="slides" :worksAvailable="true" />
         </div>
         <div class="container mx-auto grid md:grid-cols-2 gap-6 px-3">
             <img
                 v-lazy="{ src: '/images/liberte/micah-nomark.jpg' }"
                 class="max-w-full w-auto h-auto mx-auto"
-                alt="Collin Leitch: The Darling Maneuver. January 10th - February 14th, 2026"
+                alt="Micah Schippa-Wildfong: LIBERTÉ. February 21st - March 28th, 2026"
             />
             <div id="press-release">
                 <div class="grid md:grid-cols-2 grid-cols-1 gap-3 mb-6 mx-auto">
@@ -107,7 +107,16 @@ export default {
                     </ul>
                     <div class="mt-10">
                         <p class="italic mb-3">
-                            <span class="font-bold">Micah Schippa-Wildfong</span> (b. 1988) is an American artist, writer, and musician living and working in Chicago. Recent solo exhibitions include "LIBERTÉ", Twelve Ten Gallery (Chicago, IL), "People Are Glorious", Triangolo Gallery (Cremona, IT), "In Another Room I Am Drinking Eggs from a Boot", Pech (Vienna, AT), "Civilization of Happiness", Mickey (Chicago, IL), and "all fish in the night become birds", ROMANCE, (Pittsburgh, PA). They have participated in group exhibitions and performances at The Gray Center for Arts and Inquiry (Chicago, IL), the Museum of Contemporary Art (Chicago, IL), Baader-Meinhof (Omaha, NB), Apparatus Projects (Chicago, IL), Scherben (Berlin, DE), and Salzburger Kunstverein (Salzburg, AT) among many others. They have upcoming exhibitions with Mutter (Amsterdam, NL) and DISPLAY (Parma, IT) later this year.
+                            <span class="font-bold">Micah Schippa-Wildfong</span> (b. 1988) is an American artist,
+                            writer, and musician living and working in Chicago. Recent solo exhibitions include
+                            "LIBERTÉ", Twelve Ten Gallery (Chicago, IL), "People Are Glorious", Triangolo Gallery
+                            (Cremona, IT), "In Another Room I Am Drinking Eggs from a Boot", Pech (Vienna, AT),
+                            "Civilization of Happiness", Mickey (Chicago, IL), and "all fish in the night become birds",
+                            ROMANCE, (Pittsburgh, PA). They have participated in group exhibitions and performances at
+                            The Gray Center for Arts and Inquiry (Chicago, IL), the Museum of Contemporary Art (Chicago,
+                            IL), Baader-Meinhof (Omaha, NB), Apparatus Projects (Chicago, IL), Scherben (Berlin, DE),
+                            and Salzburger Kunstverein (Salzburg, AT) among many others. They have upcoming exhibitions
+                            with Mutter (Amsterdam, NL) and DISPLAY (Parma, IT) later this year.
                         </p>
                     </div>
                 </div>

@@ -20,12 +20,12 @@ export default {
             <div class="absolute top-[-4px] right-[-4px] left-[-4px] bottom-[-4px] bg-sky-900">
                 <!--<div class="absolute w-full h-full overlay" />-->
                 <img
-                    src="/images/liberte/prints20.jpg"
+                    src="/images/liberte/1210_MICAH_RE-5.jpg"
                     :class="{ 'blur-bg': menuActive }"
                     class="md:block hidden home-bg object-cover w-full h-full"
                 />
                 <img
-                    src="/images/liberte/prints20.jpg"
+                    src="/images/liberte/1210_MICAH_RE-15.jpg"
                     :class="{ 'blur-bg': menuActive }"
                     class="md:hidden home-bg object-cover w-full h-full"
                 />
