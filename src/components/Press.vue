@@ -2,7 +2,21 @@
     <div class="text-justify mb-10">
         <h2 class="text-xl font-bold mb-3">Press</h2>
         <div class="border-t py-3">
-        <div class="mb-6">
+            <div class="mb-6">
+                <h3 class="text-lg italic">Newcity Art</h3>
+                <a
+                    href="https://art.newcity.com/2026/03/02/freedom-and-its-limits-in-micah-schippa-wildfongs-liberte/"
+                    target="_blank"
+                    class="!no-underline"
+                >
+                    <h3 class="text-lg font-medium text-sky-900">
+                        Freedom and Its Limits in Micah Schippa-Wildfong’s “Liberté”
+                    </h3>
+                </a>
+                <h4 class="italic">March 2nd, 2026</h4>
+                <p>by Annette LePique</p>
+            </div>
+            <div class="mb-6">
                 <h3 class="text-lg italic">Newcity Art</h3>
                 <a
                     href="https://art.newcity.com/2026/02/03/collin-leitch-frames-nature-through-the-machine-in-the-darling-maneuver/"

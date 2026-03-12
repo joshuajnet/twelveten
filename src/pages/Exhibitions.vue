@@ -18,15 +18,13 @@ import { ref } from 'vue';
             </div>
             <div>
                 <h3 class="font-roboto text-xl mb-3">Upcoming</h3>
-                <router-link
-                    :to="{ name: 'africh-signal' }"
-                    class="no-underline text-2xl mt-8"
-                >
-                    <div class="text-lg">
-                        Noelle Africh<br />
-                        <span class="text-base italic">Signal</span><br />
-                        <span class="text-sm">April 4th &mdash; May 9th, 2026</span>
-                    </div>
+                <router-link :to="{ name: 'africh-signal' }" class="no-underline text-2xl mt-8">
+                    <img
+                        v-lazy="{ src: '/images/signal/africh-signal-square-nomark.jpg' }"
+                        class="lazy-image max-w-full w-auto h-auto mx-auto"
+                        style="max-height: calc(100vh - 200px)"
+                        alt="Noelle Africh: Signal. April 4th - May 23rd, 2026"
+                    />
                 </router-link>
             </div>
         </div>
