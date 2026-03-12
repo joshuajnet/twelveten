@@ -36,7 +36,6 @@ export default {
                     </div>
                     <div class="md:text-right text-left">
                         <a
-                            v-if="true === false"
                             href="/docs/signal/noelle-africh-signal-press-release.pdf"
                             class="block mb-3"
                             target="_blank"
@@ -50,10 +49,10 @@ export default {
                 </div>
                 <div class="text-justify max-w-screen-sm mx-auto">
                     <p class="mb-3">
-                        Twelve Ten Gallery is thrilled to present Signal, an exhibition by Noelle Africh. For their solo
-                        presentation, Africh explores the mutability of distemper, a medium historically associated with
-                        decorative painting, but here transformed into an opaque surface through which the artist
-                        investigates the emergence of form.
+                        Twelve Ten Gallery is thrilled to present <em>Signal</em>, an exhibition by Noelle Africh. For
+                        their solo presentation, Africh explores the mutability of distemper, a medium historically
+                        associated with decorative painting, but here transformed into an opaque surface through which
+                        the artist investigates the emergence of form.
                     </p>
                     <p class="mb-3">
                         Composed of pigment, chalk and a glue binder, distemper is amongst the earliest traditional
