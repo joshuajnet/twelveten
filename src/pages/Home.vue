@@ -15,17 +15,17 @@ export default {
 </script>
 
 <template>
-    <router-link :to="{ name: 'schippa-wildfong-liberte' }" class="flex flex-grow !no-underline">
+    <router-link :to="{ name: 'africh-signal' }" class="flex flex-grow !no-underline">
         <div class="fixed top-0 left-0 w-full h-full flex flex-grow bg-cover bg-center">
             <div class="absolute top-[-4px] right-[-4px] left-[-4px] bottom-[-4px] bg-sky-900">
                 <!--<div class="absolute w-full h-full overlay" />-->
                 <img
-                    src="/images/liberte/1210_MICAH_RE-5.jpg"
+                    src="/images/signal/signal-bg.jpg"
                     :class="{ 'blur-bg': menuActive }"
                     class="md:block hidden home-bg object-cover w-full h-full"
                 />
                 <img
-                    src="/images/liberte/1210_MICAH_RE-15.jpg"
+                    src="/images/signal/signal-bg.jpg"
                     :class="{ 'blur-bg': menuActive }"
                     class="md:hidden home-bg object-cover w-full h-full"
                 />
@@ -35,12 +35,12 @@ export default {
                     class="mt-auto flex w-full md:flex-row flex-col md:gap-6 md:justify-between text-white !hover:text-black"
                 >
                     <div class="text-xl">
-                        Micah Schippa-Wildfong<br />
-                        <em>LIBERTÉ</em>
+                        Noelle Africh<br />
+                        <em>Signal</em>
                     </div>
                     <div class="md:block hidden md:text-right md:mt-auto">
-                        Feb 21st &mdash; Mar 28th, 2026<br />
-                        Opening &nbsp;&nbsp; Feb 21st, 6PM &mdash; 9PM<br />
+                        April 4th &mdash; May 23rd, 2026<br />
+                        Opening &nbsp;&nbsp; April 4th, 6PM &mdash; 9PM<br />
                         Hours &nbsp;&nbsp; Wed &mdash; Sat, 1PM &mdash; 6PM<br />
                     </div>
                 </div>
