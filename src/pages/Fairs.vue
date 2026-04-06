@@ -19,7 +19,9 @@ import { ref } from 'vue';
                 <h3 class="font-roboto text-xl mb-3">Upcoming</h3>
                 <a href="https://www.neighbors.art/" target="_blank" class="no-underline text-2xl">
                     <div class="text-lg">
-                        Neighbors<br />
+                        Noelle Africh<br />
+                        Micah Schippa-Wildfong<br />
+                        <span class="text-base italic">Neighbors</span><br />
                         <span class="text-sm">Chicago, IL</span><br />
                         <span class="text-sm">April 8th &mdash; 12th, 2026</span>
                     </div>
