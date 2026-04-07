@@ -5,19 +5,9 @@ import { ref } from 'vue';
 <template>
     <div class="container mx-auto py-4 px-3 flex flex-col grow">
         <div class="grid md:grid-cols-4 grid-cols-2 gap-6 mb-6">
-            <div v-if="true === false">
-                <h3 class="font-roboto text-xl mb-3">Current</h3>
-                <router-link :to="{ name: 'nada-miami-2025' }" class="no-underline text-2xl">
-                    <div class="text-lg">
-                        Tali Halpern<br />
-                        <span class="text-base italic">NADA Miami</span><br />
-                        <span class="text-sm">December 2nd &mdash; 6th, 2025</span>
-                    </div>
-                </router-link>
-            </div>
             <div>
-                <h3 class="font-roboto text-xl mb-3">Upcoming</h3>
-                <a href="https://www.neighbors.art/" target="_blank" class="no-underline text-2xl">
+                <h3 class="font-roboto text-xl mb-3">Current</h3>
+                <router-link :to="{ name: 'neighbors-chicago-2026' }" target="_blank" class="no-underline text-2xl">
                     <div class="text-lg">
                         Noelle Africh<br />
                         Micah Schippa-Wildfong<br />
@@ -25,7 +15,19 @@ import { ref } from 'vue';
                         <span class="text-sm">Chicago, IL</span><br />
                         <span class="text-sm">April 8th &mdash; 12th, 2026</span>
                     </div>
-                </a>
+                </router-link>
+            </div>
+            <div v-if="true === false">
+                <h3 class="font-roboto text-xl mb-3">Upcoming</h3>
+                <router-link :to="{ name: 'neighbors-chicago-2026' }" target="_blank" class="no-underline text-2xl">
+                    <div class="text-lg">
+                        Noelle Africh<br />
+                        Micah Schippa-Wildfong<br />
+                        <span class="text-base italic">Neighbors</span><br />
+                        <span class="text-sm">Chicago, IL</span><br />
+                        <span class="text-sm">April 8th &mdash; 12th, 2026</span>
+                    </div>
+                </router-link>
             </div>
         </div>
         <h3 class="font-roboto text-xl mb-3">Past</h3>

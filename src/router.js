@@ -19,6 +19,7 @@ import BrainWorms from './pages/exhibitions/BrainWorms.vue';
 import BeechInterview from './pages/documents/BeechInterview.vue';
 import Fairs from './pages/Fairs.vue';
 import NadaMiami2025 from './pages/fairs/NadaMiami2025.vue';
+import NeighborsChicago2026 from './pages/fairs/NeighborsChicago2026.vue';
 import News from './pages/News.vue';
 import Error404 from './pages/Error404.vue';
 
@@ -126,6 +127,11 @@ export default createRouter({
             path: '/fairs',
             name: 'fairs',
             component: Fairs,
+        },
+        {
+            path: '/fairs/neighbors-chicago-2026',
+            name: 'neighbors-chicago-2026',
+            component: NeighborsChicago2026,
         },
         {
             path: '/fairs/nada-miami-2025',
