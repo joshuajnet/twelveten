@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import Home from './pages/Home.vue';
 import About from './pages/About.vue';
 import Exhibitions from './pages/Exhibitions.vue';
+import BeyondTheBlackRainbow from './pages/exhibitions/BeyondTheBlackRainbow.vue';
 import Signal from './pages/exhibitions/Signal.vue';
 import Liberte from './pages/exhibitions/Liberte.vue';
 import DarlingManeuver from './pages/exhibitions/DarlingManeuver.vue';
@@ -45,6 +46,11 @@ export default createRouter({
             path: '/exhibitions',
             name: 'exhibitions',
             component: Exhibitions,
+        },
+        {
+            path: '/exhibitions/beyond-the-black-rainbow',
+            name: 'beyond-the-black-rainbow',
+            component: BeyondTheBlackRainbow,
         },
         {
             path: '/exhibitions/africh-signal',

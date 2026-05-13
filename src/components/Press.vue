@@ -5,6 +5,20 @@
             <div class="mb-6">
                 <h3 class="text-lg italic">Newcity Art</h3>
                 <a
+                    href="https://art.newcity.com/2026/04/24/noelle-africhs-signal-is-gut-instinct-turned-preserved-layer/"
+                    target="_blank"
+                    class="!no-underline"
+                >
+                    <h3 class="text-lg font-medium text-sky-900">
+                        Noelle Africh’s “Signal” Is Gut Instinct Turned Preserved Layer
+                    </h3>
+                </a>
+                <h4 class="italic">April 24th, 2026</h4>
+                <p>by Samuel Schwindt</p>
+            </div>
+            <div class="mb-6">
+                <h3 class="text-lg italic">Newcity Art</h3>
+                <a
                     href="https://art.newcity.com/2026/03/02/freedom-and-its-limits-in-micah-schippa-wildfongs-liberte/"
                     target="_blank"
                     class="!no-underline"

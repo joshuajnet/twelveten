@@ -16,14 +16,14 @@ import { ref } from 'vue';
                     />
                 </router-link>
             </div>
-            <div v-if="true === false">
+            <div>
                 <h3 class="font-roboto text-xl mb-3">Upcoming</h3>
-                <router-link :to="{ name: 'africh-signal' }" class="no-underline text-2xl mt-8">
+                <router-link :to="{ name: 'beyond-the-black-rainbow' }" class="no-underline text-2xl mt-8">
                     <img
-                        v-lazy="{ src: '/images/signal/africh-signal-square-nomark.jpg' }"
+                        v-lazy="{ src: '/images/beyond-the-black-rainbow/btbr-square.jpg' }"
                         class="lazy-image max-w-full w-auto h-auto mx-auto"
                         style="max-height: calc(100vh - 200px)"
-                        alt="Noelle Africh: Signal. April 4th - May 23rd, 2026"
+                        alt="Beyond the Black Rainbow. Justin Beachler, Laveen Gammie, Tristan Higginbotham, Nico Ramirez Rosas. June 6th - July 25th, 2026"
                     />
                 </router-link>
             </div>
