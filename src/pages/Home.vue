@@ -15,33 +15,36 @@ export default {
 </script>
 
 <template>
-    <router-link :to="{ name: 'africh-signal' }" class="flex flex-grow !no-underline">
+    <router-link :to="{ name: 'beyond-the-black-rainbow' }" class="flex flex-grow !no-underline">
         <div class="fixed top-0 left-0 w-full h-full flex flex-grow bg-cover bg-center">
             <div class="absolute top-[-4px] right-[-4px] left-[-4px] bottom-[-4px] bg-sky-900">
                 <!--<div class="absolute w-full h-full overlay" />-->
                 <img
-                    src="/images/signal/NOELLE_TWELVETEN-3.jpg"
+                    src="/images/beyond-the-black-rainbow/btbr-bg.jpg"
                     :class="{ 'blur-bg': menuActive }"
                     class="md:block hidden home-bg object-cover w-full h-full"
                 />
                 <img
-                    src="/images/signal/NOELLE_TWELVETEN-26.jpg"
+                    src="/images/beyond-the-black-rainbow/btbr-bg.jpg"
                     :class="{ 'blur-bg': menuActive }"
                     class="md:hidden home-bg object-cover w-full h-full"
                 />
             </div>
             <div class="relative z-10 container mx-auto items-center text-sm py-8 mb-6 px-3 flex flex-col grow">
                 <div
-                    class="mt-auto flex w-full md:flex-row flex-col md:gap-6 md:justify-between !hover:text-black"
+                    class="mt-auto flex w-full md:flex-row flex-col md:gap-6 md:justify-between md:text-white text-black !hover:text-white"
                 >
                     <div class="text-xl">
-                        Noelle Africh<br />
-                        <em>Signal</em>
+                        <strong>Beyond the Black Rainbow</strong><br />
+                            Justin Beachler<br />
+                            Tristan Higginbotham<br />
+                            Laveen Gammie<br />
+                            Nico Ramirez Rosas<br />
                     </div>
                     <div class="md:block hidden md:text-right md:mt-auto">
-                        April 4th &mdash; May 23rd, 2026<br />
-                        Opening &nbsp;&nbsp; April 4th, 6PM &mdash; 9PM<br />
-                        Hours &nbsp;&nbsp; Wed &mdash; Sat, 1PM &mdash; 6PM<br />
+                        June 6th &mdash; July 25th, 2026<br />
+                        Opening June 6th, 6PM &mdash; 9PM<br />
+                        Gallery Hours: Weds &mdash; Sat, 1PM &mdash; 6PM<br />
                     </div>
                 </div>
                 <Footer class="relative z-10 !flex-grow-0 !flex-shrink" />
