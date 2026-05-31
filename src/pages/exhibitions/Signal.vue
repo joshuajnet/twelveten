@@ -104,7 +104,7 @@ export default {
                             have also participated in many group exhibitions including at Galerie Gisela Clement (Bonn,
                             Germany), RUSCHWOMAN (Chicago, IL), Hyde Park Art Center (Chicago, IL), The Plan (Chicago,
                             IL), The Green Gallery - West (Milwaukee, WI), and Patient Info (Chicago, IL), among others.
-                            They have a forthcoming two-person at No31 (Duns, Scotland) in 2026.
+                            They have a forthcoming three-person at No31 (Duns, Scotland) in 2026.
                         </p>
                     </div>
                 </div>

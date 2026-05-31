@@ -28,8 +28,8 @@ export default {
                         <div class="text-lg">
                             <strong>Beyond the Black Rainbow</strong><br />
                             Justin Beachler<br />
-                            Tristan Higginbotham<br />
                             Laveen Gammie<br />
+                            Tristan Higginbotham<br />
                             Nico Ramirez Rosas<br />
                         </div>
                     </div>

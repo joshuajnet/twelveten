@@ -34,11 +34,11 @@ export default {
                 <div
                     class="mt-auto flex w-full md:flex-row flex-col md:gap-6 md:justify-between md:text-white text-black !hover:text-white"
                 >
-                    <div class="text-xl">
+                    <div class="text-xl md:text-left text-center">
                         <strong>Beyond the Black Rainbow</strong><br />
                             Justin Beachler<br />
-                            Tristan Higginbotham<br />
                             Laveen Gammie<br />
+                            Tristan Higginbotham<br />
                             Nico Ramirez Rosas<br />
                     </div>
                     <div class="md:block hidden md:text-right md:mt-auto">
