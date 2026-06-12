@@ -20,21 +20,21 @@ export default {
             <div class="absolute top-[-4px] right-[-4px] left-[-4px] bottom-[-4px] bg-sky-900">
                 <!--<div class="absolute w-full h-full overlay" />-->
                 <img
-                    src="/images/beyond-the-black-rainbow/btbr-bg.jpg"
+                    src="/images/beyond-the-black-rainbow/TWELVETEN_6-26-6.jpg"
                     :class="{ 'blur-bg': menuActive }"
                     class="md:block hidden home-bg object-cover w-full h-full"
                 />
                 <img
-                    src="/images/beyond-the-black-rainbow/btbr-bg.jpg"
+                    src="/images/beyond-the-black-rainbow/TWELVETEN_6-26-64.jpg"
                     :class="{ 'blur-bg': menuActive }"
                     class="md:hidden home-bg object-cover w-full h-full"
                 />
             </div>
-            <div class="relative z-10 container mx-auto items-center text-sm py-8 mb-6 px-3 flex flex-col grow">
+            <div class="relative z-10 container mx-auto text-sm py-8 mb-6 px-3 flex flex-col grow">
                 <div
-                    class="mt-auto flex w-full md:flex-row flex-col md:gap-6 md:justify-between md:text-white text-black !hover:text-white"
+                    class="mt-auto flex w-full md:flex-row flex-col md:gap-6 md:justify-between text-black !hover:text-black"
                 >
-                    <div class="text-xl md:text-left text-center">
+                    <div class="text-xl text-left">
                         <strong>Beyond the Black Rainbow</strong><br />
                             Justin Beachler<br />
                             Laveen Gammie<br />
