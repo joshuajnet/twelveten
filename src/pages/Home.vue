@@ -34,8 +34,8 @@ export default {
                 <div
                     class="mt-auto flex w-full md:flex-row flex-col md:gap-6 md:justify-between text-black !hover:text-black"
                 >
-                    <div class="text-xl text-left">
-                        <strong>Beyond the Black Rainbow</strong><br />
+                    <div class="text-left">
+                        <strong class="text-lg font-roboto">Beyond the Black Rainbow</strong><br />
                             Justin Beachler<br />
                             Laveen Gammie<br />
                             Tristan Higginbotham<br />

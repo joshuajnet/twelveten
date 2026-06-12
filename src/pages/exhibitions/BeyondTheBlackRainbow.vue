@@ -1,7 +1,7 @@
 <script>
 import { ref } from 'vue';
 import GallerySlideshow from '../../components/GallerySlideshow.vue';
-import slideshowData from '../../json/nada-miami-2025-slideshow.json';
+import slideshowData from '../../json/beyond-the-black-rainbow-slideshow.json';
 
 export default {
     components: {
@@ -18,7 +18,7 @@ export default {
 <template>
     <div class="flex flex-col grow">
         <div>
-            <GallerySlideshow :slides="slides" :worksAvailable="true" v-if="true === false" />
+            <GallerySlideshow :slides="slides" :worksAvailable="true" />
         </div>
         <div class="container mx-auto grid md:grid-cols-2 gap-6 px-3">
             <img src="/images/beyond-the-black-rainbow/btbr-square.jpg" class="max-w-full w-auto h-auto mx-auto" />
