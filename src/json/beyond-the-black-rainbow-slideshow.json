@@ -286,14 +286,91 @@
         "available": false
     },
     {
-        "image": "/images/beyond-the-black-rainbow/TWELVETEN_6-26-65.jpg",
+        "image": "/images/beyond-the-black-rainbow/TWELVETEN_6-26-31.jpg",
         "author": "Laveen Gammie",
-        "title": "(but , another thought) &amp;…",
+        "title": "Decoy (Calling out of context)",
         "date": "2026",
-        "dimensions": "10 x 9 x 0.5 in. (25.4 x 22.86 x 1.27 cm)",
-        "media": "Gypsum cast, spackle, paint",
+        "dimensions": "30 x 18 x 15.5 in. (76.2  x 45.7 x 39.37 cm)",
+        "media": "Porcelain slip casts, folding chair",
         "credit": "Photo: Mikey Mosher",
         "hidden": false,
+        "available": true
+    },
+    {
+        "image": "/images/beyond-the-black-rainbow/TWELVETEN_6-26-33.jpg",
+        "author": "Laveen Gammie",
+        "title": "Decoy (Calling out of context)",
+        "date": "2026",
+        "dimensions": "detail",
+        "media": "Porcelain slip casts, folding chair",
+        "credit": "Photo: Mikey Mosher",
+        "hidden": false,
+        "available": false
+    },
+    {
+        "image": "/images/beyond-the-black-rainbow/TWELVETEN_6-26-13.jpg",
+        "author": null,
+        "title": "Beyond the Black Rainbow",
+        "date": null,
+        "dimensions": "Installation view",
+        "media": null,
+        "credit": "Photo: Mikey Mosher",
+        "hidden": false,
+        "available": false
+    },
+    {
+        "image": "/images/beyond-the-black-rainbow/TWELVETEN_6-26-80.jpg",
+        "author": "Laveen Gammie",
+        "title": "Hyper Dream",
+        "date": "2025",
+        "dimensions": "Frame 28 x 20 x 2 in. (71.12 x 50.8 x 5.08 cm), Tray (4 x 40.5 x 5.08 cm)",
+        "media": "Wood Frame, Resin, Milk, Wood Tray, Inkjet print, Wishbone",
+        "credit": "Photo: Mikey Mosher",
+        "hidden": true,
+        "available": true
+    },
+    {
+        "image": "/images/beyond-the-black-rainbow/TWELVETEN_6-26-82.jpg",
+        "author": "Laveen Gammie",
+        "title": "Untitled",
+        "date": "2026",
+        "dimensions": "9 x 6.5 x 4.5 inches (22.86 x 16.51 x 11.3 cm)",
+        "media": "Porcelain slip casts, folding chair",
+        "credit": "Photo: Mikey Mosher",
+        "hidden": true,
+        "available": true
+    },
+    {
+        "image": "/images/beyond-the-black-rainbow/TWELVETEN_6-26-78.jpg",
+        "author": "Tristan Higginbotham",
+        "title": "Dreamreading",
+        "date": "2025",
+        "dimensions": "8.5 x 4 x 4  in. (21.59 x 10.16 x 10.16 cm)",
+        "media": "Bone, paper pulp, acrylic medium, watercolor, graphite",
+        "credit": "Photo: Mikey Mosher",
+        "hidden": true,
+        "available": true
+    },
+    {
+        "image": "/images/beyond-the-black-rainbow/TWELVETEN_6-26-44.jpg",
+        "author": "Nico Ramirez Rosas",
+        "title": "Maude Greene",
+        "date": "2026",
+        "dimensions": "1 x 3.75 x 2.5 inches (2.54 x 9.525 x 6.35 cm)",
+        "media": "MJ, nail, sparkles and fake ID",
+        "credit": "Photo: Mikey Mosher",
+        "hidden": true,
+        "available": true
+    },
+    {
+        "image": "/images/beyond-the-black-rainbow/TWELVETEN_6-26-46.jpg",
+        "author": "Nico Ramirez Rosas",
+        "title": "Maude Greene",
+        "date": "2026",
+        "dimensions": "0.5 x 3.6 x 2.25 in. (1.27 x 9.144 x 5.715 cm)",
+        "media": "Advil liquid gel min and poly plastics on fake ID",
+        "credit": "Photo: Mikey Mosher",
+        "hidden": true,
         "available": true
     }
 ]
