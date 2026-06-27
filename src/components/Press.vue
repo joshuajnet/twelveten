@@ -3,6 +3,20 @@
         <h2 class="text-xl font-bold mb-3">Press</h2>
         <div class="border-t py-3">
             <div class="mb-6">
+                <h3 class="text-lg italic">Hyperallergic</h3>
+                <a
+                    href="https://hyperallergic.com/10-art-shows-to-see-in-chicago-this-summer/"
+                    target="_blank"
+                    class="!no-underline"
+                >
+                    <h3 class="text-lg font-medium text-sky-900">
+                        10 Art Shows to See in Chicago This Summer (feat. Beyond the Black Rainbow group exhibition)
+                    </h3>
+                </a>
+                <h4 class="italic">June 24th, 2026</h4>
+                <p>by Natalie Jenkins</p>
+            </div>
+            <div class="mb-6">
                 <h3 class="text-lg italic">Newcity Art</h3>
                 <a
                     href="https://art.newcity.com/2026/04/24/noelle-africhs-signal-is-gut-instinct-turned-preserved-layer/"
