@@ -4,7 +4,7 @@ import { ref } from 'vue';
 
 <template>
     <div class="container mx-auto py-4 px-3 flex flex-col grow">
-        <div class="grid md:grid-cols-4 grid-cols-2 gap-6 mb-6">
+        <div class="grid md:grid-cols-4 grid-cols-2 gap-6 mb-6" v-if="true === false">
             <div>
                 <h3 class="font-roboto text-xl mb-3">Current</h3>
                 <router-link :to="{ name: 'beyond-the-black-rainbow' }" class="no-underline text-2xl mt-8">
@@ -18,7 +18,7 @@ import { ref } from 'vue';
             </div>
             <div v-if="true===false">
                 <h3 class="font-roboto text-xl mb-3">Upcoming</h3>
-                <router-link :to="{ name: 'beyond-the-black-rainbow' }" class="no-underline text-2xl mt-8">
+                <router-link :to="{ name: 'beyond-the-black-rainbow' }" class="no-underline text-2xl">
                     <img
                         v-lazy="{ src: '/images/beyond-the-black-rainbow/btbr-square.jpg' }"
                         class="lazy-image max-w-full w-auto h-auto mx-auto"
@@ -30,6 +30,14 @@ import { ref } from 'vue';
         </div>
         <h3 class="font-roboto text-xl mb-3">Past</h3>
         <div class="grid md:grid-cols-4 grid-cols-2 gap-6">
+            <router-link :to="{ name: 'beyond-the-black-rainbow' }" class="no-underline text-2xl">
+                <img
+                    v-lazy="{ src: '/images/beyond-the-black-rainbow/btbr-square.jpg' }"
+                    class="lazy-image max-w-full w-auto h-auto mx-auto"
+                    style="max-height: calc(100vh - 200px)"
+                    alt="Beyond the Black Rainbow: Justin Beachler, Laveen Gammie, Tristan Higginbotham, Nico Ramirez Rosas. June 6th - July 25th, 2026"
+                />
+            </router-link>
             <router-link :to="{ name: 'africh-signal' }" class="no-underline text-2xl">
                     <img
                         v-lazy="{ src: '/images/signal/africh-signal-square-nomark.jpg' }"

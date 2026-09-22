@@ -22,7 +22,7 @@ import { ref } from 'vue';
                 <div class="text-lg">
                     Noelle Africh<br />
                     <span class="text-base italic">NADA Miami</span><br />
-                    <span class="text-sm">Decmber 1st &mdash; 5th, 2026</span>
+                    <span class="text-sm">December 1st &mdash; 5th, 2026</span>
                 </div>
             </div>
         </div>
