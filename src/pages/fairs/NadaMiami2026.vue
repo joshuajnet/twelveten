@@ -17,7 +17,7 @@ export default {
 
 <template>
     <div class="flex flex-col grow">
-        <div>
+        <div v-if="true === false">
             <GallerySlideshow :slides="slides" :worksAvailable="true" />
         </div>
         <div class="container max-w-screen-sm mx-auto grid md:grid-cols-1 gap-6 px-3">
@@ -25,9 +25,8 @@ export default {
                 <div class="grid md:grid-cols-2 grid-cols-1 gap-3 mb-6 mx-auto">
                     <div class="flex justify-between">
                         <div class="text-lg">
-                            <strong>Tali Halpern</strong><br />
-                            <em>NADA Miami 2025</em><br />
-                            Booth D206
+                            <strong>Noelle Africh</strong><br />
+                            <em>NADA Miami 2026</em>
                         </div>
                     </div>
                     <div class="md:text-right text-left">
@@ -38,8 +37,15 @@ export default {
                         >
                             Preview PDF
                         </a>
-                        December 2nd &mdash; 6th, 2025<br />
-                        Ice Palace Studios<br /> 1400 North Miami Avenue<br />
+                        December 1st &mdash; 5th, 2026<br />
+                        Ice Palace Studios<br />
+                        1400 North Miami Avenue<br />
+                        <a
+                            href="mailto:joshua@twelvetengallery.com?subject=Neighbors"
+                            class="py-1 px-3 inline-block cursor-pointer hover:text-sky-600 !no-underline border hover:shadow mt-3 font-roboto font-light text-sm"
+                        >
+                            Inquire
+                        </a>
                     </div>
                 </div>
                 <div class="text-justify max-w-screen-sm mx-auto">
