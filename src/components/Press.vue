@@ -1,6 +1,20 @@
 <template>
     <div class="text-justify mb-10">
         <h2 class="text-xl font-bold mb-3">Press</h2>
+        <div class="mb-6">
+                <h3 class="text-lg italic">Newcity Art</h3>
+                <a
+                    href="https://art.newcity.com/2026/07/08/beyond-the-black-rainbow-and-utopian-collapse/"
+                    target="_blank"
+                    class="!no-underline"
+                >
+                    <h3 class="text-lg font-medium text-sky-900">
+                        “Beyond the Black Rainbow” and Utopian Collapse
+                    </h3>
+                </a>
+                <h4 class="italic">July 8th, 2026</h4>
+                <p>by Teddy Sandler</p>
+            </div>
         <div class="border-t py-3">
             <div class="mb-6">
                 <h3 class="text-lg italic">Hyperallergic</h3>
