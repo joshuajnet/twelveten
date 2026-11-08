@@ -19,11 +19,13 @@ import { ref } from 'vue';
             </div>
             <div>
                 <h3 class="font-roboto text-xl mb-3">Upcoming</h3>
-                <div class="text-lg">
-                    Noelle Africh<br />
-                    <span class="text-base italic">NADA Miami</span><br />
-                    <span class="text-sm">December 1st &mdash; 5th, 2026</span>
-                </div>
+                <router-link :to="{ name: 'nada-miami-2026' }" class="no-underline text-2xl">
+                    <div class="text-lg">
+                        Noelle Africh<br />
+                        <span class="text-base italic">NADA Miami</span><br />
+                        <span class="text-sm">December 1st &mdash; 5th, 2026</span>
+                    </div>
+                </router-link>
             </div>
         </div>
         <h3 class="font-roboto text-xl mb-3">Past</h3>

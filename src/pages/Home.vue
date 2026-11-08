@@ -15,17 +15,17 @@ export default {
 </script>
 
 <template>
-    <router-link :to="{ name: 'fairs' }" class="flex flex-grow !no-underline">
+    <router-link :to="{ name: 'nada-miami-2026' }" class="flex flex-grow !no-underline">
         <div class="fixed top-0 left-0 w-full h-full flex flex-grow bg-cover bg-center">
-            <div class="absolute top-[-4px] right-[-4px] left-[-4px] bottom-[-4px] bg-sky-900" v-if="true === false">
+            <div class="absolute top-[-4px] right-[-4px] left-[-4px] bottom-[-4px] bg-sky-900">
                 <!--<div class="absolute w-full h-full overlay" />-->
                 <img
-                    src="/images/beyond-the-black-rainbow/TWELVETEN_6-26-6.jpg"
+                    src="/images/nada-miami-2026/privacy-whitespace.jpg"
                     :class="{ 'blur-bg': menuActive }"
                     class="md:block hidden home-bg object-cover w-full h-full"
                 />
                 <img
-                    src="/images/beyond-the-black-rainbow/TWELVETEN_6-26-64.jpg"
+                    src="/images/nada-miami-2026/privacy-whitespace.jpg"
                     :class="{ 'blur-bg': menuActive }"
                     class="md:hidden home-bg object-cover w-full h-full"
                 />

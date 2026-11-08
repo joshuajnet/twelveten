@@ -30,7 +30,7 @@ export default {
                         </div>
                     </div>
                     <div class="md:text-right text-left">
-                        <a
+                        <a  v-if="true === false"
                             href="/docs/nada-miami-2025/tali-halpern-nada-miami-preview.pdf"
                             class="block mb-3"
                             target="_blank"
@@ -41,7 +41,7 @@ export default {
                         Ice Palace Studios<br />
                         1400 North Miami Avenue<br />
                         <a
-                            href="mailto:joshua@twelvetengallery.com?subject=Neighbors"
+                            href="mailto:joshua@twelvetengallery.com?subject=NADA"
                             class="py-1 px-3 inline-block cursor-pointer hover:text-sky-600 !no-underline border hover:shadow mt-3 font-roboto font-light text-sm"
                         >
                             Inquire
@@ -50,44 +50,34 @@ export default {
                 </div>
                 <div class="text-justify max-w-screen-sm mx-auto">
                     <p class="mb-3">
-                        For their participation in NADA Miami Projects Tali Halpern will present a focused series of
-                        woven self-portraits that explore the tension between historical forms of image-making and the
-                        digital conditions of contemporary self-representation.
+                        Twelve Ten Gallery is pleased to present a solo booth of paintings by Chicago-based artist Noelle Africh. Africh's paintings explore the emergence of form through the material and historical properties of distemper, recasting one of the earliest painting media in conversation with modern forms of image making. Drawing from a diverse array of influences, including early photographic experimentation, material and process based-art, Africh develops the medium and its mnemonic content, affecting the moment where recognition is retroactively constituted.
                     </p>
                     <p class="mb-3">
-                        Halpern’s process, translating pixel-based imagery into thread via a digital Jacquard loom,
-                        engages both traditional fiber craft and post-industrial production. The resulting works are
-                        both material and conceptual hybrids: slow to make, yet drawn from the accelerated rhythms of
-                        internet culture.
+                        <img
+                            src="/images/nada-miami-2026/privacy.jpg"
+                            alt="Noelle Africh, 'Privacy', 2026. Distemper on linen over panel. 12 x 9 in (22.86 x 20.48
+                        cm). Photo credit: Jonas Mueller."
+                        />
+                    </p>
+                    <p class="mb-6 text-center font-roboto font-light text-xs">
+                        Noelle Africh, "Privacy", 2026. Distemper on linen over panel. 12 x 9 in (22.86 x 20.48
+                        cm). Photo credit: Jonas Mueller.
                     </p>
                     <p class="mb-3">
-                        Working at the intersection of fiber, performance, and digital media, Halpern uses a
-                        computerized loom to weave tapestries sourced from their archive of texts, selfies, and
-                        performances. Their work resonates with feminist and queer legacies, invoking artists like
-                        Miriam Schapiro, Cindy Sherman and Tracey Emin while also drawing from drag, meme culture, and
-                        theories of gender performativity.
+                        Consisting of chalk, pigment, and a binder, distemper is a medium that is applied while hot and fluid, undergoing a continual process of change as it cools and cures. The artist engages this alchemical flux, intervening with experimental techniques that reactivate the surface and alter its contingent outcomes. Latent images become visible through a material reaction, as though developed rather than composed. In this respect, Africh’s process recalls the temporal doubling of photographic processes, as the image is carefully calibrated in both its time of capture and time of exposure.
+                    </p>
+                    <p class="mb-3">
+                        Africh’s images emerge mercurially through successive stages, the final form remaining unfixed until the artist marks their completion through an axiomatic decision. In this sense they draw on the rich dialectical arc between tradition and the avant-garde, as the determinate gestures of craft and authorial heroism are reconstituted in favor of autonomic execution and the selective framing of process and materials. The artist’s decision to arrest the process of a painting into one state, one moment, rather than another, demands a similarly nominative attention, their paintings occupying a space between the procedural and the intentional.
                     </p>
                     <p>
-                        Halpern embraces mutable roles as both saint and seducer, merging sacred imagery with the
-                        self-conscious gaze of digital culture. Their work navigates the performance of microcelebrity,
-                        blending pop iconography with intimate acts of self-fashioning to create a texture of soft
-                        glamour and digital nostalgia. Through collage and fragmentation, they explore the unstable
-                        terrain of subjectification in a world that insists on clear boundaries and binary legibility.
+                        For Africh, this process of continuous change is where mimicry inspires mimesis. Recalling the work of post-minimalists such as Lynda Benglis or Eva Hesse, whose practices demonstrate how the literality of material acquires a new expressive relationship in regards to the body and time,  Africh stages the synthetic constitution of memory. Their paintings foreground the act of recognition itself: the moment when a particular form may surface or be submerged within an indeterminate field.
                     </p>
                     <p class="mb-3" s>
-                        Halpern’s practice threads together queer embodiment, textile history, and the aesthetics of
-                        internet performance, offering a critical, and deeply personal, response to how the self is
-                        constructed and consumed today.
+                        For NADA Miami 2026, this focused presentation will bring together a selection of recent works that highlight Africh’s singular engagement with material transformation and the representational possibilities of painting’s surface.
                     </p>
                     <div class="mt-10">
                         <p class="italic mb-3">
-                            <span class="font-bold">Tali Halpern</span> (b. 1994, Chicago, IL) lives and works in
-                            Chicago. Tali’s work explores the complexities of queerness, sexuality, desirability,
-                            gender, and their aesthetics as well as topics surrounding addiction and recovery through a
-                            mixed media fiber practice. Their work is informed by collage, exploring the layers of
-                            intersectionality in art, identity, and existence. Their works have been exhibited at Twelve
-                            Ten Gallery (Chicago), Tiger Strikes Asteroid (Chicago) and de boer (Los Angeles), among
-                            others. MFA School of the Art Institute of Chicago, BFA Hampshire College.
+                            <span class="font-bold">Noelle Africh</span> (b. 1992, Chicago, IL) lives and works in Chicago, IL. They received an MFA in Painting and Drawing from The School of the Art Institute of Chicago and a Bachelor of Science degree in Mathematics from the University of Illinois in Urbana-Champaign. Solo exhibitions include "Signal", Twelve Ten (Chicago, IL), "Superstition", Slow Dance (Chicago, IL) and "Loomer", SHED Projects (Cleveland, OH). They have also participated in a three-person at No31 (Duns, Scotland) in 2026, and many group exhibitions including at Galerie Gisela Clement (Bonn, Germany), RUSCHWOMAN (Chicago, IL), Hyde Park Art Center (Chicago, IL), The Plan (Chicago, IL), The Green Gallery - West (Milwaukee, WI), and Patient Info (Chicago, IL), among others.
                         </p>
                     </div>
                 </div>
