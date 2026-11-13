@@ -102,7 +102,7 @@ export async function seed(db: DB, { force = false }: SeedOptions = {}): Promise
                 press_release_url: e.pressReleaseUrl ?? null,
                 header_links: JSON.stringify(e.headerLinks ?? []),
                 show_inquire: e.showInquire ?? false,
-                slideshow_visible: e.slideshowVisible ?? true,
+                slideshow_visible: e.slideshowVisible ?? Boolean(e.slideshow),
                 works_available: e.worksAvailable ?? false,
                 content: JSON.stringify(exhibitionContent(e)),
                 published: true,

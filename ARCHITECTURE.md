@@ -59,7 +59,7 @@ Stored dates are ISO `YYYY-MM-DD` strings for whole days and ISO timestamps for 
   | Table | Holds |
   |---|---|
   | `user`, `session`, `account`, `verification`, `rateLimit` | Login (Better Auth layout, camelCase columns; `user.role` is `user` or `admin`) |
-  | `exhibitions` | Exhibitions and fairs (`kind`). Header: `artists` (one per line), `title`, `subtitle`, `title_first`, run dates `starts_on`/`ends_on` (`date`), `timezone`, `hours_text`, `venue_text` (multi-line), `location_text` (short, for list cards), `press_release_url`, `header_links` (`[{label,url}]`), `show_inquire`. Media: `hero_image`/`hero_alt`, `thumbnail`, `slideshow_visible`, `works_available`. Body: `content` (rich-text JSON document). SEO overrides, `published` |
+  | `exhibitions` | Exhibitions and fairs (`kind`). Header: `artists` (one per line), `title`, `subtitle`, `title_first`, run dates `starts_on`/`ends_on` (`date`), `timezone`, `hours_text`, `venue_text` (multi-line), `location_text` (short, for list cards), `press_release_url`, `header_links` (`[{label,url}]`), `show_inquire`. Media: `hero_image`/`hero_alt`, `thumbnail`, `slideshow_visible` (off by default), `works_available`. Body: `content` (rich-text JSON document). SEO overrides, `published` |
   | `exhibition_events` | Dated events shown under an exhibition's dates (label, `starts_at`, `ends_at`, `position`), e.g. the opening |
   | `artworks` | Slideshow slides per exhibition: `image` or `video` (mp4), caption fields, `alt`, `hidden`, `available`; `(exhibition_id, position)` unique, deferrable |
   | `news_posts` | News posts: `slug`, `title`, `published_at`, `body_html`, SEO overrides, `published` |

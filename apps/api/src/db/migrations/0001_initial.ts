@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS exhibitions (
   press_release_url text,
   header_links jsonb NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(header_links) = 'array'), -- [{label,url}]
   show_inquire boolean NOT NULL DEFAULT false,
-  slideshow_visible boolean NOT NULL DEFAULT true,
+  slideshow_visible boolean NOT NULL DEFAULT false, -- slideshow is opt-in per exhibition
   works_available boolean NOT NULL DEFAULT false,
   content jsonb NOT NULL DEFAULT '{"type":"doc","content":[]}'::jsonb
     CHECK (jsonb_typeof(content) = 'object' AND content->>'type' = 'doc'),

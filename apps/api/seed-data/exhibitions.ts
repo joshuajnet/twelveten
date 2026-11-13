@@ -32,6 +32,7 @@ export interface SeedExhibition {
     pressReleaseUrl?: string;
     headerLinks?: { label: string; url: string }[];
     showInquire?: boolean;
+    /** Show the slideshow. Defaults to on when `slideshow` is set (matches the old pages). */
     slideshowVisible?: boolean;
     worksAvailable?: boolean;
     /** File name in apps/web/src/json (without .json) */

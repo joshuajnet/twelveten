@@ -79,6 +79,23 @@ describe('seed', () => {
         ]);
     });
 
+    it('turns the slideshow on only where the old page showed one', async () => {
+        const rows = await db.selectFrom('exhibitions').select(['slug', 'slideshow_visible']).execute();
+        const visible = Object.fromEntries(rows.map((r) => [r.slug, r.slideshow_visible]));
+        expect(visible['africh-signal']).toBe(true);
+        expect(visible['neighbors-chicago-2026']).toBe(false);
+    });
+
+    it('defaults the slideshow to off for new exhibitions', async () => {
+        const row = await db
+            .insertInto('exhibitions')
+            .values({ slug: 'new-show', title: 'New', starts_on: '2027-01-01', ends_on: '2027-02-01' })
+            .returning('slideshow_visible')
+            .executeTakeFirstOrThrow();
+        expect(row.slideshow_visible).toBe(false);
+        await db.deleteFrom('exhibitions').where('slug', '=', 'new-show').execute();
+    });
+
     it('links press to exhibitions and the home splash to its fair', async () => {
         const linked = await db.selectFrom('press_items').select('exhibition_id').where('exhibition_id', 'is not', null).execute();
         expect(linked).toHaveLength(pressItems.filter((p) => p.exhibition).length);
