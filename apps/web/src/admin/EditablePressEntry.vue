@@ -10,9 +10,12 @@ import { adminApi, conflictCurrent, errorMessage } from './api';
 import { askConflict, toast, useUnsavedGuard } from './state';
 import { btnDanger, btnOutline, btnPrimary } from './ui/buttons';
 
-/** A press item edited in place, with its link and the exhibition it covers. */
-const props = defineProps<{ item: PressItem; exhibitions: ExhibitionSummary[] }>();
-const emit = defineEmits<{ updated: [PressItem]; deleted: [string] }>();
+/**
+ * A press item edited in place, with its link and the exhibition it covers.
+ * With `isNew`, nothing exists yet: Save creates it, Discard drops the form.
+ */
+const props = defineProps<{ item: PressItem; exhibitions: ExhibitionSummary[]; isNew?: boolean }>();
+const emit = defineEmits<{ updated: [PressItem]; deleted: [string]; created: [PressItem]; discarded: [] }>();
 
 const form = reactive({
     outlet: props.item.outlet as string | null,
@@ -29,9 +32,38 @@ const linkOpen = ref(false);
 
 const KEYS = ['outlet', 'title', 'url', 'publishedOn', 'issueLabel', 'byline', 'exhibitionId'] as const;
 const dirty = computed(() => KEYS.some((k) => form[k] !== props.item[k]));
+const publishOnCreate = ref(false);
 useUnsavedGuard(dirty);
+const missing = computed(() => [!form.outlet && 'publication', !form.title && 'title', !form.url && 'article link'].filter(Boolean) as string[]);
+
+async function create() {
+    if (missing.value.length) {
+        if (!form.url) linkOpen.value = true;
+        return void toast(`Add the ${missing.value.join(', ')} first`, 'error');
+    }
+    saving.value = true;
+    try {
+        const created = await adminApi.createPress({
+            outlet: form.outlet!,
+            title: form.title!,
+            url: form.url!,
+            publishedOn: form.publishedOn,
+            issueLabel: form.issueLabel || null,
+            byline: form.byline || null,
+            exhibitionId: form.exhibitionId,
+            published: publishOnCreate.value,
+        });
+        emit('created', created);
+        toast('Press item added', 'success', 1500);
+    } catch (e) {
+        toast(errorMessage(e), 'error');
+    } finally {
+        saving.value = false;
+    }
+}
 
 async function save(version = props.item.updatedAt): Promise<void> {
+    if (props.isNew) return create();
     if (!form.outlet || !form.title || !form.url) return void toast('Outlet, title and link are required', 'error');
     saving.value = true;
     try {
@@ -52,6 +84,7 @@ async function save(version = props.item.updatedAt): Promise<void> {
 }
 
 async function setPublished(on: boolean) {
+    if (props.isNew) return void (publishOnCreate.value = on);
     try {
         emit('updated', await adminApi.patchPress(props.item.id, { updatedAt: props.item.updatedAt, published: on }));
     } catch (e) {
@@ -70,13 +103,17 @@ async function remove() {
 </script>
 
 <template>
-    <div class="mb-6" :class="{ 'bg-amber-50/60': !item.published }">
+    <div class="mb-6" :class="isNew ? 'bg-sky-50/70' : { 'bg-amber-50/60': !item.published }" :data-new="isNew || undefined">
         <div class="admin-ui mb-1 flex flex-wrap items-center gap-2 text-xs">
-            <span v-if="!item.published" class="rounded bg-amber-100 px-1.5 text-amber-900">Draft</span>
-            <div class="w-32"><Switch :model-value="item.published" label="Published" @update:model-value="setPublished" /></div>
+            <span v-if="isNew" class="rounded bg-sky-100 px-1.5 text-sky-900">New — not saved yet</span>
+            <span v-else-if="!item.published" class="rounded bg-amber-100 px-1.5 text-amber-900">Draft</span>
+            <div class="w-32">
+                <Switch :model-value="isNew ? publishOnCreate : item.published" :label="isNew ? 'Publish on save' : 'Published'" @update:model-value="setPublished" />
+            </div>
             <span class="flex-1" />
-            <button type="button" :class="btnDanger" @click="confirmDelete = true">Delete</button>
-            <button type="button" :class="btnPrimary" :disabled="!dirty || saving" @click="save()">Save</button>
+            <button v-if="isNew" type="button" :class="btnOutline" @click="emit('discarded')">Discard</button>
+            <button v-else type="button" :class="btnDanger" @click="confirmDelete = true">Delete</button>
+            <button type="button" :class="btnPrimary" :disabled="(!isNew && !dirty) || saving" @click="save()">Save</button>
         </div>
         <h3 class="text-lg italic"><InlineText v-model="form.outlet" placeholder="Publication" /></h3>
         <h3 class="text-lg font-medium text-sky-900"><InlineText v-model="form.title" placeholder="Article title" /></h3>

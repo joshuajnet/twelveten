@@ -31,6 +31,19 @@ const press = useInfiniteList<PressItem>({ key: 'press', fetchPage: (c) => api.p
 
 // ---- Editing (admins) ----
 const editing = computed(() => isAdmin.value && editMode.editing);
+
+/** An unsaved press item: only the form exists until Save creates it. */
+const newPress = ref<PressItem | null>(null);
+function blankPress(): PressItem {
+    return { id: '', outlet: '', title: '', url: '', publishedOn: todayIso(), issueLabel: null, byline: null, exhibitionId: null, published: false, updatedAt: new Date().toISOString() };
+}
+function onPressCreated(item: PressItem) {
+    newPress.value = null;
+    press.prepend(item);
+}
+watch(editing, (on) => {
+    if (!on) newPress.value = null;
+});
 const exhibitions = ref<ExhibitionSummary[]>([]);
 watch(
     editing,
@@ -45,9 +58,7 @@ async function handleRequest(kind: typeof editMode.request) {
     editMode.request = null;
     const { adminApi } = await import('@/admin/api');
     if (kind === 'new-news') news.prepend(await adminApi.createNews({ title: 'New post' }));
-    if (kind === 'new-press') {
-        press.prepend(await adminApi.createPress({ outlet: 'Publication', title: 'Article title', url: 'https://example.com/', publishedOn: todayIso() }));
-    }
+    if (kind === 'new-press') newPress.value = blankPress();
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 watch(() => editMode.request, handleRequest, { immediate: true });
@@ -77,7 +88,8 @@ useMeta(() => {
                 <h2 class="text-xl font-bold mb-3">Press</h2>
                 <div class="border-t py-3">
                     <template v-if="editing">
-                        <button type="button" class="admin-ui mb-3 text-xs text-sky-800 underline" @click="editMode.request = 'new-press'">+ Add press</button>
+                        <button v-if="!newPress" type="button" class="admin-ui mb-3 text-xs text-sky-800 underline" @click="editMode.request = 'new-press'">+ Add press</button>
+                        <EditablePressEntry v-else is-new :item="newPress" :exhibitions="exhibitions" @created="onPressCreated" @discarded="newPress = null" />
                         <EditablePressEntry
                             v-for="p in press.state.items"
                             :key="p.id"

@@ -156,8 +156,28 @@ test('add, edit and delete a news post and a press item', async ({ page }) => {
     await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
     await expect(page.getByText('Post deleted')).toBeVisible();
 
+    // A new press item is only a form until it is saved; discarding leaves nothing behind.
     await page.getByRole('button', { name: '+ Add press' }).click();
-    await expect(page.getByRole('textbox', { name: 'Publication' }).first()).toHaveText('Publication');
+    const draft = page.locator('[data-new]');
+    await expect(draft.getByText('New — not saved yet')).toBeVisible();
+    await draft.getByRole('button', { name: 'Discard' }).click();
+    await expect(draft).toHaveCount(0);
+
+    // Save creates it; then delete it again.
+    await page.getByRole('button', { name: '+ Add press' }).click();
+    await draft.getByRole('textbox').nth(0).fill('E2E Outlet');
+    await draft.getByRole('textbox').nth(1).fill('E2E press article');
+    await draft.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByText('Add the article link first')).toBeVisible();
+    await page.getByRole('dialog').getByLabel('Article link').fill('https://example.com/e2e-press');
+    await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click();
+    await draft.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByText('Press item added')).toBeVisible();
+    const saved = page.locator('.mb-6', { hasText: 'E2E press article' });
+    await expect(saved.getByText('Draft', { exact: true })).toBeVisible();
+    await saved.getByRole('button', { name: 'Delete' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
+    await expect(saved).toHaveCount(0);
 });
 
 test('infinite loading fetches news 10 at a time until the end', async ({ browser }) => {
