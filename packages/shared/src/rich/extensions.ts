@@ -6,6 +6,7 @@ import { Node, mergeAttributes, type Extensions } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import Paragraph from '@tiptap/extension-paragraph';
 import Bold from '@tiptap/extension-bold';
+import { BulletList, OrderedList } from '@tiptap/extension-list';
 
 export type ParagraphVariant = 'default' | 'italic' | 'lead';
 
@@ -42,6 +43,42 @@ export const LegacyBold = Bold.extend({
         return [...(this.parent?.() ?? []), { tag: 'span.font-bold' }];
     },
 });
+
+export type ListSize = 'default' | 'sm' | 'xs';
+const LIST_SIZE_CLASS: Record<ListSize, string | null> = { default: null, sm: 'text-sm', xs: 'text-xs' };
+
+/** Lists can be set in smaller type (footnotes, reading lists). */
+const sizeAttribute = {
+    size: {
+        default: 'default' satisfies ListSize,
+        parseHTML: (el: HTMLElement): ListSize => {
+            const cls = el.getAttribute('class') ?? '';
+            if (/\btext-xs\b/.test(cls)) return 'xs';
+            if (/\btext-sm\b/.test(cls)) return 'sm';
+            return 'default';
+        },
+        renderHTML: (attrs: { size?: ListSize }) => {
+            const cls = LIST_SIZE_CLASS[attrs.size ?? 'default'];
+            return cls ? { class: cls } : {};
+        },
+    },
+};
+
+export const SizedBulletList = BulletList.extend({
+    addAttributes() {
+        return { ...this.parent?.(), ...sizeAttribute };
+    },
+}).configure({ HTMLAttributes: { class: 'list-disc ml-5 mb-3' } });
+
+export const SizedOrderedList = OrderedList.extend({
+    addAttributes() {
+        return { ...this.parent?.(), ...sizeAttribute };
+    },
+    parseHTML() {
+        // Legacy markup sometimes numbered a <ul> with Tailwind's list-decimal.
+        return [...(this.parent?.() ?? []), { tag: 'ul.list-decimal', priority: 60 }];
+    },
+}).configure({ HTMLAttributes: { class: 'list-decimal ml-6 mb-3' } });
 
 /** Image with caption. */
 export const Figure = Node.create({
@@ -163,8 +200,8 @@ export function richExtensions(): Extensions {
             horizontalRule: false,
             strike: false,
             underline: false,
-            bulletList: { HTMLAttributes: { class: 'list-disc ml-5 mb-3' } },
-            orderedList: { HTMLAttributes: { class: 'list-decimal ml-6 mb-3' } },
+            bulletList: false,
+            orderedList: false,
             listItem: { HTMLAttributes: { class: 'mb-2' } },
             link: {
                 openOnClick: false,
@@ -175,6 +212,8 @@ export function richExtensions(): Extensions {
         }),
         StyledParagraph,
         LegacyBold,
+        SizedBulletList,
+        SizedOrderedList,
         Figure,
         Video,
         Bio,

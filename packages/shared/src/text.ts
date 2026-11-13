@@ -24,15 +24,19 @@ function nodeText(node: RichNode): string {
     return (node.content ?? []).map(nodeText).join('');
 }
 
-/** Text of the first non-empty paragraph in a rich document. */
-export function firstParagraph(doc: RichDoc): string {
+/**
+ * Text of the first substantial top-level paragraph in a rich document (used for descriptions).
+ * Short lines such as captions are skipped unless nothing longer exists.
+ */
+export function firstParagraph(doc: RichDoc, minLength = 60): string {
+    let fallback = '';
     for (const node of doc.content) {
-        if (node.type === 'paragraph') {
-            const text = nodeText(node).replace(/\s+/g, ' ').trim();
-            if (text) return text;
-        }
+        if (node.type !== 'paragraph') continue;
+        const text = nodeText(node).replace(/\s+/g, ' ').trim();
+        if (text.length >= minLength) return text;
+        fallback ||= text;
     }
-    return '';
+    return fallback;
 }
 
 /** First non-empty paragraph of an HTML string. */

@@ -1,0 +1,45 @@
+import type { Exhibition, ExhibitionKind, ExhibitionSummary, HomePage, NewsPost, Page, PressItem } from '@twelveten/shared';
+
+export class ApiError extends Error {
+    constructor(
+        readonly status: number,
+        message: string,
+    ) {
+        super(message);
+    }
+}
+
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+    const res = await fetch(`/api${path}`, {
+        credentials: 'same-origin',
+        ...init,
+        headers: { Accept: 'application/json', ...(init.body ? { 'Content-Type': 'application/json' } : {}), ...init.headers },
+    });
+    if (!res.ok) {
+        let message = res.statusText;
+        try {
+            message = ((await res.json()) as { error?: string }).error ?? message;
+        } catch {
+            // non-JSON error body
+        }
+        throw new ApiError(res.status, message);
+    }
+    return (res.status === 204 ? undefined : await res.json()) as T;
+}
+
+const qs = (params: Record<string, string | number | null | undefined>) => {
+    const s = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) if (v !== null && v !== undefined && v !== '') s.set(k, String(v));
+    const out = s.toString();
+    return out ? `?${out}` : '';
+};
+
+export const api = {
+    request,
+    home: () => request<HomePage>('/home'),
+    exhibitions: (kind?: ExhibitionKind) => request<{ items: ExhibitionSummary[] }>(`/exhibitions${qs({ kind })}`).then((r) => r.items),
+    exhibition: (slug: string, kind?: ExhibitionKind) => request<Exhibition>(`/exhibitions/${encodeURIComponent(slug)}${qs({ kind })}`),
+    news: (cursor?: string | null, limit?: number) => request<Page<NewsPost>>(`/news${qs({ cursor, limit })}`),
+    newsPost: (slug: string) => request<NewsPost>(`/news/${encodeURIComponent(slug)}`),
+    press: (cursor?: string | null, limit?: number, exhibition?: string) => request<Page<PressItem>>(`/press${qs({ cursor, limit, exhibition })}`),
+};

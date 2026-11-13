@@ -1,5 +1,5 @@
 /**
- * News posts from the old apps/web/src/json/news.json, with known data fixes applied.
+ * News posts from the old site's news.json, with known data fixes applied.
  * Slugs keep the old URL paths (some don't match their dates) so existing links keep working.
  */
 import { readFileSync } from 'node:fs';
@@ -42,7 +42,7 @@ function parseDate(text: string): string {
 }
 
 export function loadNews(): SeedNewsPost[] {
-    const file = fileURLToPath(new URL('../../web/src/json/news.json', import.meta.url));
+    const file = fileURLToPath(new URL('./news.json', import.meta.url));
     const legacy = JSON.parse(readFileSync(file, 'utf8')) as LegacyNews[];
     return legacy.map((n) => ({
         slug: n.path,

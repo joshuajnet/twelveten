@@ -1,70 +1,75 @@
-<script>
-import Footer from '../components/Footer.vue';
+<script setup lang="ts">
+import { computed } from 'vue';
+import { exhibitionPath, formatDateRange } from '@twelveten/shared';
+import Footer from '@/components/Footer.vue';
+import { api } from '@/api/client';
+import { useResource } from '@/composables/useResource';
+import { useMeta } from '@/composables/useMeta';
 
-export default {
-    components: {
-        Footer,
-    },
-    props: {
-        menuActive: {
-            type: Boolean,
-            default: false,
-        },
-    },
-};
+defineProps<{ menuActive?: boolean }>();
+
+const { data: home } = useResource(
+    () => 'home',
+    () => api.home(),
+);
+
+const target = computed(() => (home.value?.link ? exhibitionPath(home.value.link) : null));
+const dates = computed(() => {
+    const h = home.value;
+    if (!h) return '';
+    const start = h.link?.startsOn ?? h.startsOn;
+    const end = h.link?.endsOn ?? h.endsOn;
+    return start && end ? formatDateRange(start, end) : '';
+});
+const textClass = computed(() => (home.value?.textColor === 'white' ? 'text-white hover:text-white!' : 'text-black hover:text-black!'));
+
+useMeta(() => (home.value ? { kind: 'home', home: home.value } : null));
 </script>
 
 <template>
-    <router-link :to="{ name: 'nada-miami-2026' }" class="flex grow no-underline!">
+    <component :is="target ? 'router-link' : 'div'" v-bind="target ? { to: target } : {}" class="flex grow no-underline!">
         <div class="fixed top-0 left-0 w-full h-full flex grow bg-cover bg-center">
             <div class="absolute top-[-4px] right-[-4px] left-[-4px] bottom-[-4px] bg-sky-900">
-                <!--<div class="absolute w-full h-full overlay" />-->
-                <img
-                    src="/images/nada-miami-2026/privacy-whitespace.jpg"
-                    :class="{ 'blur-bg': menuActive }"
-                    class="md:block hidden home-bg object-cover w-full h-full"
-                />
-                <img
-                    src="/images/nada-miami-2026/privacy-whitespace.jpg"
-                    :class="{ 'blur-bg': menuActive }"
-                    class="md:hidden home-bg object-cover w-full h-full"
-                />
+                <template v-if="home">
+                    <img
+                        :src="home.bgImage"
+                        alt=""
+                        :class="{ 'blur-bg': menuActive }"
+                        :style="{ objectPosition: home.bgFocalPoint }"
+                        class="md:block hidden home-bg object-cover w-full h-full"
+                    />
+                    <img
+                        :src="home.bgImageMobile ?? home.bgImage"
+                        alt=""
+                        :class="{ 'blur-bg': menuActive }"
+                        :style="{ objectPosition: home.bgFocalPoint }"
+                        class="md:hidden home-bg object-cover w-full h-full"
+                    />
+                </template>
             </div>
-            <div class="relative z-10 container mx-auto text-sm py-8 mb-4 px-3 flex flex-col grow"
-                :class="{ 'blur-bg bg-sky-900': menuActive }"
-            >
-                <div
-                    class="mt-auto flex w-full md:flex-row flex-col md:gap-6 md:justify-between text-black !hover:text-black"
-                >
+            <div class="relative z-10 container mx-auto text-sm py-8 mb-4 px-3 flex flex-col grow" :class="{ 'blur-bg bg-sky-900': menuActive }">
+                <div v-if="home" class="mt-auto flex w-full md:flex-row flex-col md:gap-6 md:justify-between" :class="textClass">
                     <div class="text-left text-lg">
-                        <strong class="text-xl"> Noelle Africh</strong><br />
-                            NADA Miami
+                        <strong v-if="home.headline" class="text-xl"> {{ home.headline }}</strong><br />
+                        {{ home.subline }}
+                        <template v-if="home.extraText"><br />{{ home.extraText }}</template>
                     </div>
-                    <div class="md:block hidden md:text-right md:mt-auto text-lg">
-                        December 1st &mdash; 5th, 2026
+                    <div v-if="dates" class="md:block hidden md:text-right md:mt-auto text-lg">
+                        {{ dates }}
                     </div>
                 </div>
                 <Footer class="relative z-10 grow-0! shrink!" />
             </div>
         </div>
-    </router-link>
+    </component>
 </template>
+
 <style scoped>
-.overlay {
-    background: rgba(0, 0, 0, 0.15);
-}
 .home-bg {
     transition: all 0.2s ease-in-out;
 }
 .blur-bg {
     opacity: 0.7;
     filter: blur(2px);
-}
-.shadow-text {
-    text-shadow:
-        2px 2px 6px rgba(0, 0, 0, 0.05),
-        -2px -2px 6px rgba(0, 0, 0, 0.05),
-        2px -2px 6px rgba(0, 0, 0, 0.2),
-        -2px 2px 6px rgba(0, 0, 0, 0.05);
 }
 </style>

@@ -7,6 +7,7 @@ import type {
     NewsPost,
     PressItem,
 } from '@twelveten/shared';
+import { richToHtmlServer } from '@twelveten/shared/rich/server';
 import type {
     ArtworkRow,
     ExhibitionEventRow,
@@ -91,6 +92,7 @@ export function toExhibition(
         slideshowVisible: r.slideshow_visible,
         worksAvailable: r.works_available,
         content: r.content,
+        contentHtml: richToHtmlServer(r.content),
         seoTitle: r.seo_title,
         seoDescription: r.seo_description,
         ogImage: r.og_image,

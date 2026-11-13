@@ -108,6 +108,8 @@ export const exhibitionSchema = exhibitionSummarySchema.extend({
     slideshowVisible: z.boolean(),
     worksAvailable: z.boolean(),
     content: richDocSchema,
+    /** `content` rendered to HTML by the API (so the public site needs no editor code). */
+    contentHtml: z.string(),
     ...seoFields,
     updatedAt: isoTimestamp,
     events: z.array(exhibitionEventSchema),

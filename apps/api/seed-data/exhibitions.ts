@@ -35,10 +35,12 @@ export interface SeedExhibition {
     /** Show the slideshow. Defaults to on when `slideshow` is set (matches the old pages). */
     slideshowVisible?: boolean;
     worksAvailable?: boolean;
-    /** File name in apps/web/src/json (without .json) */
+    /** File name in seed-data/slideshows (without .json) */
     slideshow?: string;
     /** YouTube id shown above the text */
     video?: string;
+    /** HTML shown under the video */
+    videoCaption?: string;
 }
 
 const HOURS = 'Hours: Wed - Sat, 1PM — 6PM';
@@ -188,6 +190,7 @@ export const exhibitions: SeedExhibition[] = [
         headerLinks: [{ label: 'In Conversation', url: '/documents/beech-von-sternberg-interview' }],
         slideshow: 'delphicfuture-slideshow',
         video: 'XaswpDf-jMI',
+        videoCaption: '<em>Map of the Bomb</em> premiere trailer.',
     },
     {
         slug: 'the-veil',
@@ -273,11 +276,8 @@ export const exhibitions: SeedExhibition[] = [
         endsOn: '2026-12-05',
         timezone: 'America/New_York',
         venueText: 'Ice Palace Studios\n1400 North Miami Avenue',
-        locationText: 'Miami, FL',
         showInquire: true,
         worksAvailable: true,
-        // As on the old page: this fair still shows the NADA Miami 2025 slideshow.
-        slideshow: 'nada-miami-2025-slideshow',
     },
     {
         slug: 'neighbors-chicago-2026',
@@ -303,7 +303,6 @@ export const exhibitions: SeedExhibition[] = [
         endsOn: '2025-12-06',
         timezone: 'America/New_York',
         venueText: 'Ice Palace Studios\n1400 North Miami Avenue',
-        locationText: 'Miami, FL',
         headerLinks: [{ label: 'Preview PDF', url: '/docs/nada-miami-2025/tali-halpern-nada-miami-preview.pdf' }],
         worksAvailable: true,
         slideshow: 'nada-miami-2025-slideshow',

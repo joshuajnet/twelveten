@@ -1,28 +1,33 @@
 # Architecture
 
 ## Overview
-Twelve Ten Gallery website: a Vue 3 single-page app built with Vite and styled with Tailwind CSS 4, plus a TypeScript API (Hono) backed by Postgres via Kysely. The site's content (exhibitions, fairs, slideshows, news, press, home splash) is still bundled in the frontend source; the API currently exposes a health check and owns the database schema.
+Twelve Ten Gallery website: a Vue 3 single-page app built with Vite and styled with Tailwind CSS 4, plus a TypeScript API (Hono) backed by Postgres via Kysely. All content (exhibitions, fairs, slideshows, news, press, home splash) lives in the database and is read by the site through `/api`.
 
 ## Repo layout
 npm workspaces:
 
 | Path | Contents |
 |---|---|
-| `apps/web` | Vue 3 SPA (`@twelveten/web`): pages, components, JSON content, `public/` images and PDFs |
+| `apps/web` | Vue 3 SPA (`@twelveten/web`): pages, components, API client, `public/` images and PDFs |
 | `apps/api` | `@twelveten/api`: Hono app (`src/app.ts`), Lambda entry (`src/lambda.ts`), local Node server (`src/local.ts`), database access and migrations (`src/db/`) |
 | `packages/shared` | `@twelveten/shared` TypeScript source used by other workspaces: content schemas (zod), date formatting, route table, meta-tag builder |
 | `docker-compose.yml` | Local services: Postgres 17 (databases `twelveten` and `twelveten_test`) and LocalStack 4.14.0 (S3, SSM) |
 | `docker/` | Container init: Postgres test-database creation, LocalStack bootstrap (`docker/localstack/init/10-bootstrap.sh`) |
-| `apps/api/seed-data` | Original site content for the initial seed: `exhibitions.ts` (header data), `exhibitions/<slug>.html` / `<slug>.bio.html` (body text), `press.ts`, `news.ts` (reads `apps/web/src/json/news.json`), `home.ts` |
+| `apps/api/seed-data` | Original site content for the initial seed: `exhibitions.ts` (header data), `exhibitions/<slug>.html` / `<slug>.bio.html` (body text), `slideshows/*.json`, `press.ts`, `news.ts` + `news.json`, `home.ts` |
 | `e2e/` | Playwright tests; `e2e/visual` holds full-page screenshot tests for every public URL |
 | `vitest.config.ts` | Root Vitest config; each workspace defines a Vitest project |
 | `playwright.config.ts` | Playwright config (desktop + mobile projects; serves the built site with `vite preview`) |
 
 ## Frontend (`apps/web`)
-- Entry: `src/main.js` mounts `App.vue` with `vue-router` (`src/router.js`, HTML5 history) and `vue3-lazyload`.
-- Pages: `src/pages/` (one `.vue` file per exhibition and fair under `exhibitions/` and `fairs/`), shared components in `src/components/`.
-- Content: slideshows in `src/json/*-slideshow.json`, news in `src/json/news.json`, press list in `src/components/Press.vue`.
-- Styling: `src/style.css` imports Tailwind and defines theme fonts. SFC `<style>` blocks that use `@apply` start with `@reference "@/style.css";`. Global element styles in `App.vue` live in `@layer base` so utility classes override them.
+- Entry: `src/main.js` mounts `App.vue` with `vue-router` (`src/router.ts`, HTML5 history, every page lazy-loaded), `@unhead/vue` (document head) and `vue3-lazyload`.
+- Routes: `/`, `/about`, `/exhibitions`, `/exhibitions/:slug`, `/fairs`, `/fairs/:slug`, `/news`, `/news/:slug`, `/documents/beech-von-sternberg-interview`, legacy redirects from `REDIRECTS`, and a catch-all 404.
+- Data: `src/api/client.ts` (`api.*` typed fetchers against same-origin `/api`). `useResource` loads data reactively with loading / not-found / error state. `useMeta` sets title, description, canonical, Open Graph / Twitter tags and JSON-LD from `buildMeta`.
+- Exhibitions and fairs: `pages/ExhibitionDetail.vue` loads one by slug and renders `components/exhibition/ExhibitionTemplate.vue`: optional slideshow (`slideshowVisible`), hero image (two columns) or a single narrow column when there is no hero, `ExhibitionHeader.vue` (artists/title/subtitle, PDF and header links, derived dates and events, venue, hours, Inquire button), and the body (`RichContent.vue` renders the API's `contentHtml` and replaces the `pressList` placeholder with the exhibition's press).
+- Lists: `pages/Exhibitions.vue` (thumbnail grid) and `pages/Fairs.vue` (text cards) group items into Current / Upcoming / Past with `exhibitionStatus` on the gallery's local date.
+- News: `pages/News.vue` shows Press and Gallery News side by side; each list loads 10 items at a time as the reader scrolls (`useInfiniteList`: IntersectionObserver sentinel with a 600px margin, no concurrent fetches, retry on error, a keyboard-reachable "Load more", `aria-live` announcements). Loaded items and scroll position persist for the session so back navigation restores them. `/news/:slug` shows one post.
+- Home: `pages/Home.vue` renders the splash from `/api/home` (desktop/mobile background with focal point, headline, subline, extra text, derived dates, black/white text) and links it to the chosen exhibition or fair.
+- Styling: `src/style.css` imports Tailwind, adds `packages/shared/src` as a class source (classes emitted by the rich-text renderer), and defines theme fonts. SFC `<style>` blocks that use `@apply` start with `@reference "@/style.css";`. Global element styles in `App.vue` live in `@layer base` so utility classes override them.
+- Dev server and `vite preview` proxy `/api` to `API_TARGET` (default `http://localhost:3000`).
 - `@` resolves to `apps/web/src`.
 
 ## Shared package (`packages/shared`)
@@ -96,4 +101,4 @@ Stored dates are ISO `YYYY-MM-DD` strings for whole days and ISO timestamps for 
 ## Testing
 - `npm test`: Vitest across workspaces. `apps/web` tests run in happy-dom with `@vue/test-utils` (`src/**/*.test.js`); `packages/shared` tests run in Node (`src/**/*.test.ts`); `apps/api` tests run in Node against the `twelveten_test` database (override with `TEST_DATABASE_URL`), one file at a time, and need `docker compose up` first.
 - `npx tsc -p packages/shared` / `npx tsc -p apps/api`: type-check (`tsconfig.base.json` holds the common compiler options).
-- `npm run test:e2e`: builds the site and runs Playwright. Visual tests compare each page against the committed baseline in `e2e/__screenshots__/`; refresh it intentionally with `npx playwright test --update-snapshots`.
+- `npm run test:e2e`: builds the site and runs Playwright against `vite preview` (needs the API on port 3000 with seeded data). Visual tests compare each page against the committed baseline in `e2e/__screenshots__/`; refresh it intentionally with `npx playwright test --update-snapshots`.

@@ -15,7 +15,7 @@ const exhibition = (over: Partial<Exhibition> = {}): Exhibition => ({
     thumbnail: null, heroImage: '/media/images/signal/hero.jpg', heroAlt: null, published: true,
     hoursText: null, venueText: null, pressReleaseUrl: null, headerLinks: [], showInquire: false, slideshowVisible: true, worksAvailable: true,
     content: { type: 'doc', content: [{ type: 'paragraph' }, para('Twelve Ten Gallery is thrilled to present Signal, an exhibition by Noelle Africh.')] },
-    seoTitle: null, seoDescription: null, ogImage: null, updatedAt: ts,
+    seoTitle: null, seoDescription: null, ogImage: null, updatedAt: ts, contentHtml: '',
     events: [], artworks: [], press: [],
     ...over,
 });

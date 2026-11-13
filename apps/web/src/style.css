@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+/* Classes emitted by the shared rich-text renderer. */
+@source '../../../packages/shared/src';
 
 @theme {
   --font-gloock: 'Gloock', display;
@@ -23,5 +25,12 @@
   ::backdrop,
   ::file-selector-button {
     border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+/* Rich text (exhibition bodies): list items wrap their text in <p>; keep the list's own spacing. */
+@layer components {
+  .rich-content li > p {
+    margin-bottom: 0;
   }
 }

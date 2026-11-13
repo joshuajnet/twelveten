@@ -1,152 +1,78 @@
-<script setup>
-import { ref } from 'vue';
+<script setup lang="ts">
+import { computed } from 'vue';
+import { exhibitionStatus, formatDateRange, joinArtists, todayIso, type ExhibitionSummary } from '@twelveten/shared';
+import { api } from '@/api/client';
+import { useResource } from '@/composables/useResource';
+import { useMeta } from '@/composables/useMeta';
+
+const { data } = useResource(
+    () => 'exhibition' as const,
+    (k) => api.exhibitions(k),
+);
+
+const today = todayIso();
+const byStatus = computed(() => {
+    const groups = { current: [] as ExhibitionSummary[], upcoming: [] as ExhibitionSummary[], past: [] as ExhibitionSummary[] };
+    for (const e of data.value ?? []) groups[exhibitionStatus(e.startsOn, e.endsOn, today)].push(e);
+    // Upcoming reads soonest first; the API returns newest first.
+    groups.upcoming.reverse();
+    return groups;
+});
+
+const alt = (e: ExhibitionSummary) => {
+    const who = joinArtists(e.artists);
+    return `${e.titleFirst || !who ? e.title : `${who}: ${e.title}`}. ${formatDateRange(e.startsOn, e.endsOn)}`;
+};
+const image = (e: ExhibitionSummary) => e.thumbnail ?? e.heroImage;
+
+useMeta(() => ({ kind: 'static', path: '/exhibitions', image: data.value?.[0] ? image(data.value[0]) : null }));
 </script>
 
 <template>
     <div class="container mx-auto py-4 px-3 flex flex-col grow">
-        <div class="grid md:grid-cols-4 grid-cols-2 gap-6 mb-6" v-if="true === false">
-            <div>
-                <h3 class="font-roboto text-xl mb-3">Current</h3>
-                <router-link :to="{ name: 'beyond-the-black-rainbow' }" class="no-underline text-2xl mt-8">
+        <div v-if="byStatus.current.length || byStatus.upcoming.length" class="grid md:grid-cols-4 grid-cols-2 gap-6 mb-6">
+            <div v-for="group in (['current', 'upcoming'] as const)" v-show="byStatus[group].length" :key="group">
+                <h3 class="font-roboto text-xl mb-3">{{ group === 'current' ? 'Current' : 'Upcoming' }}</h3>
+                <router-link
+                    v-for="e in byStatus[group]"
+                    :key="e.id"
+                    :to="{ name: 'exhibition', params: { slug: e.slug } }"
+                    class="no-underline text-2xl block mb-6"
+                >
                     <img
-                        v-lazy="{ src: '/images/beyond-the-black-rainbow/btbr-square.jpg' }"
+                        v-if="image(e)"
+                        v-lazy="{ src: image(e) }"
                         class="lazy-image max-w-full w-auto h-auto mx-auto"
                         style="max-height: calc(100vh - 200px)"
-                        alt="Beyond the Black Rainbow: Justin Beachler, Laveen Gammie, Tristan Higginbotham, Nico Ramirez Rosas. June 6th - July 25th, 2026"
-                    />
-                </router-link>
-            </div>
-            <div v-if="true===false">
-                <h3 class="font-roboto text-xl mb-3">Upcoming</h3>
-                <router-link :to="{ name: 'beyond-the-black-rainbow' }" class="no-underline text-2xl">
-                    <img
-                        v-lazy="{ src: '/images/beyond-the-black-rainbow/btbr-square.jpg' }"
-                        class="lazy-image max-w-full w-auto h-auto mx-auto"
-                        style="max-height: calc(100vh - 200px)"
-                        alt="Beyond the Black Rainbow: Justin Beachler, Laveen Gammie, Tristan Higginbotham, Nico Ramirez Rosas. June 6th - July 25th, 2026"
+                        :alt="alt(e)"
                     />
                 </router-link>
             </div>
         </div>
-        <h3 class="font-roboto text-xl mb-3">Past</h3>
-        <div class="grid md:grid-cols-4 grid-cols-2 gap-6">
-            <router-link :to="{ name: 'beyond-the-black-rainbow' }" class="no-underline text-2xl">
-                <img
-                    v-lazy="{ src: '/images/beyond-the-black-rainbow/btbr-square.jpg' }"
-                    class="lazy-image max-w-full w-auto h-auto mx-auto"
-                    style="max-height: calc(100vh - 200px)"
-                    alt="Beyond the Black Rainbow: Justin Beachler, Laveen Gammie, Tristan Higginbotham, Nico Ramirez Rosas. June 6th - July 25th, 2026"
-                />
-            </router-link>
-            <router-link :to="{ name: 'africh-signal' }" class="no-underline text-2xl">
+        <template v-if="byStatus.past.length">
+            <h3 class="font-roboto text-xl mb-3">Past</h3>
+            <div class="grid md:grid-cols-4 grid-cols-2 gap-6">
+                <router-link
+                    v-for="e in byStatus.past"
+                    :key="e.id"
+                    :to="{ name: 'exhibition', params: { slug: e.slug } }"
+                    class="no-underline text-2xl"
+                >
                     <img
-                        v-lazy="{ src: '/images/signal/africh-signal-square-nomark.jpg' }"
+                        v-if="image(e)"
+                        v-lazy="{ src: image(e) }"
                         class="lazy-image max-w-full w-auto h-auto mx-auto"
                         style="max-height: calc(100vh - 200px)"
-                        alt="Noelle Africh: Signal. April 4th - May 23rd, 2026"
+                        :alt="alt(e)"
                     />
-            </router-link>
-            <router-link :to="{ name: 'schippa-wildfong-liberte' }" class="no-underline text-2xl">
-                <img
-                    v-lazy="{ src: '/images/liberte/micah-nomark.jpg' }"
-                    class="lazy-image max-w-full w-auto h-auto mx-auto"
-                    style="max-height: calc(100vh - 200px)"
-                    alt="Micah Schippa-Wildfong: LIBERTÉ. February 21st - March 28th, 2026"
-                />
-            </router-link>
-            <router-link :to="{ name: 'darling-maneuver' }" class="no-underline text-2xl">
-                <img
-                    v-lazy="{ src: '/images/darling-maneuver/leitch-thumb-01.jpg' }"
-                    class="lazy-image max-w-full w-auto h-auto mx-auto"
-                    style="max-height: calc(100vh - 200px)"
-                    alt="Collin Leitch: The Darling Maneuver. January 10th - February 14th, 2026"
-                />
-            </router-link>
-            <router-link :to="{ name: 'terror-element' }" class="no-underline text-2xl">
-                <img
-                    v-lazy="{ src: '/images/terror-element/terror-element-nomark.jpg' }"
-                    class="lazy-image max-w-full w-auto h-auto mx-auto"
-                    style="max-height: calc(100vh - 200px)"
-                    alt="Anna Engelhardt, Mark Cinkevich: Terror Element. June 7th - July 19th, 2025"
-                />
-            </router-link>
-            <router-link :to="{ name: 'as-above-so-below' }" class="no-underline text-2xl">
-                <img
-                    v-lazy="{ src: '/images/as-above-so-below/trey-flier-nomark.jpg' }"
-                    class="lazy-image max-w-full w-auto h-auto mx-auto"
-                    style="max-height: calc(100vh - 200px)"
-                    alt="Trey Rozell: As above, so below. April 12th — May 24th, 2025"
-                />
-            </router-link>
-            <router-link :to="{ name: 'ryleans' }">
-                <img
-                    v-lazy="{ src: '/images/ryleans/ryleans-flier-nomark.jpg' }"
-                    class="lazy-image max-w-full w-auto h-auto mx-auto"
-                    style="max-height: calc(100vh - 200px)"
-                    alt="The Ryleans. February 15th — March 29th, 2025"
-                />
-            </router-link>
-            <router-link :to="{ name: 'coldbomb' }">
-                <img
-                    v-lazy="{ src: '/images/coldbomb/loebs-nomark2.jpg' }"
-                    class="lazy-image max-w-full w-auto h-auto mx-auto"
-                    style="max-height: calc(100vh - 200px)"
-                    alt="Jason Loebs: Coldbomb. November 9th — December 21st, 2024"
-                />
-            </router-link>
-            <router-link :to="{ name: 'star-e-eyed' }">
-                <img
-                    v-lazy="{ src: '/images/star-e-eyed/halpern-nomark-min.jpg' }"
-                    class="lazy-image max-w-full w-auto h-auto mx-auto"
-                    style="max-height: calc(100vh - 200px)"
-                    alt="Tali Halpern: Star(e) Eyed. September 28th — November 2nd, 2024"
-                />
-            </router-link>
-            <router-link :to="{ name: 'brain-worms' }">
-                <img
-                    v-lazy="{ src: '/images/brain-worms/brain-worms-nomark-min.png' }"
-                    class="lazy-image max-w-full w-auto h-auto mx-auto"
-                    style="max-height: calc(100vh - 200px)"
-                    alt="Pieter Schoolwerth, Keith Tilford: Brain Worms. June 8th — July 27th, 2024"
-                />
-            </router-link>
-            <router-link :to="{ name: 'the-veil' }">
-                <img
-                    v-lazy="{ src: '/images/veil/veil-2-nomark-min.png' }"
-                    class="lazy-image max-w-full w-auto h-auto mx-auto"
-                    style="max-height: calc(100vh - 200px)"
-                    alt="The Veil. April 5th — May 25th, 2024"
-                />
-            </router-link>
-            <router-link :to="{ name: 'delphic-future' }">
-                <img
-                    v-lazy="{ src: '/images/delphic-future/delphic-future-nomark-min.png' }"
-                    class="lazy-image max-w-full w-auto h-auto mx-auto"
-                    style="max-height: calc(100vh - 200px)"
-                    alt="Amanda Beech: Delphic Future. February 4th — March 23rd, 2024"
-                />
-            </router-link>
-            <router-link :to="{ name: 'bullet-hell' }">
-                <img
-                    v-lazy="{ src: '/images/bullethell/bullethell-nomark-min.png' }"
-                    class="lazy-image max-w-full w-auto h-auto mx-auto"
-                    style="max-height: calc(100vh - 200px)"
-                    alt="Bullet Hell: November 17th — January 12th, 2024"
-                />
-            </router-link>
-            <router-link :to="{ name: 'speedrunners' }">
-                <img
-                    v-lazy="{ src: '/images/speedrunners/speedrunners-flier.svg' }"
-                    class="lazy-image max-w-full w-auto h-auto mx-auto"
-                    style="max-height: calc(100vh - 200px)"
-                    alt="Speedrunners: September 29th — November 11th, 2023"
-                />
-            </router-link>
-        </div>
+                    <span v-else class="text-lg">{{ e.title }}</span>
+                </router-link>
+            </div>
+        </template>
     </div>
 </template>
 
-<style scoped="postcss">
+<style scoped>
 .lazy-image {
     transition: opacity 0.5s ease-in-out;
 }

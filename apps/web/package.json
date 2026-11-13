@@ -9,9 +9,11 @@
         "preview": "vite preview"
     },
     "dependencies": {
+        "@unhead/vue": "^2.1.17",
         "vue": "^3.5.0",
         "vue-router": "^4.5.0",
-        "vue3-lazyload": "^0.3.8"
+        "vue3-lazyload": "^0.3.8",
+        "@twelveten/shared": "*"
     },
     "devDependencies": {
         "@tailwindcss/postcss": "^4.3.5",

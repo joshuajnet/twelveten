@@ -17,6 +17,14 @@ describe('rich text schema', () => {
         expect(firstParagraph(doc)).toBe('Intro bold and em');
     });
 
+    it('keeps small list sizes', () => {
+        const doc = htmlToRich('<ul class="list-disc ml-5 text-sm"><li>a</li></ul><ul class="ml-6 text-xs list-decimal"><li>b</li></ul>');
+        expect(doc.content.map((n) => [n.type, n.attrs?.size])).toEqual([['bulletList', 'sm'], ['orderedList', 'xs']]);
+        const html = richToHtml(doc);
+        expect(html).toContain('<ul class="list-disc ml-5 mb-3 text-sm">');
+        expect(html).toContain('class="list-decimal ml-6 mb-3 text-xs"');
+    });
+
     it('turns image + caption paragraphs into figures', () => {
         const html = normalizeLegacyHtml(
             '<p class="mb-3">\n<img\nsrc="/images/a.jpg"\nalt="Alt\ntext"\n/>\n</p>\n<p class="mb-6 text-center font-roboto">Caption\nline.</p>',

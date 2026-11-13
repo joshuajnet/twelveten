@@ -11,7 +11,7 @@ import { sanitizeNewsHtml } from '../lib/sanitize.ts';
 
 const SEED_KEY = 'initial';
 const seedDir = new URL('../../seed-data/', import.meta.url);
-const webJsonDir = new URL('../../../web/src/json/', import.meta.url);
+const slideshowDir = new URL('../../seed-data/slideshows/', import.meta.url);
 
 interface LegacySlide {
     image?: string;
@@ -46,11 +46,12 @@ function readSeedFile(name: string): string | null {
 }
 
 /** Body HTML (+ optional video above it and bio below it) → rich document. */
-export function exhibitionContent(e: Pick<SeedExhibition, 'slug' | 'video'>): RichDoc {
+export function exhibitionContent(e: Pick<SeedExhibition, 'slug' | 'video' | 'videoCaption'>): RichDoc {
     const body = readSeedFile(`${e.slug}.html`) ?? '';
     const bio = readSeedFile(`${e.slug}.bio.html`);
     const html = [
         e.video ? `<div data-video="${e.video}"></div>` : '',
+        e.videoCaption ? `<p>${e.videoCaption}</p>` : '',
         normalizeLegacyHtml(body),
         bio ? `<div data-bio>${bio}</div>` : '',
     ].join('\n');
@@ -58,7 +59,7 @@ export function exhibitionContent(e: Pick<SeedExhibition, 'slug' | 'video'>): Ri
 }
 
 function loadSlides(name: string): LegacySlide[] {
-    return JSON.parse(readFileSync(fileURLToPath(new URL(`${name}.json`, webJsonDir)), 'utf8')) as LegacySlide[];
+    return JSON.parse(readFileSync(fileURLToPath(new URL(`${name}.json`, slideshowDir)), 'utf8')) as LegacySlide[];
 }
 
 function slideAlt(s: LegacySlide): string {
