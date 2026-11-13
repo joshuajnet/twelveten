@@ -19,6 +19,23 @@
   color utility to any element that depends on these defaults.
 */
 @layer base {
+  /* Pointer cursor on everything clickable (Tailwind 4 resets buttons to the default cursor). */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  [role='menuitem']:not([data-disabled]),
+  [role='option']:not([data-disabled]),
+  [role='switch']:not(:disabled),
+  input:is([type='submit'], [type='button'], [type='reset'], [type='checkbox'], [type='radio']):not(:disabled),
+  select:not(:disabled),
+  summary,
+  label[for],
+  ::file-selector-button {
+    cursor: pointer;
+  }
+  :disabled {
+    cursor: not-allowed;
+  }
+
   *,
   ::after,
   ::before,
