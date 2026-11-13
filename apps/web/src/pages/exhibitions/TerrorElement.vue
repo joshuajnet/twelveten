@@ -44,7 +44,7 @@ export default {
                         Hours: Wed - Sat, 1PM &mdash; 6PM<br />
                     </div>
                 </div>
-                <div class="text-justify max-w-screen-sm mx-auto">
+                <div class="text-justify max-w-(--breakpoint-sm) mx-auto">
                     <p class="mb-3">
                         Twelve Ten Gallery is pleased to present "Terror Element", a video installation by Anna
                         Engelhardt and Mark Cinkevich. The exhibition follows a fictional investigator who attempts to

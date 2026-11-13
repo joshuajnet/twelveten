@@ -47,7 +47,7 @@ export default {
                         Hours: Wed - Sat, 1PM — 6PM
                     </div>
                 </div>
-                <div class="text-justify max-w-screen-sm mx-auto">
+                <div class="text-justify max-w-(--breakpoint-sm) mx-auto">
                     <p class="mb-3">
                         <em
                             >“What is the price of two sparrows—one copper coin? But not a single sparrow can fall to

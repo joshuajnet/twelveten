@@ -32,14 +32,18 @@ export default {
 </template>
 
 <style>
-main a {
-    @apply text-sky-900 underline transition-all cursor-pointer;
-}
-main a:hover {
-    @apply text-slate-900;
-}
-main p {
-    @apply mb-3;
+@reference "@/style.css";
+/* In the base layer so utility classes (e.g. no-underline, mb-6) still override these. */
+@layer base {
+    main a {
+        @apply text-sky-900 underline transition-all cursor-pointer;
+    }
+    main a:hover {
+        @apply text-slate-900;
+    }
+    main p {
+        @apply mb-3;
+    }
 }
 /* route transitions */
 .route-enter-from {

@@ -44,7 +44,7 @@ export default {
                         Hours: Wed - Sat, 1PM &mdash; 6PM<br />
                     </div>
                 </div>
-                <div class="text-justify max-w-screen-sm mx-auto">
+                <div class="text-justify max-w-(--breakpoint-sm) mx-auto">
                     <p class="italic">
                         The work is always limited in time as well as in space. By forgetting (purposefully) these
                         essential facts one can pretend that there exists an immortal art, an eternal work … And one can

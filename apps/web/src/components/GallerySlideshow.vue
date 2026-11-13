@@ -221,7 +221,7 @@ export default {
                         <div v-if="slide.available && worksAvailable" class="relative z-20">
                             <a
                                 :href="createMailTo(slide)"
-                                class="py-1 px-3 inline-block cursor-pointer hover:text-sky-600 !no-underline border hover:shadow mt-3 font-roboto font-light"
+                                class="py-1 px-3 inline-block cursor-pointer hover:text-sky-600 no-underline! border hover:shadow-sm mt-3 font-roboto font-light"
                             >
                                 <i class="las la-envelope mr-1"></i> Inquire
                             </a>
@@ -236,10 +236,10 @@ export default {
                 <div
                     class="max-w-8xl mx-auto grid gap-3 2xl:grid-cols-6 xl:grid-cols-5 lg:grid-cols-4 md:grid-cols-3 grid-cols-2"
                 >
-                    <div v-for="(slide, index) in visibleSlides" :key="index" class="h-[25vh] flex flex-grow relative">
+                    <div v-for="(slide, index) in visibleSlides" :key="index" class="h-[25vh] flex grow relative">
                         <div
                             v-if="slide.video"
-                            class="bg-black flex items-center flex-grow hover:opacity-50 transition-opacity cursor-pointer"
+                            class="bg-black flex items-center grow hover:opacity-50 transition-opacity cursor-pointer"
                             @click="goToSlide(index)"
                         >
                             <video
@@ -256,7 +256,7 @@ export default {
                         </div>
                         <div
                             v-if="slide.image"
-                            class="flex flex-grow bg-slate-50 hover:opacity-50 transition-opacity cursor-pointer"
+                            class="flex grow bg-slate-50 hover:opacity-50 transition-opacity cursor-pointer"
                             @click="goToSlide(index)"
                         >
                             <img v-lazy="slide.image" class="lazy-image object-cover w-full h-full" />
@@ -264,7 +264,7 @@ export default {
                         <div v-if="availableView" class="absolute bottom-3 right-3">
                             <a
                                 :href="createMailTo(slide)"
-                                class="py-1 px-3 inline-block cursor-pointer bg-white/80 hover:text-sky-600 !no-underline border hover:shadow mt-3 font-roboto font-light text-xs"
+                                class="py-1 px-3 inline-block cursor-pointer bg-white/80 hover:text-sky-600 no-underline! border hover:shadow-sm mt-3 font-roboto font-light text-xs"
                             >
                                 <i class="las la-envelope mr-1"></i> Inquire
                             </a>
@@ -309,7 +309,7 @@ export default {
                                 <div v-if="slide.available" class="relative z-20">
                                     <a
                                         :href="createMailTo(slide)"
-                                        class="py-1 px-3 inline-block cursor-pointer hover:text-sky-600 !no-underline border hover:shadow mt-3 font-roboto font-light"
+                                        class="py-1 px-3 inline-block cursor-pointer hover:text-sky-600 no-underline! border hover:shadow-sm mt-3 font-roboto font-light"
                                     >
                                         <i class="las la-envelope mr-1"></i> Inquire
                                     </a>
@@ -322,7 +322,8 @@ export default {
         </transition>
     </div>
 </template>
-<style scoped="postcss">
+<style scoped>
+@reference "@/style.css";
 .grid-padded:before {
     padding-top: 100%;
 }

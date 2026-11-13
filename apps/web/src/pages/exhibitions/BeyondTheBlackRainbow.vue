@@ -46,7 +46,7 @@ export default {
                         Gallery Hours: Weds &mdash; Sat, 1PM &mdash; 6PM<br />
                     </div>
                 </div>
-                <div class="text-justify max-w-screen-sm mx-auto">
+                <div class="text-justify max-w-(--breakpoint-sm) mx-auto">
                     <p class="mb-6">
                         Twelve Ten Gallery is pleased to present “Beyond the Black Rainbow”,  a group exhibition titled after the 2010 film and featuring Justin Beachler, Laveen Gammie, Tristan Higginbotham, and Nico Ramirez Rosas.
                     </p>

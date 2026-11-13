@@ -40,7 +40,7 @@ export default {
                         Hours: Wed - Sat, 1PM &mdash; 6PM<br />
                     </div>
                 </div>
-                <div class="text-justify max-w-screen-sm mx-auto">
+                <div class="text-justify max-w-(--breakpoint-sm) mx-auto">
                     <p class="mb-3">
                         Twelve Ten Gallery is pleased to present “The Ryleans” featuring work by Noelle Africh, Ellis
                         &amp; Parker von Sternberg, Jonathan Worcester and Ziyi Zhang.

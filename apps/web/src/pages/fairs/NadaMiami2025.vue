@@ -20,7 +20,7 @@ export default {
         <div>
             <GallerySlideshow :slides="slides" :worksAvailable="true" />
         </div>
-        <div class="container max-w-screen-sm mx-auto grid md:grid-cols-1 gap-6 px-3">
+        <div class="container max-w-(--breakpoint-sm) mx-auto grid md:grid-cols-1 gap-6 px-3">
             <div id="press-release">
                 <div class="grid md:grid-cols-2 grid-cols-1 gap-3 mb-6 mx-auto">
                     <div class="flex justify-between">
@@ -42,7 +42,7 @@ export default {
                         Ice Palace Studios<br /> 1400 North Miami Avenue<br />
                     </div>
                 </div>
-                <div class="text-justify max-w-screen-sm mx-auto">
+                <div class="text-justify max-w-(--breakpoint-sm) mx-auto">
                     <p class="mb-3">
                         For their participation in NADA Miami Projects Tali Halpern will present a focused series of
                         woven self-portraits that explore the tension between historical forms of image-making and the

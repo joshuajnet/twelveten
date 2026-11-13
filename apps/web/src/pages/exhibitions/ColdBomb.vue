@@ -37,7 +37,7 @@ export default {
                         Hours: Wed - Sat, 1PM &mdash; 6PM<br />
                     </div>
                 </div>
-                <div class="text-justify max-w-screen-sm mx-auto">
+                <div class="text-justify max-w-(--breakpoint-sm) mx-auto">
                     <p class="mb-3">
                         Yoke the world in a circle. The circle on its axis becomes a line, a cut, a basis from which all
                         other measures may be drawn. Set the circle at an observatory in Greenwich and impose the law of

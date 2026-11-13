@@ -15,8 +15,8 @@ export default {
 </script>
 
 <template>
-    <router-link :to="{ name: 'nada-miami-2026' }" class="flex flex-grow !no-underline">
-        <div class="fixed top-0 left-0 w-full h-full flex flex-grow bg-cover bg-center">
+    <router-link :to="{ name: 'nada-miami-2026' }" class="flex grow no-underline!">
+        <div class="fixed top-0 left-0 w-full h-full flex grow bg-cover bg-center">
             <div class="absolute top-[-4px] right-[-4px] left-[-4px] bottom-[-4px] bg-sky-900">
                 <!--<div class="absolute w-full h-full overlay" />-->
                 <img
@@ -44,7 +44,7 @@ export default {
                         December 1st &mdash; 5th, 2026
                     </div>
                 </div>
-                <Footer class="relative z-10 !flex-grow-0 !flex-shrink" />
+                <Footer class="relative z-10 grow-0! shrink!" />
             </div>
         </div>
     </router-link>

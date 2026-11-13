@@ -39,7 +39,7 @@
                                 type="submit"
                                 name="subscribe"
                                 id="mc-embedded-subscribe"
-                                class="button !bg-sky-900 text-white"
+                                class="button bg-sky-900! text-white"
                                 value="Subscribe"
                             />
                             <p style="margin: 0px auto">

@@ -47,7 +47,7 @@ export default {
                         Hours: Wed - Sat, 1PM — 6PM
                     </div>
                 </div>
-                <div class="text-justify max-w-screen-sm mx-auto">
+                <div class="text-justify max-w-(--breakpoint-sm) mx-auto">
                     <p class="mb-3">
                         Twelve Ten Gallery is thrilled to present <em>Signal</em>, an exhibition by Noelle Africh. For
                         their solo presentation, Africh explores the mutability of distemper, a medium historically

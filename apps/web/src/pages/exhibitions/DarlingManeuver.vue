@@ -47,7 +47,7 @@ export default {
                         Hours: Wed - Sat, 1PM — 6PM
                     </div>
                 </div>
-                <div class="text-justify max-w-screen-sm mx-auto">
+                <div class="text-justify max-w-(--breakpoint-sm) mx-auto">
                     <p class="mb-3">
                         Twelve Ten Gallery is pleased to present “The Darling Maneuver," an exhibition by Collin Leitch.
                         For his solo presentation at the gallery, Leitch has produced two parallel series of sculptures

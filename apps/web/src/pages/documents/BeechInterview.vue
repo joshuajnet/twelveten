@@ -11,7 +11,7 @@ export default {
 
 <template>
     <div class="container mx-auto py-4 px-3 flex flex-col grow md:overflow-scroll md:overflow-y-hidden">
-        <div class="columns-md gap-8 md:max-h-[calc(100vh_-_200px)]">
+        <div class="columns-md gap-8 md:max-h-[calc(100vh-200px)]">
             
             <div class="flex justify-between mb-6">
                 <div class="text-xl mb-3 font-roboto font-extrabold uppercase">
@@ -27,7 +27,7 @@ export default {
             </div>
             <div>
                 <div class="pb-6 break-inside-avoid">
-                    <img src="/images/delphic-future/install-1.jpg" class="max-w-full md:max-h-[calc(100vh_-_300px)] h-auto w-auto" />
+                    <img src="/images/delphic-future/install-1.jpg" class="max-w-full md:max-h-[calc(100vh-300px)] h-auto w-auto" />
                     <p class="text-sm">Amanda Beech, "Delphic Future", 2024 installation view at Twelve Ten Gallery.</p>
                 </div>
                 <p class="mb-3">
@@ -46,7 +46,7 @@ export default {
                     One of the affiliations we can see, from this perspective, between art and philosophy, is that they both have the capacity to engage the premises on which their own reasons are constructed. And in this there is the capacity to engage in the idea that there are no premises for reason itself, where we deal with a sense of groundlessness in practice. Where we begin a practice from is always a very interesting question when one accepts that there are no premises. When there are no premises, what one is allowed to play with is rules, we are allowed to build systems and procedures. It is a labor of thought between all art and I think that it is also a labor shared with philosophy. Art is able to do the specific conceptual labor that is common to all types of philosophy, which allows it to address the question you asked: the question of art's imbrication in the very situation in which we are thinking art as such.
                 </p>
                 <div class="mb-6 break-inside-avoid">
-                    <img src="/images/delphic-future/patterns-nature-install-1.jpg" class="max-w-full md:max-h-[calc(100vh_-_300px)] h-auto w-auto" />
+                    <img src="/images/delphic-future/patterns-nature-install-1.jpg" class="max-w-full md:max-h-[calc(100vh-300px)] h-auto w-auto" />
                     <p class="text-sm">Amanda Beech, "Delphic Future", 2024 installation view at Twelve Ten Gallery.</p>
                 </div>
                 <p>
@@ -82,7 +82,7 @@ export default {
                     <strong>AB</strong> Right, noir is always a plot that recognizes the contingent nature of power and these descriptions of alienation are populist. Both philosophy and fiction in this way give better vantage points for us to look into how the given order of affairs are always organized, and concealed, by people and by history. I think this is important when art can unfortunately end up aiding and abetting that current state of affairs, as we have just said, not just by aiming to escape them <em>but in the process of understanding them</em>. There's art that can enjoy this kind of crisis it finds itself in, there's art that can describe crisis, and of course there's art that can just act like there is no crisis. Each naturalizes it. Can art manifest something that is beyond the paranoiac and conspiratorial; its boundness to that which it seeks to change including its own self-image? This begs the question of what the imagination can do and is. What is it to think about imagination as a technical apparatus that we can work through that allows us to generate something that is entirely alien to the thinker themselves but which can take place as a language/system? 
                 </p>
                 <div class="mb-6 break-inside-avoid">
-                    <img src="/images/delphic-future/engaging-1.jpg" class="max-w-full md:max-h-[calc(100vh_-_300px)] h-auto w-auto" />
+                    <img src="/images/delphic-future/engaging-1.jpg" class="max-w-full md:max-h-[calc(100vh-300px)] h-auto w-auto" />
                     <p class="text-sm">Amanda Beech, <em>Engaging in an Enterprise and Then Mysteriously Disappearing</em>, 2023, Acrylic on Paper, 58.5 in. x 55 in.</p>
                 </div>
                 <p>
@@ -92,7 +92,7 @@ export default {
                     <strong>AB</strong> Of course, when I was making both <em>Covenant Transport Move or Die</em> (2015) and <em>Map of the Bomb</em> (2022)  I was really involved in the history of inventions that attempted a mapping of complexity; technologies that map indifferent systems by offering them in understandable ways, aiming to solicit infinite variations through finite means. What I find  most interesting is the way the techniques mapping these systems have been implanted in natural language as opposed to mathematics or physics (as we have seen in the philosophy and non-philosophy of Badiou and Laurelle). I am interested in the relation between these scientific and philosophical questions and how natural language is necessary as part of these processes, and the politics and force of that language is one of mediation and construction. Ramon Llull, a monk in Palam, Majorca, working around 1260 made a machine that was a series of wheels within wheels, each one capable of moving autonomously and each one holding words with specific values relating to ethics. For Llull this device enabled its player to move through random possibilities to eventually find the truth of a Christian God. The machine that held all this openness had an end in mind, and was used to convert Muslims to Christianity. So as you were mentioning before, when a scientist starts off with a theory there needs to be an awareness of how the theory itself is reliant upon other beliefs. This system was echoed later by Liebniz, but in  the 1920’s we see its manifestation in pop culture. It inspired William Wallace Cook to write <em>Plotto</em>, a manual for the production of fiction. This was used by Alfred Hitcock and appears in George Orwell’s work as well as Jonathan Swift’s <em>Gulliver’s Travels</em>. The idea of an endless fiction, a neverending fiction through a system that claims openness, has continued ramifications. We know that these types of systems eventually became implemented in computational science and algorithmic science today where we experience Amazon predicting our desires everyday. What these systems point to is how attempts to render the open field of possibilities that we conceptualize in nature are not reducible to the thing they refer to, but instead produce a second nature. This is the space of abstraction and ideology, a world rendered by decryption descriptions, where the two obfuscate their difference from each other as well as the distinction between them and reality in itself.
                 </p>
                 <div class="mb-6 break-inside-avoid">
-                    <img src="/images/delphic-future/covenant-2.jpg" class="max-w-full md:max-h-[calc(100vh_-_300px)] h-auto w-auto" />
+                    <img src="/images/delphic-future/covenant-2.jpg" class="max-w-full md:max-h-[calc(100vh-300px)] h-auto w-auto" />
                     <p class="text-sm">Amanda Beech, <em>Covenant Transport Move or Die</em>, 2015 installation view at Twelve Ten Gallery.</p>
                 </div>
                 <p>

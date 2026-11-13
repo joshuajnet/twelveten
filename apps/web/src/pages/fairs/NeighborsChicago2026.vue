@@ -20,7 +20,7 @@ export default {
         <div>
             <GallerySlideshow :slides="slides" :worksAvailable="true" v-if="true === false" />
         </div>
-        <div class="container max-w-screen-sm mx-auto grid md:grid-cols-1 gap-6 px-3">
+        <div class="container max-w-(--breakpoint-sm) mx-auto grid md:grid-cols-1 gap-6 px-3">
             <div id="press-release">
                 <div class="grid md:grid-cols-2 grid-cols-1 gap-3 mb-6 mx-auto">
                     <div class="flex justify-between">
@@ -44,13 +44,13 @@ export default {
                         1355 North Astor, Chicago IL 60610<br />
                         <a
                             href="mailto:joshua@twelvetengallery.com?subject=Neighbors"
-                            class="py-1 px-3 inline-block cursor-pointer hover:text-sky-600 !no-underline border hover:shadow mt-3 font-roboto font-light text-sm"
+                            class="py-1 px-3 inline-block cursor-pointer hover:text-sky-600 no-underline! border hover:shadow-sm mt-3 font-roboto font-light text-sm"
                         >
                             Inquire
                         </a>
                     </div>
                 </div>
-                <div class="text-justify max-w-screen-sm mx-auto">
+                <div class="text-justify max-w-(--breakpoint-sm) mx-auto">
                     <p class="mb-6">
                         Twelve Ten Gallery is pleased to present Micah Schippa-Wildfong and Noelle Africh in the
                         inaugural edition of Neighbors Chicago, featuring works that thoughtfully engage with the

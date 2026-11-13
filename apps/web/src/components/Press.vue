@@ -6,7 +6,7 @@
                 <a
                     href="https://art.newcity.com/2026/07/08/beyond-the-black-rainbow-and-utopian-collapse/"
                     target="_blank"
-                    class="!no-underline"
+                    class="no-underline!"
                 >
                     <h3 class="text-lg font-medium text-sky-900">
                         “Beyond the Black Rainbow” and Utopian Collapse
@@ -21,7 +21,7 @@
                 <a
                     href="https://hyperallergic.com/10-art-shows-to-see-in-chicago-this-summer/"
                     target="_blank"
-                    class="!no-underline"
+                    class="no-underline!"
                 >
                     <h3 class="text-lg font-medium text-sky-900">
                         10 Art Shows to See in Chicago This Summer (feat. Beyond the Black Rainbow group exhibition)
@@ -35,7 +35,7 @@
                 <a
                     href="https://art.newcity.com/2026/04/24/noelle-africhs-signal-is-gut-instinct-turned-preserved-layer/"
                     target="_blank"
-                    class="!no-underline"
+                    class="no-underline!"
                 >
                     <h3 class="text-lg font-medium text-sky-900">
                         Noelle Africh’s “Signal” Is Gut Instinct Turned Preserved Layer
@@ -49,7 +49,7 @@
                 <a
                     href="https://art.newcity.com/2026/03/02/freedom-and-its-limits-in-micah-schippa-wildfongs-liberte/"
                     target="_blank"
-                    class="!no-underline"
+                    class="no-underline!"
                 >
                     <h3 class="text-lg font-medium text-sky-900">
                         Freedom and Its Limits in Micah Schippa-Wildfong’s “Liberté”
@@ -63,7 +63,7 @@
                 <a
                     href="https://art.newcity.com/2026/02/03/collin-leitch-frames-nature-through-the-machine-in-the-darling-maneuver/"
                     target="_blank"
-                    class="!no-underline"
+                    class="no-underline!"
                 >
                     <h3 class="text-lg font-medium text-sky-900">
                         Collin Leitch Frames Nature Through the Machine in “The Darling Maneuver”
@@ -77,7 +77,7 @@
                 <a
                     href="https://art.newcity.com/2025/07/15/simulating-reality-a-review-of-terror-element-at-twelve-ten/"
                     target="_blank"
-                    class="!no-underline"
+                    class="no-underline!"
                 >
                     <h3 class="text-lg font-medium text-sky-900">
                         Simulating Reality: A Review of “Terror Element” at Twelve Ten
@@ -91,7 +91,7 @@
                 <a
                     href="https://www.journals.uchicago.edu/doi/full/10.1086/737001"
                     target="_blank"
-                    class="!no-underline"
+                    class="no-underline!"
                 >
                     <h3 class="text-lg font-medium text-sky-900">
                         Map of the Bomb (2022) by Amanda Beech Film premiere at the Music Box Theatre 3733 N Southport
@@ -106,7 +106,7 @@
                 <a
                     href="https://art.newcity.com/2025/05/12/a-game-not-for-the-feign-of-art-a-review-of-trey-rozells-as-above-so-below-at-twelve-ten/"
                     target="_blank"
-                    class="!no-underline"
+                    class="no-underline!"
                 >
                     <h3 class="text-lg font-medium text-sky-900">
                         A Game Not for the Feign of Art: A Review of Trey Rozell’s “As above, so below” at Twelve Ten
@@ -117,7 +117,7 @@
             </div>
             <div class="mb-6">
                 <h3 class="text-lg italic">New Art Examiner</h3>
-                <a href="https://www.thenewartexaminer.org/2025/03/05/6388/" target="_blank" class="!no-underline">
+                <a href="https://www.thenewartexaminer.org/2025/03/05/6388/" target="_blank" class="no-underline!">
                     <h3 class="text-lg font-medium text-sky-900">
                         “The Ryleans”: An Art Exhibition or a Course in Twentieth-Century Philosophy?
                     </h3>
@@ -130,7 +130,7 @@
                 <a
                     href="https://www.contemporaryartdaily.com/project/jason-loebs-at-twelve-ten-gallery-chicago-44175"
                     target="_blank"
-                    class="!no-underline"
+                    class="no-underline!"
                 >
                     <h3 class="text-lg font-medium text-sky-900">Jason Loebs at Twelve Ten Gallery</h3>
                 </a>
@@ -141,7 +141,7 @@
                 <a
                     href="https://art.newcity.com/2024/10/10/weaving-online-life-a-review-of-tali-halpern-at-twelve-ten/"
                     target="_blank"
-                    class="!no-underline"
+                    class="no-underline!"
                 >
                     <h3 class="text-lg font-medium text-sky-900">
                         Weaving Online Life: A Review of Tali Halpern at Twelve Ten
@@ -155,7 +155,7 @@
                 <a
                     href="https://chicagoreader.com/arts-culture/tali-halpern-twelve-ten-gallery/"
                     target="_blank"
-                    class="!no-underline"
+                    class="no-underline!"
                 >
                     <h3 class="text-lg font-medium text-sky-900">Tali Halpern dreams big</h3>
                 </a>
@@ -167,7 +167,7 @@
                 <a
                     href="https://www.thenewartexaminer.org/2024/09/23/brainworms/"
                     target="_blank"
-                    class="!no-underline"
+                    class="no-underline!"
                 >
                     <h3 class="text-lg font-medium text-sky-900">
                         “Brain Worms” at Twelve Ten Gallery, Chicago June 8–July 27, 2024
@@ -181,7 +181,7 @@
                 <a
                     href="https://artviewer.org/pieter-schoolwerth-and-keith-tilford-at-twelve-ten-gallery/"
                     target="_blank"
-                    class="!no-underline"
+                    class="no-underline!"
                 >
                     <h3 class="text-lg font-medium text-sky-900">
                         Pieter Schoolwerth and Keith Tilford at Twelve Ten Gallery
@@ -194,7 +194,7 @@
                 <a
                     href="https://art.newcity.com/2024/07/16/forget-it-jake-its-the-internet-a-review-of-brain-worms-at-twelve-ten-gallery/"
                     target="_blank"
-                    class="!no-underline"
+                    class="no-underline!"
                 >
                     <h3 class="text-lg font-medium text-sky-900">
                         “Forget it, Jake. It’s the Internet.” A Review of “Brain Worms” at Twelve Ten Gallery
@@ -205,7 +205,7 @@
             </div>
             <div class="mb-6">
                 <h3 class="text-lg italic">Art Viewer</h3>
-                <a href="https://artviewer.org/the-veil-at-twelve-ten-gallery/" target="_blank" class="!no-underline">
+                <a href="https://artviewer.org/the-veil-at-twelve-ten-gallery/" target="_blank" class="no-underline!">
                     <h3 class="text-lg font-medium text-sky-900">The Veil at Twelve Ten Gallery</h3>
                 </a>
                 <h4 class="italic">May 22nd, 2024</h4>
@@ -215,7 +215,7 @@
                 <a
                     href="https://artguide.artforum.com/artguide/twelve-ten-gallery-23694/the-veil-229369"
                     target="_blank"
-                    class="!no-underline"
+                    class="no-underline!"
                 >
                     <h3 class="text-lg font-medium text-sky-900">"Must See" The Veil at Twelve Ten Gallery</h3>
                 </a>
@@ -226,7 +226,7 @@
                 <a
                     href="https://artviewer.org/amanda-beech-at-twelve-ten-gallery/"
                     target="_blank"
-                    class="!no-underline"
+                    class="no-underline!"
                 >
                     <h3 class="text-lg font-medium text-sky-900">Amanda Beech at Twelve Ten Gallery</h3>
                 </a>
@@ -237,7 +237,7 @@
                 <a
                     href="https://art.newcity.com/2023/12/15/you-were-always-complicit-a-review-of-bullet-hell-at-twelve-ten-gallery/"
                     target="_blank"
-                    class="!no-underline"
+                    class="no-underline!"
                 >
                     <h3 class="text-lg font-medium text-sky-900">
                         You Were Always Complicit: A Review of “Bullet Hell” at Twelve Ten Gallery
@@ -251,7 +251,7 @@
                 <a
                     href="https://chicagospleen.substack.com/p/isabelle-frances-mcguire-ryan-nault"
                     target="_blank"
-                    class="!no-underline"
+                    class="no-underline!"
                 >
                     <h3 class="text-lg font-medium text-sky-900">
                         Isabelle Frances McGuire, Ryan Nault, Liz Vitlin, Ellis &amp; Parker von Sternberg: Speedrunners

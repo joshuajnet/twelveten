@@ -16,7 +16,7 @@ import MailSignUp from '../components/MailSignUp.vue';
                     ></iframe>
                 </div>
             </div>
-            <div class="max-w-screen-sm">
+            <div class="max-w-(--breakpoint-sm)">
                 <div class="mb-4 text-2xl">Twelve Ten is a contemporary art gallery located in Chicago.</div>
                 <h3 class="text-xl font-medium text-sky-900">Twelve Ten Gallery</h3>
                 <div class="mb-4">
@@ -45,7 +45,7 @@ import MailSignUp from '../components/MailSignUp.vue';
                         href="https://www.instagram.com/twelvetengallery/"
                         target="_blank"
                         class="no-underline flex items-center"
-                        ><i class="lab la-instagram text-lg no-underline"></i> Instagram
+                        ><i class="lab la-instagram text-lg leading-7! no-underline"></i> Instagram
                     </a>
                 </div>
                 <div class="pb-4 mb-6 border-b">
