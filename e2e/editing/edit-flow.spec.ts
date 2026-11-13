@@ -10,11 +10,11 @@ test.use({ storageState: 'e2e/.auth/admin.json' });
 /** The saved admin session (see auth.setup.ts) — just open the site. */
 async function signIn(page: Page) {
     await page.goto('/');
-    await expect(page.getByRole('button', { name: '✎ Edit site' }).or(page.getByRole('toolbar', { name: 'Editing' }))).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Edit site' }).or(page.getByRole('toolbar', { name: 'Editing' }))).toBeVisible();
 }
 
 async function startEditing(page: Page) {
-    const edit = page.getByRole('button', { name: '✎ Edit site' });
+    const edit = page.getByRole('button', { name: 'Edit site' });
     if (await edit.isVisible()) await edit.click();
     await expect(page.getByRole('toolbar', { name: 'Editing' })).toBeVisible();
 }
@@ -131,7 +131,7 @@ test('turning on edit mode on the home page shows the splash editor', async ({ p
     await signIn(page);
     const done = page.getByRole('button', { name: 'Done' });
     if (await done.isVisible()) await done.click();
-    await expect(page.getByRole('button', { name: '✎ Edit site' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Edit site' })).toBeVisible();
     await startEditing(page);
     const select = page.getByLabel('Clicking the image opens');
     await expect(select).toBeVisible();

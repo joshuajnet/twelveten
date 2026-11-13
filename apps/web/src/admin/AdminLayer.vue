@@ -170,11 +170,15 @@ const menuItem = 'cursor-pointer rounded px-2 py-1.5 text-sm outline-none data-[
         <button
             v-if="!editMode.editing"
             type="button"
-            class="fixed bottom-4 left-4 z-[80] rounded-full bg-sky-900 px-4 py-2 text-sm text-white shadow-lg hover:bg-sky-950"
-            style="margin-bottom: env(safe-area-inset-bottom, 0px)"
+            class="fixed left-0 top-1/2 z-[80] flex h-9 w-9 -translate-y-1/2 items-center justify-center bg-sky-900 text-white shadow-lg hover:bg-sky-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-900"
+            aria-label="Edit site"
+            title="Edit site"
             @click="toggleEditing(true)"
         >
-            ✎ Edit site
+            <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+            </svg>
         </button>
 
         <HistoryDialog v-if="page?.history" v-model:open="historyOpen" :entity="page.history.entity" :id="page.history.id" @restored="onRestored" />
