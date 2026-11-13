@@ -1,24 +1,22 @@
 {
     "name": "twelveten",
     "private": true,
-    "version": "0.0.0",
     "type": "module",
+    "workspaces": [
+        "apps/*",
+        "packages/*"
+    ],
     "scripts": {
-        "dev": "vite",
-        "build": "vite build",
-        "preview": "vite preview"
-    },
-    "dependencies": {
-        "vue": "^3.2.47",
-        "vue-router": "^4.2.2",
-        "vue3-lazyload": "^0.3.8"
+        "dev": "npm run dev -w apps/web",
+        "build": "npm run build --workspaces --if-present",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:e2e": "npm run build -w apps/web && playwright test"
     },
     "devDependencies": {
-        "@playwright/test": "^1.65.0",
-        "@vitejs/plugin-vue": "^4.1.0",
-        "autoprefixer": "^10.4.14",
-        "postcss": "^8.4.24",
-        "tailwindcss": "^3.4.13",
-        "vite": "^4.3.9"
+        "@playwright/test": "1.65.0"
+    },
+    "engines": {
+        "node": ">=22"
     }
 }
