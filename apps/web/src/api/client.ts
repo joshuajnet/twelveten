@@ -4,6 +4,8 @@ export class ApiError extends Error {
     constructor(
         readonly status: number,
         message: string,
+        /** Server-provided details (e.g. `{ current }` on a 409 conflict). */
+        readonly details?: unknown,
     ) {
         super(message);
     }
@@ -17,12 +19,15 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     });
     if (!res.ok) {
         let message = res.statusText;
+        let details: unknown;
         try {
-            message = ((await res.json()) as { error?: string }).error ?? message;
+            const body = (await res.json()) as { error?: string; details?: unknown };
+            message = body.error ?? message;
+            details = body.details;
         } catch {
             // non-JSON error body
         }
-        throw new ApiError(res.status, message);
+        throw new ApiError(res.status, message, details);
     }
     return (res.status === 204 ? undefined : await res.json()) as T;
 }

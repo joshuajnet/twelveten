@@ -18,6 +18,8 @@ const routes: RouteRecordRaw[] = [
         name: 'beech-von-sternberg-interview',
         component: () => import('./pages/documents/BeechInterview.vue'),
     },
+    { path: '/admin', redirect: '/admin/login' },
+    { path: '/admin/login', name: 'admin-login', component: () => import('./pages/AdminLogin.vue') },
     ...Object.entries(REDIRECTS).map(([path, redirect]) => ({ path, redirect })),
     { path: '/:pathMatch(.*)*', name: 'error404', component: () => import('./pages/Error404.vue') },
 ];

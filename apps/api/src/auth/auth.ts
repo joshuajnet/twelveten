@@ -8,20 +8,26 @@ export interface AuthOptions {
     db: DB;
     secret?: string;
     siteUrl?: string;
+    trustedOrigins?: string[];
 }
 
 /**
  * Better Auth with email/password (public sign-up disabled; admins are created with
  * `npm run admin:create`), the admin plugin (roles), and Postgres for sessions and rate limits.
  */
-export function createAuth({ db, secret = config().BETTER_AUTH_SECRET, siteUrl = config().SITE_URL }: AuthOptions) {
+export function createAuth({
+    db,
+    secret = config().BETTER_AUTH_SECRET,
+    siteUrl = config().SITE_URL,
+    trustedOrigins = config().TRUSTED_ORIGINS,
+}: AuthOptions) {
     if (!secret) throw new Error('BETTER_AUTH_SECRET is not set');
     return betterAuth({
         appName: 'Twelve Ten',
         baseURL: siteUrl,
         basePath: '/api/auth',
         secret,
-        trustedOrigins: [siteUrl],
+        trustedOrigins: [siteUrl, ...trustedOrigins],
         database: { db, type: 'postgres' },
         emailAndPassword: {
             enabled: true,
@@ -44,6 +50,8 @@ export function createAuth({ db, secret = config().BETTER_AUTH_SECRET, siteUrl =
             cookiePrefix: 'twelveten',
             useSecureCookies: siteUrl.startsWith('https://'),
             defaultCookieAttributes: { sameSite: 'lax', httpOnly: true },
+            // CloudFront (and the Vite dev proxy) pass the visitor's address in X-Forwarded-For.
+            ipAddress: { ipAddressHeaders: ['x-forwarded-for'] },
         },
         plugins: [admin({ defaultRole: 'user', adminRoles: ['admin'] })],
     });

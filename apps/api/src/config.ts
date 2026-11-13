@@ -10,6 +10,11 @@ const schema = z.object({
         .default('false')
         .transform((v) => v === 'true'),
     SITE_URL: z.url().default('http://localhost:5173'),
+    /** Extra origins allowed to sign in (comma-separated), e.g. the local preview server. */
+    TRUSTED_ORIGINS: z
+        .string()
+        .default('')
+        .transform((v) => v.split(',').map((o) => o.trim()).filter(Boolean)),
     /** Signs session cookies. Required outside tests; at least 32 characters. */
     BETTER_AUTH_SECRET: z.string().min(32).optional(),
     PORT: z.coerce.number().int().positive().default(3000),

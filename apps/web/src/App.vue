@@ -1,18 +1,14 @@
-<script>
+<script setup>
+import { defineAsyncComponent, onMounted, ref } from 'vue';
 import Header from './components/Header.vue';
 import Footer from './components/Footer.vue';
+import { isAdmin, loadSession } from './session';
 
-export default {
-    components: {
-        Header,
-        Footer,
-    },
-    data() {
-        return {
-            menuActive: false,
-        };
-    },
-};
+// Editing tools are a separate bundle, downloaded only for signed-in admins.
+const AdminLayer = defineAsyncComponent(() => import('./admin/AdminLayer.vue'));
+const menuActive = ref(false);
+
+onMounted(() => void loadSession());
 </script>
 
 <template>
@@ -28,6 +24,7 @@ export default {
         </main>
 
         <Footer v-if="$route.name != 'home'" />
+        <AdminLayer v-if="isAdmin" />
     </div>
 </template>
 

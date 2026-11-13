@@ -28,7 +28,7 @@ export const exhibitionCreateSchema = z.object({
     endsOn: isoDate,
     artists: text.default(''),
 });
-export type ExhibitionCreate = z.infer<typeof exhibitionCreateSchema>;
+export type ExhibitionCreate = z.input<typeof exhibitionCreateSchema>;
 
 export const exhibitionPatchSchema = z
     .object({
@@ -87,7 +87,7 @@ export const artworkCreateSchema = z
     .object(artworkFields)
     .partial()
     .refine((a) => a.image || a.video, 'An image or video is required');
-export type ArtworkCreate = z.infer<typeof artworkCreateSchema>;
+export type ArtworkCreate = z.input<typeof artworkCreateSchema>;
 export const artworkPatchSchema = z.object(artworkFields).partial().extend(version);
 export type ArtworkPatch = z.infer<typeof artworkPatchSchema>;
 export const artworkOrderSchema = z.object({ ids: z.array(uuid).min(1) });
@@ -98,7 +98,7 @@ export const newsCreateSchema = z.object({
     publishedAt: isoTimestamp.optional(),
     bodyHtml: z.string().default(''),
 });
-export type NewsCreate = z.infer<typeof newsCreateSchema>;
+export type NewsCreate = z.input<typeof newsCreateSchema>;
 export const newsPatchSchema = z
     .object({
         slug,
@@ -125,7 +125,7 @@ const pressFields = {
     published: z.boolean(),
 };
 export const pressCreateSchema = z.object(pressFields).partial({ issueLabel: true, byline: true, exhibitionId: true, published: true });
-export type PressCreate = z.infer<typeof pressCreateSchema>;
+export type PressCreate = z.input<typeof pressCreateSchema>;
 export const pressPatchSchema = z.object(pressFields).partial().extend(version);
 export type PressPatch = z.infer<typeof pressPatchSchema>;
 

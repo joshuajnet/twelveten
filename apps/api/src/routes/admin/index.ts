@@ -28,7 +28,7 @@ import { sanitizeNewsHtml } from '../../lib/sanitize.ts';
 import { getExhibition, getHome, getNews } from '../../content/queries.ts';
 import { toArtwork, toNews, toPress } from '../../content/serialize.ts';
 import { body, fromDbError, HttpError } from './errors.ts';
-import { recordRevision } from './revisions.ts';
+import { ensureBaseline, recordRevision } from './revisions.ts';
 
 export interface AdminDeps {
     publisher: Publisher;
@@ -232,6 +232,11 @@ export function adminRoutes(deps: AdminDeps) {
         if (Object.keys(values).length === 0) throw new HttpError(400, 'Nothing to update');
 
         const updated = await db.transaction().execute(async (trx) => {
+            await ensureBaseline(trx, 'exhibition', id, async () => {
+                const current = await trx.selectFrom('exhibitions').selectAll().where('id', '=', id).executeTakeFirst();
+                const events = await trx.selectFrom('exhibition_events').selectAll().where('exhibition_id', '=', id).orderBy('position').execute();
+                return current && { ...current, events };
+            });
             const row = await trx
                 .updateTable('exhibitions')
                 .set(values)
@@ -278,6 +283,11 @@ export function adminRoutes(deps: AdminDeps) {
             if (ev.endsAt && ev.endsAt <= ev.startsAt) throw new HttpError(400, `“${ev.label}” must end after it starts`);
         }
         await db.transaction().execute(async (trx) => {
+            await ensureBaseline(trx, 'exhibition', id, async () => {
+                const current = await trx.selectFrom('exhibitions').selectAll().where('id', '=', id).executeTakeFirst();
+                const existing = await trx.selectFrom('exhibition_events').selectAll().where('exhibition_id', '=', id).orderBy('position').execute();
+                return current && { ...current, events: existing };
+            });
             await trx.deleteFrom('exhibition_events').where('exhibition_id', '=', id).execute();
             if (events.length) {
                 await trx
@@ -327,6 +337,7 @@ export function adminRoutes(deps: AdminDeps) {
         const values = columns(patch, ARTWORK_COLUMNS);
         if (Object.keys(values).length === 0) throw new HttpError(400, 'Nothing to update');
         const row = await db.transaction().execute(async (trx) => {
+            await ensureBaseline(trx, 'artwork', id, () => trx.selectFrom('artworks').selectAll().where('id', '=', id).executeTakeFirst());
             const updated = await trx
                 .updateTable('artworks')
                 .set(values)
@@ -422,6 +433,7 @@ export function adminRoutes(deps: AdminDeps) {
         if (patch.bodyHtml !== undefined) values.body_html = sanitizeNewsHtml(patch.bodyHtml);
         if (Object.keys(values).length === 0) throw new HttpError(400, 'Nothing to update');
         const row = await db.transaction().execute(async (trx) => {
+            await ensureBaseline(trx, 'news_post', id, () => trx.selectFrom('news_posts').selectAll().where('id', '=', id).executeTakeFirst());
             const updated = await trx
                 .updateTable('news_posts')
                 .set(values)
@@ -486,6 +498,7 @@ export function adminRoutes(deps: AdminDeps) {
         const values = columns(patch, PRESS_COLUMNS);
         if (Object.keys(values).length === 0) throw new HttpError(400, 'Nothing to update');
         const row = await db.transaction().execute(async (trx) => {
+            await ensureBaseline(trx, 'press_item', id, () => trx.selectFrom('press_items').selectAll().where('id', '=', id).executeTakeFirst());
             const updated = await trx
                 .updateTable('press_items')
                 .set(values)
@@ -522,6 +535,7 @@ export function adminRoutes(deps: AdminDeps) {
         const values = columns(patch, HOME_COLUMNS);
         if (Object.keys(values).length === 0) throw new HttpError(400, 'Nothing to update');
         const row = await db.transaction().execute(async (trx) => {
+            await ensureBaseline(trx, 'home_page', null, () => trx.selectFrom('home_page').selectAll().where('id', '=', 1).executeTakeFirst());
             const updated = await trx
                 .updateTable('home_page')
                 .set(values)
@@ -549,6 +563,7 @@ export function adminRoutes(deps: AdminDeps) {
             .select(['r.id', 'r.entity', 'r.entity_id', 'r.action', 'r.created_at', 'u.name as user_name'])
             .where('r.entity', '=', entity.data)
             .orderBy('r.created_at', 'desc')
+            .orderBy('r.id', 'desc')
             .limit(50);
         q = entityId ? q.where('r.entity_id', '=', entityId) : q.where('r.entity_id', 'is', null);
         const rows = await q.execute();

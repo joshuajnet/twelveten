@@ -10,8 +10,10 @@ export default defineConfig({
     expect: { toHaveScreenshot: { maxDiffPixelRatio: 0.01, animations: 'disabled' } },
     use: { baseURL: process.env.E2E_BASE_URL ?? `http://localhost:${port}` },
     projects: [
-        { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
-        { name: 'mobile', use: { ...devices['Pixel 7'] } },
+        { name: 'desktop', use: { ...devices['Desktop Chrome'] }, testMatch: /visual\/.*\.spec\.ts/ },
+        { name: 'mobile', use: { ...devices['Pixel 7'] }, testMatch: /visual\/.*\.spec\.ts/ },
+        { name: 'admin-setup', use: { ...devices['Desktop Chrome'] }, testMatch: /editing\/auth\.setup\.ts/ },
+        { name: 'editing', use: { ...devices['Desktop Chrome'] }, testMatch: /editing\/.*\.spec\.ts/, dependencies: ['admin-setup'] },
     ],
     webServer: process.env.E2E_BASE_URL
         ? undefined

@@ -1,14 +1,18 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, defineAsyncComponent } from 'vue';
 import { exhibitionPath, formatDateRange } from '@twelveten/shared';
 import Footer from '@/components/Footer.vue';
 import { api } from '@/api/client';
 import { useResource } from '@/composables/useResource';
 import { useMeta } from '@/composables/useMeta';
+import { isAdmin } from '@/session';
+import { editMode } from '@/admin/state';
+
+const HomeEditor = defineAsyncComponent(() => import('@/admin/HomeEditor.vue'));
 
 defineProps<{ menuActive?: boolean }>();
 
-const { data: home } = useResource(
+const { data: home, reload } = useResource(
     () => 'home',
     () => api.home(),
 );
@@ -27,7 +31,8 @@ useMeta(() => (home.value ? { kind: 'home', home: home.value } : null));
 </script>
 
 <template>
-    <component :is="target ? 'router-link' : 'div'" v-bind="target ? { to: target } : {}" class="flex grow no-underline!">
+    <HomeEditor v-if="isAdmin && editMode.editing" @saved="reload" />
+    <component :is="target ? 'router-link' : 'div'" v-else v-bind="target ? { to: target } : {}" class="flex grow no-underline!">
         <div class="fixed top-0 left-0 w-full h-full flex grow bg-cover bg-center">
             <div class="absolute top-[-4px] right-[-4px] left-[-4px] bottom-[-4px] bg-sky-900">
                 <template v-if="home">

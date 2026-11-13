@@ -188,7 +188,13 @@ export const PressList = Node.create({
     },
 });
 
-export function richExtensions(): Extensions {
+export interface RichOptions {
+    /** News posts: no bio, press list or video blocks. */
+    news?: boolean;
+}
+
+export function richExtensions(opts: RichOptions = {}): Extensions {
+    const blocks = opts.news ? [Figure] : [Figure, Video, Bio, PressList];
     return [
         StarterKit.configure({
             paragraph: false,
@@ -214,9 +220,6 @@ export function richExtensions(): Extensions {
         LegacyBold,
         SizedBulletList,
         SizedOrderedList,
-        Figure,
-        Video,
-        Bio,
-        PressList,
+        ...blocks,
     ];
 }

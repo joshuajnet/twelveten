@@ -20,7 +20,7 @@
                             name="EMAIL"
                             class="required email"
                             id="mce-EMAIL"
-                            required=""
+                            required
                             value=""
                         /><span id="mce-EMAIL-HELPERTEXT" class="helper_text"></span>
                     </div>

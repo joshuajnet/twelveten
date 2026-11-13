@@ -1,0 +1,81 @@
+/* Editing affordances. Only loaded for signed-in admins. */
+.admin-ui {
+    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    color: #0f172a;
+}
+body.tt-editing {
+    padding-top: 44px;
+}
+.tt-editable {
+    outline: 1px dashed transparent;
+    outline-offset: 3px;
+    border-radius: 2px;
+    transition: outline-color 0.15s;
+    cursor: text;
+}
+body.tt-editing .tt-editable {
+    outline-color: rgb(14 116 144 / 0.35);
+}
+.tt-editable:hover,
+.tt-editable:focus,
+.tt-editable:focus-within {
+    outline-color: rgb(14 116 144 / 0.9);
+    outline-style: solid;
+}
+.tt-editable:focus {
+    outline-width: 2px;
+}
+.tt-editable[data-placeholder]:empty::before {
+    content: attr(data-placeholder);
+    color: #94a3b8;
+    font-style: italic;
+}
+.tt-clickable {
+    cursor: pointer;
+}
+.tt-rich .ProseMirror {
+    outline: none;
+    min-height: 3rem;
+}
+.tt-rich .ProseMirror p.is-empty:first-child::before,
+.tt-rich .ProseMirror p.is-editor-empty::before {
+    content: attr(data-placeholder);
+    color: #94a3b8;
+    float: left;
+    height: 0;
+    pointer-events: none;
+    font-style: italic;
+}
+.tt-rich .ProseMirror [data-bio] {
+    outline: 1px dotted #94a3b8;
+    outline-offset: 6px;
+    position: relative;
+}
+.tt-rich .ProseMirror [data-bio]::after {
+    content: 'Bio';
+    position: absolute;
+    top: -1.4rem;
+    left: 0;
+    font: 11px ui-sans-serif, system-ui, sans-serif;
+    color: #64748b;
+}
+.tt-rich .ProseMirror [data-press-list] {
+    border: 1px dashed #94a3b8;
+    padding: 0.75rem;
+    text-align: center;
+    font: 12px ui-sans-serif, system-ui, sans-serif;
+    color: #64748b;
+    margin-bottom: 1rem;
+}
+.tt-rich .ProseMirror [data-press-list]::before {
+    content: 'Press for this exhibition appears here';
+}
+.tt-rich .ProseMirror .ProseMirror-selectednode {
+    outline: 2px solid rgb(14 116 144);
+}
+.tt-rich .ProseMirror [data-video] iframe {
+    pointer-events: none;
+}
+.tt-drag-ghost {
+    opacity: 0.4;
+}

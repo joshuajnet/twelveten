@@ -71,6 +71,8 @@ describe('exhibitions', () => {
         expect(rendered.flat()).toEqual(expect.arrayContaining(['/exhibitions/africh-signal', '/exhibitions']));
         const revs = await call('GET', `/admin/revisions?entity=exhibition&id=${e.id}`);
         expect(revs.body.items[0]).toMatchObject({ action: 'update', userName: 'admin' });
+        // The first edit also stored the original (seeded) version.
+        expect(revs.body.items.at(-1)).toMatchObject({ action: 'create', userName: null });
     });
 
     it('rejects stale edits with 409 and returns the current copy', async () => {
@@ -196,7 +198,7 @@ describe('revisions', () => {
         const e2 = await signal();
         await call('PATCH', `/admin/exhibitions/${e.id}`, { updatedAt: e2.updatedAt, title: 'After' });
         const revs = (await call('GET', `/admin/revisions?entity=exhibition&id=${e.id}`)).body.items;
-        const target = revs[1]; // the "Before restore" save
+        const target = revs.find((r: any, i: number) => i > 0 && r.action === 'update')!; // the "Before restore" save
         expect((await call('POST', `/admin/revisions/${target.id}/restore`)).status).toBe(200);
         expect((await signal()).title).toBe('Before restore');
     });

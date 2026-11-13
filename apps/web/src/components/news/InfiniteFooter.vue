@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import type { Ref } from 'vue';
 /** Loading / end / retry states under an infinitely loading list, plus a keyboard-reachable "Load more". */
 defineProps<{
     list: {
         state: { loading: boolean; done: boolean; error: Error | null; items: unknown[] };
         loadMore: () => Promise<void>;
         retry: () => Promise<void>;
-        announcement: string;
+        announcement: Ref<string>;
     };
     label: string;
 }>();
@@ -26,6 +27,6 @@ defineProps<{
         >
             Load more {{ label }}
         </button>
-        <span class="sr-only" aria-live="polite">{{ list.announcement }}</span>
+        <span class="sr-only" aria-live="polite">{{ list.announcement.value }}</span>
     </div>
 </template>
