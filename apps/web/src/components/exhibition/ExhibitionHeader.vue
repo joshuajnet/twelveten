@@ -10,7 +10,7 @@ const dates = computed(() => formatDateRange(props.exhibition.startsOn, props.ex
 const events = computed(() => props.exhibition.events.map((e) => formatEvent(e, props.exhibition.timezone)));
 const venueLines = computed(() => (props.exhibition.venueText ?? '').split('\n').filter(Boolean));
 const inquireHref = computed(() => `mailto:${INQUIRE_EMAIL}?subject=${encodeURIComponent(props.exhibition.title)}`);
-const isInternal = (url: string) => url.startsWith('/') && !url.startsWith('/docs/') && !url.startsWith('/media/');
+const isInternal = (url: string) => url.startsWith('/') && !url.startsWith('/media/');
 </script>
 
 <template>

@@ -107,6 +107,17 @@ describe('seed', () => {
         expect(homeLink.slug).toBe('nada-miami-2026');
     });
 
+    it('points every media reference at /media', async () => {
+        const e = await db.selectFrom('exhibitions').select(['hero_image', 'press_release_url', 'content']).where('slug', '=', 'nada-miami-2026').executeTakeFirstOrThrow();
+        expect(JSON.stringify(e)).not.toMatch(/"\/(images|docs)\//);
+        const art = await db.selectFrom('artworks').select(['image', 'video']).execute();
+        expect(art.every((a) => (a.image ?? a.video ?? '').startsWith('/media/'))).toBe(true);
+        const news = await db.selectFrom('news_posts').select('body_html').execute();
+        expect(news.some((n) => n.body_html.includes('href="/docs/'))).toBe(false);
+        const home = await db.selectFrom('home_page').select('bg_image').executeTakeFirstOrThrow();
+        expect(home.bg_image).toBe('/media/images/nada-miami-2026/privacy-whitespace.jpg');
+    });
+
     it('sanitizes news HTML and fixes legacy data errors', async () => {
         const posts = await db.selectFrom('news_posts').select(['slug', 'title', 'published_at', 'body_html']).execute();
         for (const p of posts) expect(p.body_html, p.slug).not.toMatch(/targe=|<A |<a\/>|<a><\/a>/);

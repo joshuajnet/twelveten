@@ -29,3 +29,6 @@ playwright-report
 
 .env.local
 e2e/.auth
+
+# Site media (images, PDFs) — lives in S3; local copy for development
+.media/

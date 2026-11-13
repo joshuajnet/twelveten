@@ -8,7 +8,8 @@ npm workspaces:
 
 | Path | Contents |
 |---|---|
-| `apps/web` | Vue 3 SPA (`@twelveten/web`): pages, components, API client, `public/` images and PDFs |
+| `apps/web` | Vue 3 SPA (`@twelveten/web`): pages, components, API client, editor (`src/admin`), Vite plugins (`vite/`) |
+| `.media/` (git-ignored) | Local copy of the site's media (`images/`, `docs/`), served at `/media/*` in development and uploaded to the media bucket with `media:sync` |
 | `apps/api` | `@twelveten/api`: Hono app (`src/app.ts`), Lambda entry (`src/lambda.ts`), local Node server (`src/local.ts`), database access and migrations (`src/db/`) |
 | `packages/shared` | `@twelveten/shared` TypeScript source used by other workspaces: content schemas (zod), date formatting, route table, meta-tag builder |
 | `docker-compose.yml` | Local services: Postgres 17 (databases `twelveten` and `twelveten_test`) and LocalStack 4.14.0 (S3, SSM) |
@@ -100,6 +101,9 @@ Stored dates are ISO `YYYY-MM-DD` strings for whole days and ISO timestamps for 
 - `npm run admin:create -w apps/api -- --email … [--password …] [--name …]` creates an admin or resets an existing user's password and makes them admin (`src/auth/users.ts`); without `--password` a random one is printed.
 
 ## File storage
+- All media is served under `/media/*` from the media bucket (`media/` key prefix): the original site images and PDFs at `/media/images/…` and `/media/docs/…`, admin uploads at `/media/uploads/…`. Content stores these site-relative URLs.
+- `npm run media:sync -w apps/api [-- --dry-run] [--dir …] [--bucket …]` (`src/media/sync.ts`) uploads `.media/` to `media/<path>` in `MEDIA_BUCKET` with content types and a one-year cache header, skipping objects already present with the same size.
+- In development `apps/web/vite/mediaPlugin.js` serves `/media/images` and `/media/docs` from `.media/` (with Range support for video) and the Vite proxy sends `/media/uploads/*` to the LocalStack media bucket.
 - `src/storage/uploads.ts`: presigned S3 `PUT` URLs (15 minutes) into the media bucket under `media/uploads/{yyyy}/{mm}/{uuidv7}-{slug}.{ext}`; allowed types are JPEG, PNG, WebP, GIF, SVG, MP4 and PDF (`UPLOAD_TYPES`). The browser uploads directly to S3; the stored URL is `/media/uploads/…`, served from the media bucket at `/media/*`.
 
 ## Database
@@ -127,7 +131,7 @@ Stored dates are ISO `YYYY-MM-DD` strings for whole days and ISO timestamps for 
 - On the client, `useMeta` keeps the head in sync during in-app navigation.
 
 ## Seed
-- `seed(db, { force })` (`src/db/seed.ts`) loads the original site content in one transaction: exhibitions and fairs (body HTML converted to rich documents with `htmlToRich`), their events and slideshow slides (from `apps/web/src/json/*-slideshow.json`), press items (linked to exhibitions), news posts (HTML sanitized with `sanitizeNewsHtml`), and the home splash.
+- `seed(db, { force })` (`src/db/seed.ts`) loads the original site content in one transaction (old `/images/…` and `/docs/…` references are rewritten to `/media/…`): exhibitions and fairs (body HTML converted to rich documents with `htmlToRich`), their events and slideshow slides (from `apps/web/src/json/*-slideshow.json`), press items (linked to exhibitions), news posts (HTML sanitized with `sanitizeNewsHtml`), and the home splash.
 - Rows are matched on natural keys (exhibition slug, press URL, news slug, home id). Without `force`, existing rows are kept and the run is skipped entirely once `seed_state` holds `initial`; with `force`, rows are overwritten and an exhibition's events and slides are replaced.
 - `src/lib/sanitize.ts`: `sanitizeNewsHtml` allows `p, br, a, em, i, strong, b, ul, ol, li, img, div, span` with a fixed attribute/class allowlist and `http`/`https`/`mailto` links; `target="_blank"` links get `rel="noopener noreferrer"`.
 

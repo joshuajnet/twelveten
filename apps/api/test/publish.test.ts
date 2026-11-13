@@ -43,7 +43,7 @@ describe('head tags', () => {
         expect(head.tags.status).toBe(200);
         expect(head.html).toContain('<title>Noelle Africh: Signal — Twelve Ten Gallery</title>');
         expect(head.html).toContain(`<link rel="canonical" href="${siteUrl}/exhibitions/africh-signal" />`);
-        expect(head.html).toContain('og:image" content="https://www.twelvetengallery.com/images/signal/africh-signal-square-nomark.jpg"');
+        expect(head.html).toContain('og:image" content="https://www.twelvetengallery.com/media/images/signal/africh-signal-square-nomark.jpg"');
         expect(head.html).toContain('"@type":"ExhibitionEvent"');
     });
 

@@ -10,6 +10,15 @@ import { home } from '../../seed-data/home.ts';
 import { sanitizeNewsHtml } from '../lib/sanitize.ts';
 
 const SEED_KEY = 'initial';
+
+/** The old site served media from /images and /docs; it now lives in the media bucket at /media. */
+export function toMedia<T extends string | null | undefined>(url: T): T {
+    return (typeof url === 'string' ? url.replace(/^\/(images|docs)\//, '/media/$1/') : url) as T;
+}
+/** Rewrite media references inside HTML (src/href attributes). */
+export function htmlToMedia(html: string): string {
+    return html.replace(/(["'(])\/(images|docs)\//g, '$1/media/$2/');
+}
 const seedDir = new URL('../../seed-data/', import.meta.url);
 const slideshowDir = new URL('../../seed-data/slideshows/', import.meta.url);
 
@@ -49,12 +58,14 @@ function readSeedFile(name: string): string | null {
 export function exhibitionContent(e: Pick<SeedExhibition, 'slug' | 'video' | 'videoCaption'>): RichDoc {
     const body = readSeedFile(`${e.slug}.html`) ?? '';
     const bio = readSeedFile(`${e.slug}.bio.html`);
-    const html = [
-        e.video ? `<div data-video="${e.video}"></div>` : '',
-        e.videoCaption ? `<p>${e.videoCaption}</p>` : '',
-        normalizeLegacyHtml(body),
-        bio ? `<div data-bio>${bio}</div>` : '',
-    ].join('\n');
+    const html = htmlToMedia(
+        [
+            e.video ? `<div data-video="${e.video}"></div>` : '',
+            e.videoCaption ? `<p>${e.videoCaption}</p>` : '',
+            normalizeLegacyHtml(body),
+            bio ? `<div data-bio>${bio}</div>` : '',
+        ].join('\n'),
+    );
     return htmlToRich(html);
 }
 
@@ -97,11 +108,11 @@ export async function seed(db: DB, { force = false }: SeedOptions = {}): Promise
                 hours_text: e.hoursText ?? null,
                 venue_text: e.venueText ?? null,
                 location_text: e.locationText ?? null,
-                hero_image: e.heroImage ?? null,
+                hero_image: toMedia(e.heroImage ?? null),
                 hero_alt: e.heroAlt ?? null,
-                thumbnail: e.thumbnail ?? null,
-                press_release_url: e.pressReleaseUrl ?? null,
-                header_links: JSON.stringify(e.headerLinks ?? []),
+                thumbnail: toMedia(e.thumbnail ?? null),
+                press_release_url: toMedia(e.pressReleaseUrl ?? null),
+                header_links: JSON.stringify((e.headerLinks ?? []).map((l) => ({ ...l, url: toMedia(l.url) }))),
                 show_inquire: e.showInquire ?? false,
                 slideshow_visible: e.slideshowVisible ?? Boolean(e.slideshow),
                 works_available: e.worksAvailable ?? false,
@@ -145,8 +156,8 @@ export async function seed(db: DB, { force = false }: SeedOptions = {}): Promise
                     .values({
                         exhibition_id: id,
                         position,
-                        image: s.image ?? null,
-                        video: s.video ?? null,
+                        image: toMedia(s.image ?? null),
+                        video: toMedia(s.video ?? null),
                         alt: slideAlt(s),
                         author: s.author,
                         title: s.title,
@@ -187,7 +198,7 @@ export async function seed(db: DB, { force = false }: SeedOptions = {}): Promise
                 slug: n.slug,
                 title: n.title,
                 published_at: zonedToIso(`${n.publishedOn} 12:00`),
-                body_html: sanitizeNewsHtml(n.html),
+                body_html: sanitizeNewsHtml(htmlToMedia(n.html)),
                 published: true,
             };
             const inserted = await trx
@@ -201,7 +212,7 @@ export async function seed(db: DB, { force = false }: SeedOptions = {}): Promise
 
         const homeRow = {
             id: 1,
-            bg_image: home.bgImage,
+            bg_image: toMedia(home.bgImage),
             headline: home.headline,
             subline: home.subline,
             text_color: home.textColor,

@@ -8,7 +8,8 @@
         "db:migrate": "tsx --env-file-if-exists=../../.env.local src/db/cli.ts migrate",
         "db:seed": "tsx --env-file-if-exists=../../.env.local src/db/cli.ts seed",
         "typecheck": "tsc --noEmit",
-        "admin:create": "tsx --env-file-if-exists=../../.env.local src/db/cli.ts admin:create"
+        "admin:create": "tsx --env-file-if-exists=../../.env.local src/db/cli.ts admin:create",
+        "media:sync": "tsx --env-file-if-exists=../../.env.local src/media/cli.ts"
     },
     "dependencies": {
         "@aws-sdk/client-s3": "^3.1159.0",
