@@ -2,6 +2,7 @@ import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import tailwindcss from '@tailwindcss/vite';
+import metaPlugin from './vite/metaPlugin.js';
 
 const apiTarget = process.env.API_TARGET ?? 'http://localhost:3000';
 // Media bucket (LocalStack locally) mounted at /media, matching CloudFront's /media/* behaviour.
@@ -14,7 +15,7 @@ const proxy = {
 };
 
 export default defineConfig({
-    plugins: [vue(), tailwindcss()],
+    plugins: [vue(), tailwindcss(), metaPlugin({ apiTarget })],
     resolve: {
         alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
     },

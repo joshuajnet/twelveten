@@ -66,6 +66,7 @@ Stored dates are ISO `YYYY-MM-DD` strings for whole days and ISO timestamps for 
   | GET | `/api/health` | public | `{ ok, db }`; 503 when the database is unreachable |
   | GET, POST | `/api/auth/*` | public | Better Auth (`/sign-in/email`, `/sign-out`, `/get-session`, …) |
   | GET | `/api/session` | public | `{ user: { id, name, email, role } \| null }` |
+  | GET | `/api/meta?path=` | public | `{ status, html, tags }`: the head tags for a site path (dev server) |
   | GET | `/api/home` | public | `HomePage` (with the linked exhibition's slug, kind and dates) |
   | GET | `/api/exhibitions?kind=` | public | `{ items: ExhibitionSummary[] }`, newest `starts_on` first |
   | GET | `/api/exhibitions/:slug?kind=` | public | `Exhibition` with events, slides (visible only), linked press and `contentHtml` |
@@ -118,6 +119,12 @@ Stored dates are ISO `YYYY-MM-DD` strings for whole days and ISO timestamps for 
   | `home_page` | Single row (`id = 1`): home splash images, text, optional dates, `link_exhibition_id` |
   | `content_revisions` | Snapshots of content changes (entity, entity id, action, `snapshot` JSON, user) |
   | `seed_state` | Markers for one-time seed runs |
+
+## Prerendering and meta tags
+- `apps/web/index.html` holds an `<!--app-head-->` placeholder. `apps/web/vite/metaPlugin.js` fills it: in dev from `/api/meta?path=` for the requested URL; in a build it writes `dist/_template.html` (placeholder kept), `dist/index.html` (site defaults) and `dist/404.html` (not-found title, `noindex`).
+- `src/publish/head.ts`: `headFor(db, path, siteUrl)` resolves a path with `matchRoute`, loads published content, and returns `buildMeta` tags + `renderHead` HTML (status 404 for unknown, unpublished or wrong-kind pages). `allPaths`, `sitemapXml` (published pages with `lastmod`) and `robotsTxt` (disallows `/admin` and `/api/`).
+- `src/publish/s3Publisher.ts` implements `Publisher` against the site bucket: `render(paths)` reads `_template.html` from the bucket (cached per process), writes `<path>/index.html` (`text/html`, `Cache-Control: public, max-age=60, stale-while-revalidate=300`), deletes pages that now 404, and rewrites `sitemap.xml` and `robots.txt`. `rebuildAll()` renders every path and deletes stale `exhibitions/*`, `fairs/*`, `news/*` pages. Before `_template.html` exists in the bucket it logs a warning and writes nothing.
+- On the client, `useMeta` keeps the head in sync during in-app navigation.
 
 ## Seed
 - `seed(db, { force })` (`src/db/seed.ts`) loads the original site content in one transaction: exhibitions and fairs (body HTML converted to rich documents with `htmlToRich`), their events and slideshow slides (from `apps/web/src/json/*-slideshow.json`), press items (linked to exhibitions), news posts (HTML sanitized with `sanitizeNewsHtml`), and the home splash.

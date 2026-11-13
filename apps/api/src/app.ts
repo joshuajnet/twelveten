@@ -8,6 +8,8 @@ import { resolveUserFrom, type Auth } from './auth/auth.ts';
 import { adminRoutes, handleError } from './routes/admin/index.ts';
 import { noopPublisher, type Publisher } from './publish/publisher.ts';
 import type { Storage } from './storage/uploads.ts';
+import { headFor } from './publish/head.ts';
+import { config } from './config.ts';
 
 export interface AppDeps {
     db: () => DB;
@@ -19,6 +21,8 @@ export interface AppDeps {
     publisher?: Publisher;
     /** Media uploads (S3). */
     storage?: Storage;
+    /** Absolute site origin for canonical URLs (defaults to SITE_URL). */
+    siteUrl?: string;
 }
 
 export function createApp(deps: AppDeps) {
@@ -63,6 +67,14 @@ export function createApp(deps: AppDeps) {
             .where('id', '=', c.var.userId)
             .executeTakeFirst();
         return c.json({ user: user ?? null });
+    });
+
+    /** Head tags for a site path (used by the dev server; production pages are prerendered). */
+    app.get('/meta', async (c) => {
+        const path = c.req.query('path') ?? '/';
+        const head = await headFor(c.var.db, path, deps.siteUrl ?? config().SITE_URL);
+        c.header('Cache-Control', 'public, max-age=0, s-maxage=60');
+        return c.json({ status: head.tags.status, html: head.html, tags: head.tags });
     });
 
     app.route('/', publicRoutes());
