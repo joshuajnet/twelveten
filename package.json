@@ -15,7 +15,8 @@
         "typecheck": "tsc -p packages/shared --noEmit && tsc -p apps/api --noEmit && npm run typecheck -w apps/web",
         "test": "vitest run",
         "test:watch": "vitest",
-        "test:e2e": "npm run build -w apps/web && playwright test"
+        "test:e2e": "npm run build -w apps/web && playwright test",
+        "lambda:local": "tsx scripts/lambda-local.ts"
     },
     "devDependencies": {
         "@playwright/test": "1.65.0",

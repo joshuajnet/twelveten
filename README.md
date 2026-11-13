@@ -14,4 +14,6 @@ The first run starts Postgres and LocalStack, loads the site's content, creates 
 - `npm run test:e2e`: build + Playwright visual and editing tests (needs `npm run dev` running)
 - `npm run typecheck`
 
+Deploying to AWS: see the "Deployment" section of [ARCHITECTURE.md](ARCHITECTURE.md).
+
 See [ARCHITECTURE.md](ARCHITECTURE.md) for how the system is put together.

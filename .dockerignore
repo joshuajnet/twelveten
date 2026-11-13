@@ -1,0 +1,10 @@
+**/node_modules
+**/dist
+.media
+.git
+e2e
+test-results
+playwright-report
+apps/web/public
+**/*.log
+.env*

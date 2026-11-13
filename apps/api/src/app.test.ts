@@ -25,3 +25,13 @@ describe('GET /api/health', () => {
         expect(res.status).toBe(404);
     });
 });
+
+describe('origin verification', () => {
+    it('rejects requests without the CloudFront secret header when configured', async () => {
+        const db = createDb(process.env.DATABASE_URL!, 1);
+        const app = createApp({ db: () => db, originVerifySecret: 'a-very-long-origin-secret' });
+        expect((await app.request('/api/health')).status).toBe(403);
+        expect((await app.request('/api/health', { headers: { 'x-origin-verify': 'a-very-long-origin-secret' } })).status).toBe(200);
+        await db.destroy();
+    });
+});

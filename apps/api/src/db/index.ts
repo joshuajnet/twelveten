@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import pg from 'pg';
 import { Kysely, PostgresDialect } from 'kysely';
 import type { Database } from './types.ts';
@@ -15,7 +16,9 @@ export function createDb(connectionString = config().DATABASE_URL, max = config(
     const pool = new pg.Pool({
         connectionString,
         max,
-        ssl: config().DATABASE_SSL ? { rejectUnauthorized: true } : undefined,
+        ssl: config().DATABASE_SSL
+            ? { rejectUnauthorized: true, ca: config().DATABASE_SSL_CA_FILE ? readFileSync(config().DATABASE_SSL_CA_FILE!, 'utf8') : undefined }
+            : undefined,
         idleTimeoutMillis: 30_000,
     });
     return new Kysely<Database>({ dialect: new PostgresDialect({ pool }) });

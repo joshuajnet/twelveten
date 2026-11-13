@@ -9,7 +9,12 @@ const schema = z.object({
         .enum(['true', 'false'])
         .default('false')
         .transform((v) => v === 'true'),
+    /** PEM bundle to verify the database's TLS certificate (the RDS CA bundle in the Lambda image). */
+    DATABASE_SSL_CA_FILE: z.string().optional(),
     SITE_URL: z.url().default('http://localhost:5173'),
+    /** When set, requests must carry this value in X-Origin-Verify (added by CloudFront), so the
+     *  Lambda function URL can't be called directly. */
+    ORIGIN_VERIFY_SECRET: z.string().min(16).optional(),
     /** Extra origins allowed to sign in (comma-separated), e.g. the local preview server. */
     TRUSTED_ORIGINS: z
         .string()

@@ -23,6 +23,8 @@ export interface AppDeps {
     storage?: Storage;
     /** Absolute site origin for canonical URLs (defaults to SITE_URL). */
     siteUrl?: string;
+    /** Overrides ORIGIN_VERIFY_SECRET (tests). */
+    originVerifySecret?: string;
 }
 
 export function createApp(deps: AppDeps) {
@@ -35,6 +37,15 @@ export function createApp(deps: AppDeps) {
         app.on(['GET', 'POST'], '/auth/*', (c) => {
             c.header('Cache-Control', 'no-store');
             return auth.handler(c.req.raw);
+        });
+    }
+
+    // Behind CloudFront, only requests carrying the shared origin secret are served.
+    const originSecret = deps.originVerifySecret ?? config().ORIGIN_VERIFY_SECRET;
+    if (originSecret) {
+        app.use('*', async (c, next) => {
+            if (c.req.header('x-origin-verify') !== originSecret) return c.json({ error: 'Forbidden' }, 403);
+            await next();
         });
     }
 

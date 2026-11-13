@@ -151,7 +151,39 @@ Stored dates are ISO `YYYY-MM-DD` strings for whole days and ISO timestamps for 
 - Individual commands: `npm run db:migrate|db:seed|admin:create|media:sync -w apps/api`. All read `.env.local` at the repo root; variables already set in the environment take precedence.
 - `npm run typecheck` type-checks all workspaces (`vue-tsc` for the site).
 
+## Deployment (AWS, `apps/api/serverless.yml`, OSS Serverless `osls`)
+- Topology:
+
+  ```mermaid
+  flowchart LR
+    V[Browser] --> CF[CloudFront]
+    CF -- "default: prerendered HTML (viewer-request function)" --> SB[(S3 site bucket)]
+    CF -- "/assets/*" --> SB
+    CF -- "/media/*" --> MB[(S3 media bucket)]
+    CF -- "/api/* + X-Origin-Verify" --> FN[api Lambda — function URL]
+    FN --> DB[(RDS Postgres 17)]
+    FN -- "S3 gateway endpoint" --> SB
+    V -- "presigned PUT" --> MB
+    EB[EventBridge daily] --> RB[rebuild Lambda] --> SB
+  ```
+
+- One container image (`apps/api/Dockerfile`, built from the repo root; `build.mjs` bundles `lambda`, `migrate` and `rebuild` handlers with esbuild; the RDS CA bundle is baked in and `DATABASE_SSL=true`) backs three functions: `api` (function URL, 1024 MB, 29 s, reserved concurrency 10), `migrate` (`osls invoke -f migrate`), and `rebuild` (daily at 06:15 UTC, and after each site deploy).
+- Network: a VPC with two private subnets and no NAT gateway; the Lambdas reach S3 through a gateway endpoint and RDS through a security group. Nothing at runtime calls other AWS services.
+- Secrets: SSM SecureStrings `/twelveten/<stage>/{db-password, better-auth-secret, origin-verify-secret}` (created by `npm run secrets:init -w apps/api -- --stage <stage>`) are resolved at deploy time into Lambda environment variables; RDS reads the password with `{{resolve:ssm-secure:…}}`.
+- RDS: `db.t4g.micro`, 20 GB gp3 (autoscaling to 100), encrypted, private, 7-day backups, snapshot on deletion; deletion protection on `prod`.
+- Buckets: site (private, CloudFront-only), media (private, versioned, old versions expire after 90 days, CloudFront reads `media/*`, browsers `PUT` presigned uploads; CORS limited to the site origin; retained if the stack is deleted).
+- CloudFront: default → site bucket with `cloudfront/viewer-request.js` (legacy redirects, `/path` → `/path/index.html`, `/admin/login` → SPA shell); `/assets/*` and `/media/*` cached; `/api/*` → function URL with an `X-Origin-Verify` header the API requires (`ORIGIN_VERIFY_SECRET`), all query strings and cookies forwarded, cache key includes the session cookie so admin responses are never shared; S3 403/404 → `/404.html` with status 404.
+- Per-stage settings: `apps/api/config.<stage>.yml` (git-ignored; see `config.example.yml`): `siteUrl`, optional `domain` + `certificateArn` (ACM, us-east-1).
+- Releasing:
+  1. `npm run secrets:init -w apps/api -- --stage <stage>` (once)
+  2. `npx osls deploy --stage <stage>` in `apps/api` (builds and pushes the image to ECR, creates/updates the stack)
+  3. `npx osls invoke -f migrate --stage <stage>`
+  4. `npm run media:sync -w apps/api -- --bucket <MediaBucketName>` (first time, and whenever `.media/` changes)
+  5. `npm run build -w apps/web && npm run deploy:site -w apps/api -- --stage <stage>` (uploads `dist/` with cache headers, then invokes `rebuild`)
+- `npm run lambda:local` builds the image and runs it with the Lambda Runtime Interface Emulator behind an HTTP adapter on port 3001 (Function URL event format), connected to the docker-compose services; `API_TARGET=http://localhost:3001 npm run dev:web` runs the site against it.
+
 ## Testing
 - `npm test`: Vitest across workspaces. `apps/web` tests run in happy-dom with `@vue/test-utils` (`src/**/*.test.js`); `packages/shared` tests run in Node (`src/**/*.test.ts`); `apps/api` tests run in Node against the `twelveten_test` database (override with `TEST_DATABASE_URL`), one file at a time, and need `docker compose up` first.
+- `apps/api/src/cloudfront.test.ts` checks the CloudFront function's rewrites and that its redirects match `REDIRECTS`.
 - `npx tsc -p packages/shared` / `npx tsc -p apps/api`: type-check (`tsconfig.base.json` holds the common compiler options).
 - `npm run test:e2e`: builds the site and runs Playwright against `vite preview` (needs the API on port 3000 with seeded data and the local admin). Projects: `desktop` and `mobile` run the visual tests (each page against the committed baseline in `e2e/__screenshots__/`; refresh intentionally with `npx playwright test --update-snapshots`); `admin-setup` signs in once and saves the session to `e2e/.auth/` (git-ignored); `editing` runs the in-place editing flows with that session (edit and save an exhibition, restore from history, date range picker, create/publish/delete a fair and link the home splash to it, news and press create/edit/delete, infinite loading in batches of 10).

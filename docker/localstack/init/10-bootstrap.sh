@@ -19,5 +19,6 @@ param() {
 }
 param "/twelveten/${STAGE}/better-auth-secret" "local-dev-secret-$(head -c 24 /dev/urandom | base64 | tr -dc 'A-Za-z0-9')"
 param "/twelveten/${STAGE}/db-password" "twelveten"
+param "/twelveten/${STAGE}/origin-verify-secret" "local-origin-verify-secret-0000"
 
 echo "LocalStack bootstrap complete for stage ${STAGE}"
