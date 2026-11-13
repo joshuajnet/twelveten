@@ -41,12 +41,21 @@ Stored dates are ISO `YYYY-MM-DD` strings for whole days and ISO timestamps for 
 
 ## API (`apps/api`)
 - `createApp({ db })` builds the Hono app under the `/api` base path. The same app is served by `hono/aws-lambda` (`lambda.ts`) and `@hono/node-server` (`local.ts`, port `PORT`, default 3000).
+- Request context (`src/env.ts`): `db`, `userId`, `isAdmin` (resolved per request by `resolveUser`). Admin requests see drafts and hidden slides and get `Cache-Control: private, no-store`; public responses get `s-maxage=60, stale-while-revalidate=300`.
+- Content reads live in `src/content/queries.ts`; `src/content/serialize.ts` maps rows to the `@twelveten/shared` types.
 - Routes:
 
   | Method | Path | Auth | Response |
   |---|---|---|---|
   | GET | `/api/health` | public | `{ ok, db }`; 503 when the database is unreachable |
+  | GET | `/api/home` | public | `HomePage` (with the linked exhibition's slug, kind and dates) |
+  | GET | `/api/exhibitions?kind=` | public | `{ items: ExhibitionSummary[] }`, newest `starts_on` first |
+  | GET | `/api/exhibitions/:slug?kind=` | public | `Exhibition` with events, slides (visible only) and linked press |
+  | GET | `/api/news?cursor=&limit=` | public | `Page<NewsPost>`, newest first |
+  | GET | `/api/news/:slug` | public | `NewsPost` |
+  | GET | `/api/press?cursor=&limit=&exhibition=` | public | `Page<PressItem>`, newest first, optionally for one exhibition slug |
 
+- Pagination (`src/content/cursor.ts`): keyset cursors. `nextCursor` is an opaque base64url of the last item's sort value and id; the next page is `WHERE (date, id) < cursor ORDER BY date DESC, id DESC`. `limit` defaults to 10 and is capped at 50; a malformed cursor returns 400.
 - Unknown `/api/*` paths return JSON 404s; unhandled errors return JSON 500s.
 - Configuration (`src/config.ts`, validated with zod from the environment): `DATABASE_URL` (required), `DATABASE_POOL_MAX` (default 5), `DATABASE_SSL` (`true`/`false`), `SITE_URL`, `PORT`, `NODE_ENV`.
 
