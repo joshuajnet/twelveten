@@ -11,7 +11,9 @@ npm workspaces:
 | `apps/web` | Vue 3 SPA (`@twelveten/web`): pages, components, JSON content, `public/` images and PDFs |
 | `apps/api` | `@twelveten/api`: Hono app (`src/app.ts`), Lambda entry (`src/lambda.ts`), local Node server (`src/local.ts`), database access and migrations (`src/db/`) |
 | `packages/shared` | `@twelveten/shared` TypeScript source used by other workspaces: content schemas (zod), date formatting, route table, meta-tag builder |
-| `docker-compose.yml` | Local services: Postgres 17 (databases `twelveten` and `twelveten_test`) |
+| `docker-compose.yml` | Local services: Postgres 17 (databases `twelveten` and `twelveten_test`) and LocalStack 4.14.0 (S3, SSM) |
+| `docker/` | Container init: Postgres test-database creation, LocalStack bootstrap (`docker/localstack/init/10-bootstrap.sh`) |
+| `apps/api/seed-data` | Original site content for the initial seed: `exhibitions.ts` (header data), `exhibitions/<slug>.html` / `<slug>.bio.html` (body text), `press.ts`, `news.ts` (reads `apps/web/src/json/news.json`), `home.ts` |
 | `e2e/` | Playwright tests; `e2e/visual` holds full-page screenshot tests for every public URL |
 | `vitest.config.ts` | Root Vitest config; each workspace defines a Vitest project |
 | `playwright.config.ts` | Playwright config (desktop + mobile projects; serves the built site with `vite preview`) |
@@ -29,8 +31,9 @@ Consumed as TypeScript source (`exports` point at `src/*.ts`); no build step.
 | Module | Provides |
 |---|---|
 | `content.ts` | zod schemas + types for API payloads: `Exhibition`, `ExhibitionSummary`, `ExhibitionEvent`, `Artwork`, `PressItem`, `NewsPost`, `HomePage`, rich-text documents (Tiptap JSON), `Page<T>` (`{ items, nextCursor }`), `PAGE_SIZE` = 10, `MAX_PAGE_SIZE` = 50 |
-| `dates.ts` | Display text derived from stored values: `formatDate`, `formatDateRange` (collapses shared month/year), `formatEvent` / `formatEventTime` (wall-clock time in a time zone, default `America/Chicago`), `todayIso`, `exhibitionStatus` (upcoming / current / past) |
+| `dates.ts` | Display text derived from stored values: `formatDate`, `formatDateRange` (collapses shared month/year), `formatEvent` / `formatEventTime` (wall-clock time in a time zone, default `America/Chicago`), `todayIso`, `exhibitionStatus` (upcoming / current / past), `zonedToIso` (wall-clock time in a zone → UTC) |
 | `routes.ts` | `matchRoute(path)` for every public URL, legacy `REDIRECTS`, `exhibitionPath`, `newsPath` |
+| `rich/` | Rich-text schema (Tiptap extensions): paragraphs with `default`/`italic`/`lead` variants, bold, italic, links, bullet/ordered lists, `figure` (image + caption), `video` (YouTube id), `bio` (artist bio section), `pressList` (placeholder for linked press). `richToHtml` renders in the browser; `rich/server` provides `htmlToRich` (parse + sanitize), `normalizeLegacyHtml` and `richToHtmlServer` for Node |
 | `meta.ts` | `buildMeta(input, { siteUrl })` → per-page title, description, canonical URL, Open Graph / Twitter image, JSON-LD (`ExhibitionEvent`, `NewsArticle`, `ArtGallery`) and HTTP status; `renderHead(tags)` → escaped `<head>` HTML |
 | `text.ts` | `htmlToText`, `firstParagraph`, `firstHtmlParagraph`, `truncate`, `escapeHtml` |
 
@@ -56,19 +59,29 @@ Stored dates are ISO `YYYY-MM-DD` strings for whole days and ISO timestamps for 
   | Table | Holds |
   |---|---|
   | `user`, `session`, `account`, `verification`, `rateLimit` | Login (Better Auth layout, camelCase columns; `user.role` is `user` or `admin`) |
-  | `exhibitions` | Exhibitions and fairs (`kind`); run dates `starts_on`/`ends_on` (`date`), `timezone`, header fields, hero/thumbnail, `content` (rich-text JSON document), SEO overrides, `published` |
+  | `exhibitions` | Exhibitions and fairs (`kind`). Header: `artists` (one per line), `title`, `subtitle`, `title_first`, run dates `starts_on`/`ends_on` (`date`), `timezone`, `hours_text`, `venue_text` (multi-line), `location_text` (short, for list cards), `press_release_url`, `header_links` (`[{label,url}]`), `show_inquire`. Media: `hero_image`/`hero_alt`, `thumbnail`, `slideshow_visible`, `works_available`. Body: `content` (rich-text JSON document). SEO overrides, `published` |
   | `exhibition_events` | Dated events shown under an exhibition's dates (label, `starts_at`, `ends_at`, `position`), e.g. the opening |
-  | `artworks` | Slideshow slides per exhibition; `(exhibition_id, position)` unique, deferrable |
+  | `artworks` | Slideshow slides per exhibition: `image` or `video` (mp4), caption fields, `alt`, `hidden`, `available`; `(exhibition_id, position)` unique, deferrable |
   | `news_posts` | News posts: `slug`, `title`, `published_at`, `body_html`, SEO overrides, `published` |
   | `press_items` | Press coverage: outlet, title, `url` (unique), `published_on`, optional `issue_label`/`byline`, optional `exhibition_id` |
   | `home_page` | Single row (`id = 1`): home splash images, text, optional dates, `link_exhibition_id` |
   | `content_revisions` | Snapshots of content changes (entity, entity id, action, `snapshot` JSON, user) |
   | `seed_state` | Markers for one-time seed runs |
 
+## Seed
+- `seed(db, { force })` (`src/db/seed.ts`) loads the original site content in one transaction: exhibitions and fairs (body HTML converted to rich documents with `htmlToRich`), their events and slideshow slides (from `apps/web/src/json/*-slideshow.json`), press items (linked to exhibitions), news posts (HTML sanitized with `sanitizeNewsHtml`), and the home splash.
+- Rows are matched on natural keys (exhibition slug, press URL, news slug, home id). Without `force`, existing rows are kept and the run is skipped entirely once `seed_state` holds `initial`; with `force`, rows are overwritten and an exhibition's events and slides are replaced.
+- `src/lib/sanitize.ts`: `sanitizeNewsHtml` allows `p, br, a, em, i, strong, b, ul, ol, li, img, div, span` with a fixed attribute/class allowlist and `http`/`https`/`mailto` links; `target="_blank"` links get `rel="noopener noreferrer"`.
+
+## Local AWS (LocalStack)
+- `localstack` runs S3 and SSM on `localhost:4566` (region `us-east-2`, credentials `test`/`test`). The service reports healthy once its init scripts have run.
+- `docker/localstack/init/10-bootstrap.sh` creates, idempotently for stage `local`: buckets `twelveten-local-site` and `twelveten-local-media` (media bucket allows browser `GET`/`PUT`/`HEAD` via CORS) and SecureString parameters `/twelveten/local/better-auth-secret` and `/twelveten/local/db-password`.
+
 ## Local development
 - `npm install`, then `npm run dev` (Vite dev server).
-- `docker compose up -d --wait` starts Postgres on `localhost:5432` (user/password `twelveten`).
-- `npm run db:migrate -w apps/api` applies migrations to `DATABASE_URL`; `npm run dev -w apps/api` runs the API with reload. Both read `.env.local` at the repo root when present.
+- `docker compose up -d --wait` starts Postgres on `localhost:5432` (user/password `twelveten`) and LocalStack on `localhost:4566`.
+- Copy `.env.example` to `.env.local` for local settings.
+- `npm run db:migrate -w apps/api` applies migrations to `DATABASE_URL`; `npm run db:seed -w apps/api` loads the original content (`-- --force` to overwrite); `npm run dev -w apps/api` runs the API with reload. Both read `.env.local` at the repo root when present.
 - `npm run build` builds all workspaces.
 
 ## Testing

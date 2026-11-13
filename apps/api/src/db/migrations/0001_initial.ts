@@ -72,17 +72,23 @@ CREATE TABLE IF NOT EXISTS exhibitions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   slug text NOT NULL UNIQUE CHECK (slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
   kind text NOT NULL DEFAULT 'exhibition' CHECK (kind IN ('exhibition','fair')),
-  artists_line text NOT NULL DEFAULT '',
+  artists text NOT NULL DEFAULT '',          -- one artist per line
   title text NOT NULL,
+  subtitle text,                             -- e.g. 'curated by David Mitchell', 'Booth D206'
+  title_first boolean NOT NULL DEFAULT false, -- group shows: title above the artist list
   starts_on date NOT NULL,
   ends_on date NOT NULL,
   timezone text NOT NULL DEFAULT 'America/Chicago',
   hours_text text,
-  venue_text text,
+  venue_text text,                           -- multi-line address shown in the header (fairs)
+  location_text text,                        -- short place for list cards, e.g. 'Chicago, IL'
   hero_image text,
   hero_alt text,
   thumbnail text,
   press_release_url text,
+  header_links jsonb NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(header_links) = 'array'), -- [{label,url}]
+  show_inquire boolean NOT NULL DEFAULT false,
+  slideshow_visible boolean NOT NULL DEFAULT true,
   works_available boolean NOT NULL DEFAULT false,
   content jsonb NOT NULL DEFAULT '{"type":"doc","content":[]}'::jsonb
     CHECK (jsonb_typeof(content) = 'object' AND content->>'type' = 'doc'),
@@ -113,7 +119,8 @@ CREATE TABLE IF NOT EXISTS artworks (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   exhibition_id uuid NOT NULL REFERENCES exhibitions(id) ON DELETE CASCADE,
   position integer NOT NULL,
-  image text NOT NULL,
+  image text,                                -- still image, or
+  video text,                                -- an mp4 played in the slideshow
   alt text NOT NULL DEFAULT '',
   author text,
   title text,
@@ -124,7 +131,8 @@ CREATE TABLE IF NOT EXISTS artworks (
   hidden boolean NOT NULL DEFAULT false,
   available boolean NOT NULL DEFAULT false,
   created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT artworks_media_chk CHECK (image IS NOT NULL OR video IS NOT NULL)
 );
 DO $$ BEGIN
   ALTER TABLE artworks ADD CONSTRAINT artworks_position_uq

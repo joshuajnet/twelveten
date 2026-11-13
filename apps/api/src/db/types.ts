@@ -1,5 +1,5 @@
 import type { ColumnType, Generated, Insertable, Selectable, Updateable } from 'kysely';
-import type { RichDoc } from '@twelveten/shared';
+import type { HeaderLink, RichDoc } from '@twelveten/shared';
 
 /** ISO 'YYYY-MM-DD' (pg DATE is parsed as a string). */
 type IsoDate = string;
@@ -7,6 +7,8 @@ type IsoDate = string;
 type Timestamp = ColumnType<string, string | Date | undefined, string | Date>;
 type CreatedAt = ColumnType<string, string | Date | undefined, never>;
 type Json<T> = ColumnType<T, string | T, string | T>;
+/** JSON column with a database default (optional on insert). */
+type JsonWithDefault<T> = ColumnType<T, string | T | undefined, string | T>;
 
 export interface UserTable {
     id: Generated<string>;
@@ -26,19 +28,25 @@ export interface ExhibitionTable {
     id: Generated<string>;
     slug: string;
     kind: Generated<'exhibition' | 'fair'>;
-    artists_line: Generated<string>;
+    artists: Generated<string>;
     title: string;
+    subtitle: string | null;
+    title_first: Generated<boolean>;
     starts_on: IsoDate;
     ends_on: IsoDate;
     timezone: Generated<string>;
     hours_text: string | null;
     venue_text: string | null;
+    location_text: string | null;
     hero_image: string | null;
     hero_alt: string | null;
     thumbnail: string | null;
     press_release_url: string | null;
+    header_links: JsonWithDefault<HeaderLink[]>;
+    show_inquire: Generated<boolean>;
+    slideshow_visible: Generated<boolean>;
     works_available: Generated<boolean>;
-    content: Json<RichDoc>;
+    content: JsonWithDefault<RichDoc>;
     seo_title: string | null;
     seo_description: string | null;
     og_image: string | null;
@@ -62,7 +70,8 @@ export interface ArtworkTable {
     id: Generated<string>;
     exhibition_id: string;
     position: number;
-    image: string;
+    image: string | null;
+    video: string | null;
     alt: Generated<string>;
     author: string | null;
     title: string | null;

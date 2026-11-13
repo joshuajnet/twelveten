@@ -86,3 +86,18 @@ describe('exhibitionStatus', () => {
         expect(todayIso('America/Chicago', new Date('2026-11-13T02:00:00Z'))).toBe('2026-11-12');
     });
 });
+
+import { zonedToIso } from './dates.ts';
+
+describe('zonedToIso', () => {
+    it.each([
+        ['2026-04-04 18:00', 'America/Chicago', '2026-04-04T23:00:00.000Z'], // CDT
+        ['2024-11-09 18:00', 'America/Chicago', '2024-11-10T00:00:00.000Z'], // CST
+        ['2026-12-01 11:00', 'America/New_York', '2026-12-01T16:00:00.000Z'],
+        ['2026-03-08 03:30', 'America/Chicago', '2026-03-08T08:30:00.000Z'], // just after spring-forward
+    ])('%s %s → %s', (wall, tz, iso) => expect(zonedToIso(wall, tz)).toBe(iso));
+
+    it('round-trips through formatEventTime', () => {
+        expect(formatEventTime(zonedToIso('2026-04-04 18:00'), zonedToIso('2026-04-04 21:00'))).toBe('April 4th, 6PM — 9PM');
+    });
+});

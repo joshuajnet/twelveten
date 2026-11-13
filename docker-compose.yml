@@ -18,5 +18,23 @@ services:
       timeout: 3s
       retries: 30
 
+  localstack:
+    # Last LocalStack release that runs without an auth token.
+    image: localstack/localstack:4.14.0
+    environment:
+      SERVICES: s3,ssm
+      AWS_DEFAULT_REGION: us-east-2
+      STAGE: local
+    ports:
+      - '4566:4566'
+    volumes:
+      - ./docker/localstack/init:/etc/localstack/init/ready.d:ro
+    healthcheck:
+      # Healthy only after the ready.d init scripts have finished.
+      test: ['CMD-SHELL', 'curl -sf localhost:4566/_localstack/init/ready | grep -q ''"completed": true''']
+      interval: 2s
+      timeout: 3s
+      retries: 60
+
 volumes:
   postgres-data:

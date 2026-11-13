@@ -64,8 +64,21 @@ function describe(body: string, suffix?: string): string {
     return `${truncate(body, DESCRIPTION_MAX - tail.length)}${tail}`;
 }
 
-function exhibitionTitle(e: Pick<Exhibition, 'artistsLine' | 'title'>): string {
-    return e.artistsLine ? `${e.artistsLine}: ${e.title}` : e.title;
+/** Artists as a single line: 'A, B & C'. */
+export function artistList(artists: string): string[] {
+    return artists.split('\n').map((s) => s.trim()).filter(Boolean);
+}
+
+export function joinArtists(artists: string): string {
+    const list = artistList(artists);
+    if (list.length <= 1) return list[0] ?? '';
+    return `${list.slice(0, -1).join(', ')} & ${list[list.length - 1]}`;
+}
+
+function exhibitionTitle(e: Pick<Exhibition, 'artists' | 'title' | 'titleFirst'>): string {
+    const artists = joinArtists(e.artists);
+    if (!artists) return e.title;
+    return e.titleFirst ? `${e.title}: ${artists}` : `${artists}: ${e.title}`;
 }
 
 export function buildMeta(input: MetaInput, { siteUrl }: MetaOptions): HeadTags {
@@ -74,7 +87,7 @@ export function buildMeta(input: MetaInput, { siteUrl }: MetaOptions): HeadTags 
             const e = input.exhibition;
             const path = exhibitionPath(e);
             const dates = formatDateRange(e.startsOn, e.endsOn);
-            const firstVisible = e.artworks.find((a) => !a.hidden);
+            const firstVisible = e.artworks.find((a) => !a.hidden && a.image);
             const image = e.ogImage ?? e.heroImage ?? firstVisible?.image ?? DEFAULT_IMAGE;
             const name = exhibitionTitle(e);
             const jsonLd: Record<string, unknown> = {
@@ -92,7 +105,7 @@ export function buildMeta(input: MetaInput, { siteUrl }: MetaOptions): HeadTags 
                         : { '@type': 'Place', name: SITE_NAME, address: GALLERY_ADDRESS },
                 organizer: { '@type': 'ArtGallery', name: SITE_NAME, url: siteUrl },
             };
-            const artists = e.artistsLine.split(/,\s*|\s+&\s+|\s+and\s+/).map((s) => s.trim()).filter(Boolean);
+            const artists = artistList(e.artists);
             if (artists.length) jsonLd.performer = artists.map((n) => ({ '@type': 'Person', name: n }));
             return {
                 title: withSite(e.seoTitle ?? name),

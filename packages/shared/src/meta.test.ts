@@ -10,10 +10,10 @@ const ts = '2026-04-01T12:00:00.000Z';
 const para = (text: string) => ({ type: 'paragraph', content: [{ type: 'text', text }] });
 
 const exhibition = (over: Partial<Exhibition> = {}): Exhibition => ({
-    id, slug: 'africh-signal', kind: 'exhibition', artistsLine: 'Noelle Africh', title: 'Signal',
+    id, slug: 'africh-signal', kind: 'exhibition', artists: 'Noelle Africh', title: 'Signal', subtitle: null, titleFirst: false, locationText: null,
     startsOn: '2026-04-04', endsOn: '2026-05-23', timezone: 'America/Chicago',
     thumbnail: null, heroImage: '/media/images/signal/hero.jpg', heroAlt: null, published: true,
-    hoursText: null, venueText: null, pressReleaseUrl: null, worksAvailable: true,
+    hoursText: null, venueText: null, pressReleaseUrl: null, headerLinks: [], showInquire: false, slideshowVisible: true, worksAvailable: true,
     content: { type: 'doc', content: [{ type: 'paragraph' }, para('Twelve Ten Gallery is thrilled to present Signal, an exhibition by Noelle Africh.')] },
     seoTitle: null, seoDescription: null, ogImage: null, updatedAt: ts,
     events: [], artworks: [], press: [],
@@ -42,7 +42,7 @@ describe('buildMeta: exhibition', () => {
 
     it('falls back from og image → hero → first visible artwork → default', () => {
         const art = (image: string, hidden: boolean) => ({
-            id, exhibitionId: id, position: 0, image, alt: '', author: null, title: null, dateText: null,
+            id, exhibitionId: id, position: 0, image, video: null, alt: '', author: null, title: null, dateText: null,
             dimensions: null, media: null, credit: null, hidden, available: false, updatedAt: ts,
         });
         const noHero = exhibition({ heroImage: null, artworks: [art('/a.jpg', true), art('/b.jpg', false)] });
@@ -63,6 +63,15 @@ describe('buildMeta: exhibition', () => {
         const tags = buildMeta({ kind: 'exhibition', exhibition: exhibition({ seoTitle: 'Custom', seoDescription: 'Desc' }) }, { siteUrl });
         expect(tags.title).toBe(`Custom — ${SITE_NAME}`);
         expect(tags.description).toBe('Desc');
+    });
+});
+
+describe('artists', () => {
+    it('joins multi-line artists and puts the title first for group shows', () => {
+        const group = exhibition({ artists: 'Sam Bornstein\nAisling Hamrogue\nKate Steciw', title: 'The Veil', titleFirst: true });
+        const tags = buildMeta({ kind: 'exhibition', exhibition: group }, { siteUrl });
+        expect(tags.title).toBe(`The Veil: Sam Bornstein, Aisling Hamrogue & Kate Steciw — ${SITE_NAME}`);
+        expect(tags.jsonLd?.performer).toHaveLength(3);
     });
 });
 

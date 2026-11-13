@@ -122,3 +122,24 @@ export function exhibitionStatus(startsOn: string, endsOn: string, today: string
     if (today > endsOn) return 'past';
     return 'current';
 }
+
+/** Offset (minutes) of a time zone from UTC at an instant. */
+function offsetMinutes(instant: Date, timeZone: string): number {
+    const p = zonedParts(instant, timeZone);
+    const asUtc = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute);
+    return (asUtc - Math.floor(instant.getTime() / 60000) * 60000) / 60000;
+}
+
+/**
+ * Convert a wall-clock time in a time zone ('2026-04-04 18:00') to an ISO UTC timestamp.
+ * DST-aware: resolves the zone's offset at that moment.
+ */
+export function zonedToIso(wallClock: string, timeZone: string = GALLERY_TIMEZONE): string {
+    const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})$/.exec(wallClock);
+    if (!m) throw new Error(`Expected 'YYYY-MM-DD HH:mm', got ${wallClock}`);
+    const [y, mo, d, h, mi] = m.slice(1).map(Number) as [number, number, number, number, number];
+    const naive = Date.UTC(y, mo - 1, d, h, mi);
+    let guess = naive - offsetMinutes(new Date(naive), timeZone) * 60000;
+    guess = naive - offsetMinutes(new Date(guess), timeZone) * 60000;
+    return new Date(guess).toISOString();
+}

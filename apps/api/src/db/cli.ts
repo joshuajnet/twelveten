@@ -1,5 +1,6 @@
 import { closeDb, db } from './index.ts';
 import { migrateToLatest } from './migrate.ts';
+import { seed } from './seed.ts';
 
 async function main(command: string | undefined): Promise<void> {
     switch (command) {
@@ -9,8 +10,18 @@ async function main(command: string | undefined): Promise<void> {
             for (const r of results ?? []) console.log(`${r.status}: ${r.migrationName}`);
             return;
         }
+        case 'seed': {
+            const force = process.argv.includes('--force');
+            const r = await seed(db(), { force });
+            console.log(
+                r.skipped
+                    ? 'Seed already applied (use --force to overwrite).'
+                    : `Seeded ${r.exhibitions} exhibitions/fairs, ${r.artworks} slides, ${r.events} events, ${r.press} press items, ${r.news} news posts.`,
+            );
+            return;
+        }
         default:
-            throw new Error(`Unknown command "${command}". Use: migrate`);
+            throw new Error(`Unknown command "${command}". Use: migrate | seed [--force]`);
     }
 }
 

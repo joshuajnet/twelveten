@@ -41,7 +41,8 @@ export const artworkSchema = z.object({
     id: uuid,
     exhibitionId: uuid,
     position: z.number().int(),
-    image: z.string().min(1),
+    image: z.string().min(1).nullable(),
+    video: z.string().min(1).nullable(),
     alt: z.string(),
     author: z.string().nullable(),
     title: z.string().nullable(),
@@ -75,12 +76,19 @@ const seoFields = {
     ogImage: z.string().nullable(),
 };
 
+export const headerLinkSchema = z.object({ label: z.string().min(1), url: z.string().min(1) });
+export type HeaderLink = z.infer<typeof headerLinkSchema>;
+
 export const exhibitionSummarySchema = z.object({
     id: uuid,
     slug,
     kind: exhibitionKind,
-    artistsLine: z.string(),
+    /** One artist per line. */
+    artists: z.string(),
     title: z.string().min(1),
+    subtitle: z.string().nullable(),
+    titleFirst: z.boolean(),
+    locationText: z.string().nullable(),
     startsOn: isoDate,
     endsOn: isoDate,
     timezone: z.string(),
@@ -95,6 +103,9 @@ export const exhibitionSchema = exhibitionSummarySchema.extend({
     hoursText: z.string().nullable(),
     venueText: z.string().nullable(),
     pressReleaseUrl: z.string().nullable(),
+    headerLinks: z.array(headerLinkSchema),
+    showInquire: z.boolean(),
+    slideshowVisible: z.boolean(),
     worksAvailable: z.boolean(),
     content: richDocSchema,
     ...seoFields,
