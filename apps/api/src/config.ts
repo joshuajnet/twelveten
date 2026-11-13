@@ -13,6 +13,13 @@ const schema = z.object({
     /** Signs session cookies. Required outside tests; at least 32 characters. */
     BETTER_AUTH_SECRET: z.string().min(32).optional(),
     PORT: z.coerce.number().int().positive().default(3000),
+    AWS_REGION: z.string().default('us-east-2'),
+    /** Custom AWS endpoint (LocalStack in development). */
+    AWS_ENDPOINT_URL: z.url().optional(),
+    MEDIA_BUCKET: z.string().default('twelveten-local-media'),
+    SITE_BUCKET: z.string().default('twelveten-local-site'),
+    /** Path the media bucket is served under on the site. */
+    MEDIA_PUBLIC_PREFIX: z.string().default('/media'),
 });
 
 export type Config = z.infer<typeof schema>;

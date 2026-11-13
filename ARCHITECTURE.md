@@ -53,16 +53,42 @@ Stored dates are ISO `YYYY-MM-DD` strings for whole days and ISO timestamps for 
   | Method | Path | Auth | Response |
   |---|---|---|---|
   | GET | `/api/health` | public | `{ ok, db }`; 503 when the database is unreachable |
+  | GET, POST | `/api/auth/*` | public | Better Auth (`/sign-in/email`, `/sign-out`, `/get-session`, …) |
+  | GET | `/api/session` | public | `{ user: { id, name, email, role } \| null }` |
   | GET | `/api/home` | public | `HomePage` (with the linked exhibition's slug, kind and dates) |
   | GET | `/api/exhibitions?kind=` | public | `{ items: ExhibitionSummary[] }`, newest `starts_on` first |
-  | GET | `/api/exhibitions/:slug?kind=` | public | `Exhibition` with events, slides (visible only) and linked press |
+  | GET | `/api/exhibitions/:slug?kind=` | public | `Exhibition` with events, slides (visible only), linked press and `contentHtml` |
   | GET | `/api/news?cursor=&limit=` | public | `Page<NewsPost>`, newest first |
   | GET | `/api/news/:slug` | public | `NewsPost` |
   | GET | `/api/press?cursor=&limit=&exhibition=` | public | `Page<PressItem>`, newest first, optionally for one exhibition slug |
+  | GET | `/api/admin/exhibitions/:id` | admin | `Exhibition` including drafts and hidden slides |
+  | POST | `/api/admin/exhibitions` | admin | Create a draft exhibition or fair (unique slug from the title) |
+  | PATCH | `/api/admin/exhibitions/:id` | admin | Update fields; `content` is sanitised through the rich-text schema |
+  | DELETE | `/api/admin/exhibitions/:id` | admin | Delete (slides and events cascade) |
+  | PUT | `/api/admin/exhibitions/:id/events` | admin | Replace the event list |
+  | POST | `/api/admin/exhibitions/:id/artworks` | admin | Append a slide (image or video) |
+  | PATCH / DELETE | `/api/admin/artworks/:id` | admin | Edit / delete a slide (positions stay contiguous) |
+  | PUT | `/api/admin/exhibitions/:id/artworks/order` | admin | Reorder slides (`ids` must list every slide once) |
+  | POST, PATCH, DELETE | `/api/admin/news[/:id]` | admin | News posts (HTML sanitised with `sanitizeNewsHtml`) |
+  | POST, PATCH, DELETE | `/api/admin/press[/:id]` | admin | Press items |
+  | PATCH | `/api/admin/home` | admin | Home splash |
+  | GET | `/api/admin/revisions?entity=&id=` | admin | Last 50 revisions of one item |
+  | POST | `/api/admin/revisions/:id/restore` | admin | Restore that revision (a deleted exhibition comes back with its slides) |
+  | POST | `/api/admin/uploads` | admin | Presigned S3 `PUT` for an image, mp4 or PDF (≤ 200 MB) → `{ uploadUrl, url, key, headers }` |
+  | POST | `/api/admin/publish/rebuild` | admin | Re-render every page |
 
+- Admin writes (`src/routes/admin/index.ts`): bodies are validated with the zod schemas in `@twelveten/shared` (`admin.ts`). Every update sends the `updatedAt` it last saw; a mismatch (compared at millisecond precision) returns 409 with the current copy. Each create/update/delete writes a `content_revisions` snapshot and then asks the `Publisher` to re-render the affected pages (the item's page, its list page, and `/` when the home splash links to it). Postgres constraint errors map to 400/409.
 - Pagination (`src/content/cursor.ts`): keyset cursors. `nextCursor` is an opaque base64url of the last item's sort value and id; the next page is `WHERE (date, id) < cursor ORDER BY date DESC, id DESC`. `limit` defaults to 10 and is capped at 50; a malformed cursor returns 400.
 - Unknown `/api/*` paths return JSON 404s; unhandled errors return JSON 500s.
-- Configuration (`src/config.ts`, validated with zod from the environment): `DATABASE_URL` (required), `DATABASE_POOL_MAX` (default 5), `DATABASE_SSL` (`true`/`false`), `SITE_URL`, `PORT`, `NODE_ENV`.
+- Configuration (`src/config.ts`, validated with zod from the environment): `DATABASE_URL` (required), `DATABASE_POOL_MAX` (default 5), `DATABASE_SSL` (`true`/`false`), `SITE_URL`, `PORT`, `NODE_ENV`, `BETTER_AUTH_SECRET` (≥ 32 chars), `AWS_REGION`, `AWS_ENDPOINT_URL` (LocalStack), `MEDIA_BUCKET`, `SITE_BUCKET`, `MEDIA_PUBLIC_PREFIX` (default `/media`). `src/services.ts` wires auth, storage and the publisher from this configuration for `lambda.ts` and `local.ts`.
+
+## Auth
+- Better Auth (`src/auth/auth.ts`) mounted at `/api/auth/*`: email/password with public sign-up disabled, the `admin` plugin (`user.role`), UUIDv7 ids, sessions and rate limits stored in Postgres (sign-in limited to 5 attempts per minute), 7-day sessions refreshed daily, cookies prefixed `twelveten` (`HttpOnly`, `SameSite=Lax`, `Secure` when `SITE_URL` is https), `trustedOrigins` = `SITE_URL`.
+- Each request resolves the session into `userId` / `isAdmin`; banned users count as signed out.
+- `npm run admin:create -w apps/api -- --email … [--password …] [--name …]` creates an admin or resets an existing user's password and makes them admin (`src/auth/users.ts`); without `--password` a random one is printed.
+
+## File storage
+- `src/storage/uploads.ts`: presigned S3 `PUT` URLs (15 minutes) into the media bucket under `media/uploads/{yyyy}/{mm}/{uuidv7}-{slug}.{ext}`; allowed types are JPEG, PNG, WebP, GIF, SVG, MP4 and PDF (`UPLOAD_TYPES`). The browser uploads directly to S3; the stored URL is `/media/uploads/…`, served from the media bucket at `/media/*`.
 
 ## Database
 - Postgres 17, accessed with Kysely over `pg` (`src/db/index.ts`). `DATE` columns are returned as `YYYY-MM-DD` strings and `TIMESTAMPTZ` as ISO strings. Table types live in `src/db/types.ts`.

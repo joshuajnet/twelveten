@@ -5,6 +5,9 @@ import type { AppEnv } from './env.ts';
 import { publicRoutes } from './routes/public.ts';
 import { InvalidCursorError } from './content/cursor.ts';
 import { resolveUserFrom, type Auth } from './auth/auth.ts';
+import { adminRoutes, handleError } from './routes/admin/index.ts';
+import { noopPublisher, type Publisher } from './publish/publisher.ts';
+import type { Storage } from './storage/uploads.ts';
 
 export interface AppDeps {
     db: () => DB;
@@ -12,6 +15,10 @@ export interface AppDeps {
     auth?: Auth;
     /** Overrides session resolution (tests). Defaults to the Better Auth session. */
     resolveUser?: (headers: Headers) => Promise<{ id: string; role: string } | null>;
+    /** Re-renders public pages after admin changes. */
+    publisher?: Publisher;
+    /** Media uploads (S3). */
+    storage?: Storage;
 }
 
 export function createApp(deps: AppDeps) {
@@ -59,12 +66,12 @@ export function createApp(deps: AppDeps) {
     });
 
     app.route('/', publicRoutes());
+    app.route('/admin', adminRoutes({ publisher: deps.publisher ?? noopPublisher, storage: deps.storage }));
 
     app.notFound((c) => c.json({ error: 'Not found' }, 404));
     app.onError((err, c) => {
         if (err instanceof InvalidCursorError) return c.json({ error: err.message }, 400);
-        console.error(err);
-        return c.json({ error: 'Internal server error' }, 500);
+        return handleError(err, c);
     });
 
     return app;
