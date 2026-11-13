@@ -7,14 +7,19 @@
         "packages/*"
     ],
     "scripts": {
-        "dev": "npm run dev -w apps/web",
+        "dev": "tsx scripts/dev.ts",
+        "dev:web": "npm run dev -w apps/web",
+        "dev:down": "docker compose down",
+        "db:reset": "docker compose down -v",
         "build": "npm run build --workspaces --if-present",
+        "typecheck": "tsc -p packages/shared --noEmit && tsc -p apps/api --noEmit && npm run typecheck -w apps/web",
         "test": "vitest run",
         "test:watch": "vitest",
         "test:e2e": "npm run build -w apps/web && playwright test"
     },
     "devDependencies": {
         "@playwright/test": "1.65.0",
+        "tsx": "^4.23.15",
         "typescript": "^5.9.3",
         "vitest": "^5.1.0"
     },

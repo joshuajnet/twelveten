@@ -1,5 +1,12 @@
 import { defineConfig, devices } from '@playwright/test';
 
+// Local admin credentials (written by `npm run dev`) for the editing tests.
+try {
+    process.loadEnvFile('.env.local');
+} catch {
+    // CI provides env vars directly
+}
+
 const port = Number(process.env.E2E_PORT ?? 4173);
 
 export default defineConfig({

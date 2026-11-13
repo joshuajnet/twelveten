@@ -140,11 +140,16 @@ Stored dates are ISO `YYYY-MM-DD` strings for whole days and ISO timestamps for 
 - `docker/localstack/init/10-bootstrap.sh` creates, idempotently for stage `local`: buckets `twelveten-local-site` and `twelveten-local-media` (media bucket allows browser `GET`/`PUT`/`HEAD` via CORS) and SecureString parameters `/twelveten/local/better-auth-secret` and `/twelveten/local/db-password`.
 
 ## Local development
-- `npm install`, then `npm run dev` (Vite dev server).
-- `docker compose up -d --wait` starts Postgres on `localhost:5432` (user/password `twelveten`) and LocalStack on `localhost:4566`.
-- Copy `.env.example` to `.env.local` for local settings.
-- `npm run db:migrate -w apps/api` applies migrations to `DATABASE_URL`; `npm run db:seed -w apps/api` loads the original content (`-- --force` to overwrite); `npm run dev -w apps/api` runs the API with reload. Both read `.env.local` at the repo root when present.
-- `npm run build` builds all workspaces.
+- Prerequisites: Node 22+, Docker. `npm install`, then `npm run dev` (`scripts/dev.ts`):
+  1. creates `.env.local` from `.env.example` on first run (random `BETTER_AUTH_SECRET`) and adds local admin credentials (`ADMIN_EMAIL`, `ADMIN_PASSWORD`) if missing;
+  2. `docker compose up -d --wait` (Postgres, LocalStack);
+  3. applies migrations, seeds the original content (skipped once applied), and creates/updates the local admin;
+  4. starts the API (`tsx watch`, port 3000) and Vite (port 5173, or the next free port) with prefixed, coloured output; the API is told the site's origin so sign-in works on that port;
+  5. waits for both and prints the site, admin login (with credentials when they were just created), API, LocalStack and Postgres addresses. A warning is shown when `.media/` is missing.
+- Ctrl+C stops the API and site; `npm run dev:down` stops the containers; `npm run db:reset` also deletes the database volume (the next `npm run dev` re-seeds).
+- `npm run dev:web` runs only the site (expects an API at `API_TARGET`).
+- Individual commands: `npm run db:migrate|db:seed|admin:create|media:sync -w apps/api`. All read `.env.local` at the repo root; variables already set in the environment take precedence.
+- `npm run typecheck` type-checks all workspaces (`vue-tsc` for the site).
 
 ## Testing
 - `npm test`: Vitest across workspaces. `apps/web` tests run in happy-dom with `@vue/test-utils` (`src/**/*.test.js`); `packages/shared` tests run in Node (`src/**/*.test.ts`); `apps/api` tests run in Node against the `twelveten_test` database (override with `TEST_DATABASE_URL`), one file at a time, and need `docker compose up` first.
