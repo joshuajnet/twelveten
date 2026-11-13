@@ -121,6 +121,8 @@ function closeConflict(o: boolean) {
 }
 
 const menuItem = 'cursor-pointer rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-slate-100';
+const menuContent = 'admin-ui z-[85] min-w-48 rounded-md border border-slate-200 bg-white p-1 shadow-lg';
+const iconButton = `${btnOutline} h-8 w-8 justify-center px-0!`;
 </script>
 
 <template>
@@ -149,17 +151,35 @@ const menuItem = 'cursor-pointer rounded px-2 py-1.5 text-sm outline-none data-[
                 </button>
             </template>
             <DropdownMenuRoot>
-                <DropdownMenuTrigger :class="btnOutline" aria-label="More">New / More ▾</DropdownMenuTrigger>
+                <DropdownMenuTrigger :class="iconButton" aria-label="Create new" title="Create new">
+                    <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                        <path d="M12 5v14M5 12h14" />
+                    </svg>
+                </DropdownMenuTrigger>
                 <DropdownMenuPortal>
-                    <DropdownMenuContent class="admin-ui z-[85] min-w-48 rounded-md border border-slate-200 bg-white p-1 shadow-lg" align="end" :side-offset="4">
+                    <DropdownMenuContent :class="menuContent" align="end" :side-offset="4">
                         <DropdownMenuItem :class="menuItem" @select="newKind = 'exhibition'">New exhibition</DropdownMenuItem>
                         <DropdownMenuItem :class="menuItem" @select="newKind = 'fair'">New fair</DropdownMenuItem>
                         <DropdownMenuItem :class="menuItem" @select="newsOrPress('new-news')">New news post</DropdownMenuItem>
                         <DropdownMenuItem :class="menuItem" @select="newsOrPress('new-press')">New press item</DropdownMenuItem>
-                        <DropdownMenuSeparator class="my-1 h-px bg-slate-100" />
+                    </DropdownMenuContent>
+                </DropdownMenuPortal>
+            </DropdownMenuRoot>
+            <DropdownMenuRoot>
+                <DropdownMenuTrigger :class="iconButton" aria-label="More options" title="More options">
+                    <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path
+                            d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+                        />
+                        <circle cx="12" cy="12" r="3" />
+                    </svg>
+                </DropdownMenuTrigger>
+                <DropdownMenuPortal>
+                    <DropdownMenuContent :class="menuContent" align="end" :side-offset="4">
                         <DropdownMenuItem v-if="page?.remove" :class="[menuItem, 'text-red-700']" @select="confirmDelete = true">Delete this page…</DropdownMenuItem>
                         <DropdownMenuItem :class="menuItem" @select="deletedOpen = true">Recently deleted…</DropdownMenuItem>
                         <DropdownMenuItem :class="menuItem" @select="rebuild">Re-publish all pages</DropdownMenuItem>
+                        <DropdownMenuSeparator class="my-1 h-px bg-slate-100" />
                         <DropdownMenuItem :class="menuItem" @select="toggleEditing(false)">Stop editing</DropdownMenuItem>
                         <DropdownMenuItem :class="menuItem" @select="logout">Sign out</DropdownMenuItem>
                     </DropdownMenuContent>

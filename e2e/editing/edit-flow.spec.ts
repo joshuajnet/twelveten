@@ -90,7 +90,7 @@ test('change exhibition dates with the range picker', async ({ page }) => {
 test('create a fair draft, publish it, link the home splash to it', async ({ page, browser }) => {
     await signIn(page);
     await startEditing(page);
-    await page.getByRole('button', { name: 'More' }).click();
+    await page.getByRole('button', { name: 'Create new' }).click();
     await page.getByRole('menuitem', { name: 'New fair' }).click();
     const dialog = page.getByRole('dialog');
     await dialog.getByLabel('Title').fill('E2E Art Fair');
@@ -120,7 +120,7 @@ test('create a fair draft, publish it, link the home splash to it', async ({ pag
     await page.getByRole('button', { name: 'Save' }).click();
     await expect(page.getByText('Saved', { exact: true })).toBeVisible();
     await page.goto('/fairs/e2e-art-fair');
-    await page.getByRole('button', { name: 'More' }).click();
+    await page.getByRole('button', { name: 'More options' }).click();
     await page.getByRole('menuitem', { name: 'Delete this page…' }).click();
     await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
     await page.waitForURL('/fairs');
