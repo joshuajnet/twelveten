@@ -31,42 +31,45 @@ useMeta(() => (home.value ? { kind: 'home', home: home.value } : null));
 </script>
 
 <template>
-    <HomeEditor v-if="isAdmin && editMode.editing" @saved="reload" />
-    <component :is="target ? 'router-link' : 'div'" v-else v-bind="target ? { to: target } : {}" class="flex grow no-underline!">
-        <div class="fixed top-0 left-0 w-full h-full flex grow bg-cover bg-center">
-            <div class="absolute top-[-4px] right-[-4px] left-[-4px] bottom-[-4px] bg-sky-900">
-                <template v-if="home">
-                    <img
-                        :src="home.bgImage"
-                        alt=""
-                        :class="{ 'blur-bg': menuActive }"
-                        :style="{ objectPosition: home.bgFocalPoint }"
-                        class="md:block hidden home-bg object-cover w-full h-full"
-                    />
-                    <img
-                        :src="home.bgImageMobile ?? home.bgImage"
-                        alt=""
-                        :class="{ 'blur-bg': menuActive }"
-                        :style="{ objectPosition: home.bgFocalPoint }"
-                        class="md:hidden home-bg object-cover w-full h-full"
-                    />
-                </template>
-            </div>
-            <div class="relative z-10 container mx-auto text-sm py-8 mb-4 px-3 flex flex-col grow" :class="{ 'blur-bg bg-sky-900': menuActive }">
-                <div v-if="home" class="mt-auto flex w-full md:flex-row flex-col md:gap-6 md:justify-between" :class="textClass">
-                    <div class="text-left text-lg">
-                        <strong v-if="home.headline" class="text-xl"> {{ home.headline }}</strong><br />
-                        {{ home.subline }}
-                        <template v-if="home.extraText"><br />{{ home.extraText }}</template>
-                    </div>
-                    <div v-if="dates" class="md:block hidden md:text-right md:mt-auto text-lg">
-                        {{ dates }}
-                    </div>
+    <!-- Stable root: the route <transition> attaches here, so swapping to the (async) editor happens inside it. -->
+    <div class="flex grow">
+        <HomeEditor v-if="isAdmin && editMode.editing" @saved="reload" />
+        <component :is="target ? 'router-link' : 'div'" v-else v-bind="target ? { to: target } : {}" class="flex grow no-underline!">
+            <div class="fixed top-0 left-0 w-full h-full flex grow bg-cover bg-center">
+                <div class="absolute top-[-4px] right-[-4px] left-[-4px] bottom-[-4px] bg-sky-900">
+                    <template v-if="home">
+                        <img
+                            :src="home.bgImage"
+                            alt=""
+                            :class="{ 'blur-bg': menuActive }"
+                            :style="{ objectPosition: home.bgFocalPoint }"
+                            class="md:block hidden home-bg object-cover w-full h-full"
+                        />
+                        <img
+                            :src="home.bgImageMobile ?? home.bgImage"
+                            alt=""
+                            :class="{ 'blur-bg': menuActive }"
+                            :style="{ objectPosition: home.bgFocalPoint }"
+                            class="md:hidden home-bg object-cover w-full h-full"
+                        />
+                    </template>
                 </div>
-                <Footer class="relative z-10 grow-0! shrink!" />
+                <div class="relative z-10 container mx-auto text-sm py-8 mb-4 px-3 flex flex-col grow" :class="{ 'blur-bg bg-sky-900': menuActive }">
+                    <div v-if="home" class="mt-auto flex w-full md:flex-row flex-col md:gap-6 md:justify-between" :class="textClass">
+                        <div class="text-left text-lg">
+                            <strong v-if="home.headline" class="text-xl"> {{ home.headline }}</strong><br />
+                            {{ home.subline }}
+                            <template v-if="home.extraText"><br />{{ home.extraText }}</template>
+                        </div>
+                        <div v-if="dates" class="md:block hidden md:text-right md:mt-auto text-lg">
+                            {{ dates }}
+                        </div>
+                    </div>
+                    <Footer class="relative z-10 grow-0! shrink!" />
+                </div>
             </div>
-        </div>
-    </component>
+        </component>
+    </div>
 </template>
 
 <style scoped>

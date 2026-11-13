@@ -127,6 +127,20 @@ test('create a fair draft, publish it, link the home splash to it', async ({ pag
     await visitor.close();
 });
 
+test('turning on edit mode on the home page shows the splash editor', async ({ page }) => {
+    await signIn(page);
+    const done = page.getByRole('button', { name: 'Done' });
+    if (await done.isVisible()) await done.click();
+    await expect(page.getByRole('button', { name: '✎ Edit site' })).toBeVisible();
+    await startEditing(page);
+    const select = page.getByLabel('Clicking the image opens');
+    await expect(select).toBeVisible();
+    // toBeVisible ignores opacity; the page fade must finish (nothing above the editor left transparent).
+    await expect
+        .poll(() => select.evaluate((el) => { let o = 1; for (let n: Element | null = el; n; n = n.parentElement) o *= Number(getComputedStyle(n).opacity); return o; }))
+        .toBe(1);
+});
+
 test('add, edit and delete a news post and a press item', async ({ page }) => {
     await signIn(page);
     await page.goto('/news');

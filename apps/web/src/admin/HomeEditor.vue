@@ -119,7 +119,7 @@ const textClass = computed(() => (draft.value?.textColor === 'white' ? 'text-whi
                     aria-hidden="true"
                 />
             </div>
-            <div class="admin-ui absolute right-3 top-14 z-20 w-72 space-y-2 rounded-md bg-white/95 p-3 text-sm shadow-lg">
+            <div class="admin-ui absolute right-3 top-40 z-20 w-72 space-y-2 rounded-md bg-white/95 p-3 text-sm shadow-lg">
                 <div class="flex flex-wrap gap-1">
                     <MediaButton label="Background" @uploaded="(url) => (draft!.bgImage = url)" />
                     <MediaButton label="Mobile background" @uploaded="(url) => (draft!.bgImageMobile = url)" />
