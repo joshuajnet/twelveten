@@ -49,7 +49,7 @@ defineProps<{ range?: boolean; grid: { value: DateValue; rows: DateValue[][] }[]
                             :is="range ? RangeCalendarCellTrigger : CalendarCellTrigger"
                             :day="day"
                             :month="month.value"
-                            class="flex h-8 w-8 items-center justify-center rounded text-sm hover:bg-slate-100 data-[outside-view]:text-slate-300 data-[today]:font-bold data-[selected]:bg-sky-800 data-[selected]:text-white data-[highlighted]:bg-sky-100 data-[selection-start]:bg-sky-800 data-[selection-end]:bg-sky-800"
+                            class="flex h-8 w-8 items-center justify-center text-sm hover:bg-slate-100 data-[outside-view]:text-slate-300 data-[today]:font-bold data-[selected]:bg-sky-800 data-[selected]:text-white data-[highlighted]:bg-sky-100 data-[selection-start]:bg-sky-800 data-[selection-end]:bg-sky-800"
                         />
                     </component>
                 </component>
