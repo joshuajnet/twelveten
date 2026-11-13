@@ -1,6 +1,8 @@
 import { closeDb, db } from './index.ts';
 import { migrateToLatest } from './migrate.ts';
 import { seed } from './seed.ts';
+import { randomBytes } from 'node:crypto';
+import { upsertAdmin } from '../auth/users.ts';
 
 async function main(command: string | undefined): Promise<void> {
     switch (command) {
@@ -20,8 +22,21 @@ async function main(command: string | undefined): Promise<void> {
             );
             return;
         }
+        case 'admin:create': {
+            const arg = (name: string) => {
+                const i = process.argv.indexOf(`--${name}`);
+                return i > -1 ? process.argv[i + 1] : undefined;
+            };
+            const email = arg('email') ?? process.env.ADMIN_EMAIL;
+            if (!email) throw new Error('Usage: admin:create --email you@example.com [--password …] [--name …]');
+            const password = arg('password') ?? process.env.ADMIN_PASSWORD ?? randomBytes(12).toString('base64url');
+            const { created } = await upsertAdmin(db(), { email, password, name: arg('name') });
+            console.log(`${created ? 'Created' : 'Updated'} admin ${email}`);
+            if (!arg('password') && !process.env.ADMIN_PASSWORD) console.log(`Password: ${password}`);
+            return;
+        }
         default:
-            throw new Error(`Unknown command "${command}". Use: migrate | seed [--force]`);
+            throw new Error(`Unknown command "${command}". Use: migrate | seed [--force] | admin:create --email …`);
     }
 }
 

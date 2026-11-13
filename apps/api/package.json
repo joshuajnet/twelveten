@@ -7,11 +7,13 @@
         "dev": "tsx watch --env-file-if-exists=../../.env.local src/local.ts",
         "db:migrate": "tsx --env-file-if-exists=../../.env.local src/db/cli.ts migrate",
         "db:seed": "tsx --env-file-if-exists=../../.env.local src/db/cli.ts seed",
-        "typecheck": "tsc --noEmit"
+        "typecheck": "tsc --noEmit",
+        "admin:create": "tsx --env-file-if-exists=../../.env.local src/db/cli.ts admin:create"
     },
     "dependencies": {
         "@hono/node-server": "^2.1.8",
         "@twelveten/shared": "*",
+        "better-auth": "^1.7.14",
         "hono": "^4.13.14",
         "kysely": "^0.29.7",
         "pg": "^8.23.1",

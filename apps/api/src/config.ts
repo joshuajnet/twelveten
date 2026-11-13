@@ -10,6 +10,8 @@ const schema = z.object({
         .default('false')
         .transform((v) => v === 'true'),
     SITE_URL: z.url().default('http://localhost:5173'),
+    /** Signs session cookies. Required outside tests; at least 32 characters. */
+    BETTER_AUTH_SECRET: z.string().min(32).optional(),
     PORT: z.coerce.number().int().positive().default(3000),
 });
 
