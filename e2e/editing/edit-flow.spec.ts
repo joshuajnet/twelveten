@@ -23,7 +23,7 @@ const errors: string[] = [];
 
 test.beforeEach(async ({ page }) => {
     page.on('pageerror', (e) => {
-        if (!e.message.includes("reading 'replace'")) errors.push(e.message); // Mailchimp's own script
+        errors.push(e.message);
     });
 });
 test.afterEach(() => {
