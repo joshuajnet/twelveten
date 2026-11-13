@@ -578,6 +578,43 @@ export function adminRoutes(deps: AdminDeps) {
         return c.json({ items });
     });
 
+    /** Deleted items that can still be brought back (their latest revision is a delete). */
+    app.get('/deleted', async (c) => {
+        const rows = await c.var.db
+            .selectFrom('content_revisions as r')
+            .leftJoin('user as u', 'u.id', 'r.user_id')
+            .select(['r.id', 'r.entity', 'r.entity_id', 'r.snapshot', 'r.created_at', 'u.name as user_name'])
+            .where('r.action', '=', 'delete')
+            .where('r.entity', 'in', ['exhibition', 'news_post', 'press_item'])
+            .where(({ not, exists, selectFrom }) =>
+                not(
+                    exists(
+                        selectFrom('content_revisions as later')
+                            .select('later.id')
+                            .whereRef('later.entity_id', '=', 'r.entity_id')
+                            .where('later.action', '!=', 'delete')
+                            .whereRef('later.id', '>', 'r.id'),
+                    ),
+                ),
+            )
+            .orderBy('r.created_at', 'desc')
+            .limit(50)
+            .execute();
+        const items = rows.map((r) => {
+            const snap = r.snapshot as { title?: string; kind?: string; outlet?: string };
+            return {
+                revisionId: r.id,
+                entity: r.entity,
+                entityId: r.entity_id,
+                title: snap.title ?? '(untitled)',
+                detail: r.entity === 'exhibition' ? (snap.kind === 'fair' ? 'Fair' : 'Exhibition') : r.entity === 'news_post' ? 'News post' : `Press · ${snap.outlet ?? ''}`,
+                deletedAt: r.created_at,
+                userName: r.user_name,
+            };
+        });
+        return c.json({ items });
+    });
+
     app.post('/revisions/:id/restore', async (c) => {
         const db = c.var.db;
         const rev = await db.selectFrom('content_revisions').selectAll().where('id', '=', c.req.param('id')).executeTakeFirst();

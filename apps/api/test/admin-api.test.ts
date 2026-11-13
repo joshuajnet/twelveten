@@ -209,7 +209,10 @@ describe('revisions', () => {
         await call('DELETE', `/admin/exhibitions/${created.id}`);
         const revs = (await call('GET', `/admin/revisions?entity=exhibition&id=${created.id}`)).body.items;
         expect(revs[0].action).toBe('delete');
+        const deleted = (await call('GET', '/admin/deleted')).body.items;
+        expect(deleted.map((d: any) => d.title)).toContain('Temp Show');
         await call('POST', `/admin/revisions/${revs[0].id}/restore`);
+        expect((await call('GET', '/admin/deleted')).body.items.map((d: any) => d.title)).not.toContain('Temp Show');
         const back = (await call('GET', `/admin/exhibitions/${created.id}`)).body;
         expect(back.title).toBe('Temp Show');
         expect(back.artworks).toHaveLength(1);

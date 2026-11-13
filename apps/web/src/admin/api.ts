@@ -44,6 +44,10 @@ export const adminApi = {
     revisions: (entity: RevisionEntityName, id: string | null) =>
         send<{ items: RevisionSummary[] }>('GET', `/revisions?entity=${entity}${id ? `&id=${id}` : ''}`).then((r) => r.items),
     restore: (revisionId: string) => send<{ ok: true }>('POST', `/revisions/${revisionId}/restore`),
+    deleted: () =>
+        send<{ items: { revisionId: string; entity: string; entityId: string; title: string; detail: string; deletedAt: string; userName: string | null }[] }>('GET', '/deleted').then(
+            (r) => r.items,
+        ),
     upload: (req: UploadRequest) => send<UploadTicket>('POST', '/uploads', req),
     rebuild: () => send<{ pages: number }>('POST', '/publish/rebuild'),
 };

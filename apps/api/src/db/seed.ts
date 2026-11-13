@@ -91,6 +91,8 @@ export async function seed(db: DB, { force = false }: SeedOptions = {}): Promise
     }
 
     await db.transaction().execute(async (trx) => {
+        // A forced reseed overwrites content, so earlier revisions no longer describe it.
+        if (force) await trx.deleteFrom('content_revisions').execute();
         const idBySlug = new Map<string, string>();
 
         for (const e of exhibitions) {

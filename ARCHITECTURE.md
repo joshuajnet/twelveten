@@ -132,7 +132,7 @@ Stored dates are ISO `YYYY-MM-DD` strings for whole days and ISO timestamps for 
 
 ## Seed
 - `seed(db, { force })` (`src/db/seed.ts`) loads the original site content in one transaction (old `/images/…` and `/docs/…` references are rewritten to `/media/…`): exhibitions and fairs (body HTML converted to rich documents with `htmlToRich`), their events and slideshow slides (from `apps/web/src/json/*-slideshow.json`), press items (linked to exhibitions), news posts (HTML sanitized with `sanitizeNewsHtml`), and the home splash.
-- Rows are matched on natural keys (exhibition slug, press URL, news slug, home id). Without `force`, existing rows are kept and the run is skipped entirely once `seed_state` holds `initial`; with `force`, rows are overwritten and an exhibition's events and slides are replaced.
+- Rows are matched on natural keys (exhibition slug, press URL, news slug, home id). Without `force`, existing rows are kept and the run is skipped entirely once `seed_state` holds `initial`; with `force`, rows are overwritten, an exhibition's events and slides are replaced, and `content_revisions` is cleared.
 - `src/lib/sanitize.ts`: `sanitizeNewsHtml` allows `p, br, a, em, i, strong, b, ul, ol, li, img, div, span` with a fixed attribute/class allowlist and `http`/`https`/`mailto` links; `target="_blank"` links get `rel="noopener noreferrer"`.
 
 ## Local AWS (LocalStack)

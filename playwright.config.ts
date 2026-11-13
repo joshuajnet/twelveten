@@ -20,7 +20,7 @@ export default defineConfig({
         { name: 'desktop', use: { ...devices['Desktop Chrome'] }, testMatch: /visual\/.*\.spec\.ts/ },
         { name: 'mobile', use: { ...devices['Pixel 7'] }, testMatch: /visual\/.*\.spec\.ts/ },
         { name: 'admin-setup', use: { ...devices['Desktop Chrome'] }, testMatch: /editing\/auth\.setup\.ts/ },
-        { name: 'editing', use: { ...devices['Desktop Chrome'] }, testMatch: /editing\/.*\.spec\.ts/, dependencies: ['admin-setup'] },
+        { name: 'editing', use: { ...devices['Desktop Chrome'] }, testMatch: /editing\/.*\.spec\.ts/, dependencies: ['admin-setup', 'desktop', 'mobile'] },
     ],
     webServer: process.env.E2E_BASE_URL
         ? undefined

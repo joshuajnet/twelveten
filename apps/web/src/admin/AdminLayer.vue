@@ -9,6 +9,7 @@ import Dialog from './ui/Dialog.vue';
 import Switch from './ui/Switch.vue';
 import HistoryDialog from './HistoryDialog.vue';
 import NewPageDialog from './NewPageDialog.vue';
+import DeletedDialog from './DeletedDialog.vue';
 import { adminApi, errorMessage, signOut } from './api';
 import { conflict, editMode, toast } from './state';
 import { session, setHint } from '@/session';
@@ -25,6 +26,7 @@ const label = computed(() => (page.value ? unref(page.value.label) : ''));
 const historyOpen = ref(false);
 const newKind = ref<ExhibitionKind | null>(null);
 const confirmDelete = ref(false);
+const deletedOpen = ref(false);
 
 async function save() {
     if (!page.value || !dirty.value || editMode.saving) return;
@@ -125,7 +127,7 @@ const menuItem = 'cursor-pointer rounded px-2 py-1.5 text-sm outline-none data-[
     <div class="admin-ui">
         <header
             v-if="editMode.editing"
-            class="fixed inset-x-0 top-0 z-[80] flex h-11 items-center gap-2 border-b border-slate-200 bg-white/95 px-3 text-sm shadow-sm backdrop-blur"
+            class="fixed inset-x-0 top-0 z-[80] flex h-11 items-center gap-2 overflow-x-auto whitespace-nowrap border-b border-slate-200 bg-white/95 px-3 text-sm shadow-sm backdrop-blur"
             style="padding-top: env(safe-area-inset-top, 0px)"
             role="toolbar"
             aria-label="Editing"
@@ -156,6 +158,7 @@ const menuItem = 'cursor-pointer rounded px-2 py-1.5 text-sm outline-none data-[
                         <DropdownMenuItem :class="menuItem" @select="newsOrPress('new-press')">New press item</DropdownMenuItem>
                         <DropdownMenuSeparator class="my-1 h-px bg-slate-100" />
                         <DropdownMenuItem v-if="page?.remove" :class="[menuItem, 'text-red-700']" @select="confirmDelete = true">Delete this page…</DropdownMenuItem>
+                        <DropdownMenuItem :class="menuItem" @select="deletedOpen = true">Recently deleted…</DropdownMenuItem>
                         <DropdownMenuItem :class="menuItem" @select="rebuild">Re-publish all pages</DropdownMenuItem>
                         <DropdownMenuItem :class="menuItem" @select="toggleEditing(false)">Stop editing</DropdownMenuItem>
                         <DropdownMenuItem :class="menuItem" @select="logout">Sign out</DropdownMenuItem>
@@ -175,6 +178,7 @@ const menuItem = 'cursor-pointer rounded px-2 py-1.5 text-sm outline-none data-[
         </button>
 
         <HistoryDialog v-if="page?.history" v-model:open="historyOpen" :entity="page.history.entity" :id="page.history.id" @restored="onRestored" />
+        <DeletedDialog v-model:open="deletedOpen" />
         <NewPageDialog :open="newKind !== null" :kind="newKind ?? 'exhibition'" @update:open="closeNew" />
 
         <Dialog :open="conflict.open" title="Someone else changed this" description="Another save happened since you opened this page." @update:open="closeConflict">

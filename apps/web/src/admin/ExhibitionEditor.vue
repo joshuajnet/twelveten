@@ -106,7 +106,7 @@ useEditablePage({
         if (!original.value) return;
         const list = original.value.kind === 'fair' ? '/fairs' : '/exhibitions';
         await adminApi.deleteExhibition(original.value.id);
-        toast('Deleted — restore it from History on the list page if needed', 'success');
+        toast('Deleted — it can be restored from More ▸ Recently deleted', 'success');
         await router.push(list);
     },
 });
