@@ -42,6 +42,8 @@ provider:
       api:
         path: ../..
         file: apps/api/Dockerfile
+        # Lambda rejects images with attestation manifests (buildx adds them by default).
+        buildOptions: ['--provenance=false', '--sbom=false', '--platform=linux/amd64']
   vpc:
     securityGroupIds:
       - !Ref LambdaSecurityGroup
@@ -50,6 +52,7 @@ provider:
       - !Ref PrivateSubnetB
   environment:
     NODE_ENV: production
+    STAGE: ${sls:stage}
     SITE_URL: ${self:custom.siteUrl}
     DATABASE_URL: !Join
       - ''
@@ -89,6 +92,10 @@ provider:
         - Effect: Allow
           Action: [s3:ListBucket]
           Resource: !GetAtt MediaBucket.Arn
+        # One-time data import (npm run data:push): read, then delete, the uploaded dump.
+        - Effect: Allow
+          Action: [s3:GetObject, s3:GetObjectVersion, s3:DeleteObject, s3:DeleteObjectVersion]
+          Resource: !Join ['', [!GetAtt MediaBucket.Arn, '/import/*']]
 
 functions:
   api:

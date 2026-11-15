@@ -15,6 +15,7 @@
         "secrets:init": "tsx src/deploy/secrets.ts",
         "deploy": "osls deploy",
         "deploy:site": "tsx src/deploy/site.ts",
+        "data:push": "tsx src/deploy/data.ts",
         "migrate:remote": "osls invoke -f migrate"
     },
     "dependencies": {

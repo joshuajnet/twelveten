@@ -111,12 +111,27 @@ jobs:
           if [ ! -s "$f" ]; then echo "{}" > "$f"; fi
           cat "$f"
           echo "url=$SITE_URL" >> "$GITHUB_OUTPUT"
+      # A previous update or rollback may still be finishing; CloudFormation rejects updates until then.
+      - name: Wait for the stack to be idle
+        run: |
+          for i in $(seq 1 90); do
+            status=$(aws cloudformation describe-stacks --stack-name "twelveten-$STAGE" --query 'Stacks[0].StackStatus' --output text 2>/dev/null || echo NONE)
+            case "$status" in
+              *_IN_PROGRESS) echo "$status, waiting"; sleep 20 ;;
+              *) echo "$status"; exit 0 ;;
+            esac
+          done
+          echo "Stack still busy after 30 minutes"; exit 1
       - name: Deploy infrastructure and Lambda image
         working-directory: apps/api
         run: npx osls deploy --stage "$STAGE" --region "$AWS_REGION"
-      - name: Migrate and seed database
+      # Staging gets the original public site content from git. Prod is never seeded: its data
+      # arrives once, from the gallery's local database, through npm run data:push.
+      - name: Migrate database (and seed staging)
         working-directory: apps/api
-        run: npx osls invoke -f migrate --stage "$STAGE" --region "$AWS_REGION" -d '{"seed":true}'
+        run: |
+          if [ "$STAGE" = prod ]; then payload='{}'; else payload='{"seed":true}'; fi
+          npx osls invoke -f migrate --stage "$STAGE" --region "$AWS_REGION" -d "$payload"
       - name: Build and upload site
         run: |
           npm run build -w apps/web
