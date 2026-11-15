@@ -5,6 +5,7 @@ import Dialog from './ui/Dialog.vue';
 import { adminApi, errorMessage } from './api';
 import { toast } from './state';
 import { btnOutline } from './ui/buttons';
+import { dateTime as fmt } from '@/backoffice/format';
 
 const props = defineProps<{ entity: RevisionEntityName; id: string | null }>();
 const emit = defineEmits<{ restored: [] }>();
@@ -24,7 +25,6 @@ watch(open, async (o) => {
     }
 });
 
-const fmt = (iso: string) => new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
 const ACTION = { create: 'Created', update: 'Saved', delete: 'Deleted', restore: 'Restored' } as const;
 
 async function restore(r: RevisionSummary) {

@@ -39,8 +39,8 @@ export const invoiceStatusClass: Record<InvoiceStatus, string> = {
 export const money = (cents: number, currency = 'USD') =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency, minimumFractionDigits: 2 }).format(cents / 100);
 
-/** Today as YYYY-MM-DD in local time. */
-export const todayIso = () => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
+/** Basis points as a percent input value: 1025 → '10.25', 0 → '' (read back with `parsePercent`). */
+export const percentInput = (bps: number) => (bps ? String(bps / 100) : '');
+
+/** Cents as an amount input value with two decimals: 260000 → '2600.00' (read back with `parsePrice`). */
+export const amountInput = (cents: number) => (cents / 100).toFixed(2);

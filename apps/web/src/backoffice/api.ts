@@ -32,18 +32,9 @@ import type {
     WorkStatus,
     WorkSummary,
 } from '@twelveten/shared';
-import { api } from '@/api/client';
+import { adminSend as send, qs } from '@/api/client';
 
-/** Back-office (people, profiles, addresses, inventory) API client. Admin-only endpoints. */
-const send = <T>(method: string, path: string, body?: unknown) =>
-    api.request<T>(`/admin${path}`, { method, body: body === undefined ? undefined : JSON.stringify(body) });
-
-const qs = (params: Record<string, string | number | null | undefined>) => {
-    const s = new URLSearchParams();
-    for (const [k, v] of Object.entries(params)) if (v !== null && v !== undefined && v !== '') s.set(k, String(v));
-    const out = s.toString();
-    return out ? `?${out}` : '';
-};
+/** Back-office (people, profiles, addresses, inventory, invoices) API client. Admin-only endpoints. */
 
 export type PersonSort = 'name' | 'updated';
 export interface PersonQuery {

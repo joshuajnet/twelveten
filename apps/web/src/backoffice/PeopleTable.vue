@@ -1,40 +1,22 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
-import type { NumberedPage, PersonSummary, ProfileFilter } from '@twelveten/shared';
+import type { PersonSummary, ProfileFilter } from '@twelveten/shared';
 import { PEOPLE_PAGE_SIZE, PROFILE_TYPES } from '@twelveten/shared';
-import { errorMessage } from '@/admin/api';
 import { boApi, type PersonSort } from './api';
 import Avatar from './Avatar.vue';
 import Pagination from './Pagination.vue';
+import { usePagedList } from './useListQuery';
 
 /** One page of people for the current filter, search and sort. */
 const props = defineProps<{ profile: ProfileFilter | null; q: string; sort: PersonSort; page: number }>();
 const emit = defineEmits<{ page: [page: number] }>();
 
-const result = ref<NumberedPage<PersonSummary> | null>(null);
-const loading = ref(false);
-const error = ref('');
-let seq = 0;
-
-async function load() {
-    const mine = ++seq;
-    loading.value = true;
-    error.value = '';
-    try {
-        const r = await boApi.persons({ profile: props.profile, q: props.q, sort: props.sort, page: props.page, limit: PEOPLE_PAGE_SIZE });
-        if (mine !== seq) return;
-        result.value = r;
-        // A page past the end (e.g. after deletions): go to the last page.
-        const last = Math.max(1, Math.ceil(r.total / r.pageSize));
-        if (!r.items.length && props.page > last) emit('page', last);
-    } catch (e) {
-        if (mine === seq) error.value = errorMessage(e);
-    } finally {
-        if (mine === seq) loading.value = false;
-    }
-}
-watch(() => [props.profile, props.q, props.sort, props.page], load, { immediate: true });
+const { result, loading, error, reload } = usePagedList(
+    () => [props.profile, props.q, props.sort, props.page],
+    () => boApi.persons({ profile: props.profile, q: props.q, sort: props.sort, page: props.page, limit: PEOPLE_PAGE_SIZE }),
+    (page) => emit('page', page),
+);
 
 const artistsOnly = computed(() => props.profile === 'artist');
 const collectorsOnly = computed(() => props.profile === 'collector');
@@ -107,7 +89,7 @@ const linkFor = (p: PersonSummary) => {
             </table>
             <p v-if="!result && loading" class="px-3 py-8 text-center text-sm text-slate-500">Loading…</p>
             <p v-else-if="error" class="px-3 py-8 text-center text-sm text-red-700" role="alert">
-                Couldn’t load people: {{ error }} <button type="button" class="text-sky-800 underline" @click="load">Retry</button>
+                Couldn’t load people: {{ error }} <button type="button" class="text-sky-800 underline" @click="reload">Retry</button>
             </p>
             <p v-else-if="result && !result.total" class="px-3 py-8 text-center text-sm text-slate-500">No people match.</p>
         </div>

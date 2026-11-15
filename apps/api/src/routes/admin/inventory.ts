@@ -20,7 +20,8 @@ import { toArtwork } from '../../content/serialize.ts';
 import { artworkLinks, getWork, listWorks, trackedValues, workHistory } from '../../inventory/queries.ts';
 import { body, HttpError } from './errors.ts';
 import { ensureBaseline, recordRevision } from './revisions.ts';
-import { columns, conflictOr404, ensureCollectorProfile, isUuid, sameVersion, uniqueSlug } from './util.ts';
+import { createArtistProfile } from './people.ts';
+import { closeGap, columns, conflictOr404, ensureCollectorProfile, findOr404, idParam, isUuid, nextPosition, pageParams, reorder, sameVersion, touch, uniqueSlug } from './util.ts';
 
 type Trx = Transaction<Database>;
 
@@ -108,18 +109,14 @@ async function assertPerson(db: Pick<DB, 'selectFrom'>, personId: string | null 
 /** Append an image to a work at the end of its list. */
 async function appendImage(trx: Trx, workId: string, url: string, alt: string) {
     await sql`SELECT pg_advisory_xact_lock(hashtext(${`work-images:${workId}`}))`.execute(trx);
-    const max = await trx.selectFrom('work_images').select((eb) => eb.fn.max('position').as('max')).where('work_id', '=', workId).executeTakeFirst();
-    return trx.insertInto('work_images').values({ work_id: workId, url, alt, position: Number(max?.max ?? -1) + 1 }).returningAll().executeTakeFirstOrThrow();
+    const position = await nextPosition(trx, 'work_images', { work_id: workId });
+    return trx.insertInto('work_images').values({ work_id: workId, url, alt, position }).returningAll().executeTakeFirstOrThrow();
 }
 
 export function inventoryRoutes() {
     const app = new Hono<AppEnv>();
 
-    const workOr404 = async (db: DB, id: string) => {
-        const work = isUuid(id) ? await getWork(db, id) : null;
-        if (!work) throw new HttpError(404, 'Not found');
-        return work;
-    };
+    const workOr404 = (db: DB, id: string) => findOr404((x) => getWork(db, x), id);
 
     // ---------- Works ----------
 
@@ -130,10 +127,7 @@ export function inventoryRoutes() {
         if (artist && !isUuid(artist)) throw new HttpError(400, 'Invalid artist');
         if (status && !workStatus.safeParse(status).success) throw new HttpError(400, 'Unknown status');
         if (location && !workLocation.safeParse(location).success) throw new HttpError(400, 'Unknown location');
-        const page = Number(c.req.query('page') ?? 1);
-        const pageSize = Number(c.req.query('limit') ?? WORKS_PAGE_SIZE);
-        if (!Number.isInteger(page) || page < 1) throw new HttpError(400, 'Invalid page');
-        if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100) throw new HttpError(400, 'limit must be 1–100');
+        const { page, pageSize } = pageParams(c, WORKS_PAGE_SIZE);
         return c.json(await listWorks(c.var.db, { artistId: artist, status: status as never, location, q: c.req.query('q')?.trim() || undefined }, page, pageSize));
     });
 
@@ -157,15 +151,15 @@ export function inventoryRoutes() {
         return c.json(await getWork(db, id), 201);
     });
 
-    app.get('/works/:id', async (c) => c.json(await workOr404(c.var.db, c.req.param('id'))));
+    app.get('/works/:id', async (c) => c.json(await workOr404(c.var.db, idParam(c))));
 
     app.get('/works/:id/history', async (c) => {
-        await workOr404(c.var.db, c.req.param('id'));
-        return c.json({ items: await workHistory(c.var.db, c.req.param('id')) });
+        await workOr404(c.var.db, idParam(c));
+        return c.json({ items: await workHistory(c.var.db, idParam(c)) });
     });
 
     app.patch('/works/:id', async (c) => {
-        const id = c.req.param('id');
+        const id = idParam(c);
         const patch = await body(c, workPatchSchema);
         const db = c.var.db;
         await workOr404(db, id);
@@ -190,7 +184,7 @@ export function inventoryRoutes() {
     });
 
     app.delete('/works/:id', async (c) => {
-        const id = c.req.param('id');
+        const id = idParam(c);
         const db = c.var.db;
         await workOr404(db, id);
         await db.transaction().execute(async (trx) => {
@@ -203,16 +197,14 @@ export function inventoryRoutes() {
 
     // ---------- Work images ----------
 
-    const touchWork = (trx: Trx, id: string) => trx.updateTable('works').set({ updated_at: new Date() }).where('id', '=', id).execute();
-
     app.post('/works/:id/images', async (c) => {
-        const id = c.req.param('id');
+        const id = idParam(c);
         const input = await body(c, workImageCreateSchema);
         const db = c.var.db;
         await workOr404(db, id);
         await db.transaction().execute(async (trx) => {
             await appendImage(trx, id, input.url, input.alt);
-            await touchWork(trx, id);
+            await touch(trx, 'works', id);
         });
         return c.json(await getWork(db, id), 201);
     });
@@ -221,7 +213,7 @@ export function inventoryRoutes() {
         const { id, imageId } = c.req.param();
         const input = await body(c, workImagePatchSchema);
         const db = c.var.db;
-        if (!isUuid(imageId)) throw new HttpError(404, 'Not found');
+        if (!isUuid(id) || !isUuid(imageId)) throw new HttpError(404, 'Not found');
         const updated = await db.updateTable('work_images').set({ alt: input.alt }).where('id', '=', imageId).where('work_id', '=', id).executeTakeFirst();
         if (!updated.numUpdatedRows) throw new HttpError(404, 'Not found');
         return c.json(await getWork(db, id));
@@ -230,35 +222,24 @@ export function inventoryRoutes() {
     app.delete('/works/:id/images/:imageId', async (c) => {
         const { id, imageId } = c.req.param();
         const db = c.var.db;
-        if (!isUuid(imageId)) throw new HttpError(404, 'Not found');
+        if (!isUuid(id) || !isUuid(imageId)) throw new HttpError(404, 'Not found');
         await db.transaction().execute(async (trx) => {
             const img = await trx.deleteFrom('work_images').where('id', '=', imageId).where('work_id', '=', id).returning('position').executeTakeFirst();
             if (!img) throw new HttpError(404, 'Not found');
-            await trx
-                .updateTable('work_images')
-                .set((eb) => ({ position: eb('position', '-', 1) }))
-                .where('work_id', '=', id)
-                .where('position', '>', img.position)
-                .execute();
-            await touchWork(trx, id);
+            await closeGap(trx, 'work_images', { work_id: id }, img.position);
+            await touch(trx, 'works', id);
         });
         return c.json(await getWork(db, id));
     });
 
     app.put('/works/:id/images/order', async (c) => {
-        const id = c.req.param('id');
+        const id = idParam(c);
         const { ids } = await body(c, workImagesOrderSchema);
         const db = c.var.db;
         await workOr404(db, id);
         await db.transaction().execute(async (trx) => {
-            const current = await trx.selectFrom('work_images').select('id').where('work_id', '=', id).execute();
-            const known = new Set(current.map((r) => r.id));
-            if (ids.length !== known.size || new Set(ids).size !== ids.length || ids.some((x) => !known.has(x))) {
-                throw new HttpError(400, 'The order must list every image of this work exactly once');
-            }
-            // (work_id, position) is unique but deferred, so swaps are fine inside the transaction.
-            for (const [position, imageId] of ids.entries()) await trx.updateTable('work_images').set({ position }).where('id', '=', imageId).execute();
-            await touchWork(trx, id);
+            await reorder(trx, 'work_images', { work_id: id }, ids, 'image of this work');
+            await touch(trx, 'works', id);
         });
         return c.json(await getWork(db, id));
     });
@@ -266,7 +247,7 @@ export function inventoryRoutes() {
     // ---------- Linking slideshow slides to artists and works ----------
 
     app.post('/artworks/:id/link', async (c) => {
-        const id = c.req.param('id');
+        const id = idParam(c);
         const input = await body(c, artworkLinkSchema);
         const db = c.var.db;
         if (!isUuid(id)) throw new HttpError(404, 'Not found');
@@ -284,10 +265,7 @@ export function inventoryRoutes() {
 
         const row = await db.transaction().execute(async (trx) => {
             const userId = c.var.userId;
-            if (slug) {
-                const profile = await trx.insertInto('artist_profiles').values({ person_id: person.id, slug }).returningAll().executeTakeFirstOrThrow();
-                await recordRevision(trx, { entity: 'artist_profile', entityId: person.id, action: 'create', snapshot: { ...profile, exhibition_ids: [] }, userId });
-            }
+            if (slug) await createArtistProfile(trx, person.id, { slug }, userId);
             let workId = input.workId;
             if (!workId) {
                 const created = await trx
@@ -319,15 +297,8 @@ export function inventoryRoutes() {
                 .where('artist_id', '=', person.id)
                 .executeTakeFirst();
             if (!linked) {
-                const max = await trx
-                    .selectFrom('exhibition_artists')
-                    .select((eb) => eb.fn.max('position').as('max'))
-                    .where('exhibition_id', '=', slide.exhibition_id)
-                    .executeTakeFirst();
-                await trx
-                    .insertInto('exhibition_artists')
-                    .values({ exhibition_id: slide.exhibition_id, artist_id: person.id, position: Number(max?.max ?? -1) + 1 })
-                    .execute();
+                const position = await nextPosition(trx, 'exhibition_artists', { exhibition_id: slide.exhibition_id });
+                await trx.insertInto('exhibition_artists').values({ exhibition_id: slide.exhibition_id, artist_id: person.id, position }).execute();
             }
             return updated;
         });

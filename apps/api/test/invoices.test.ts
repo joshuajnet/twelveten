@@ -121,6 +121,44 @@ describe('invoices', () => {
         expect((await call('DELETE', `/admin/invoices/${inv.id}`)).status).toBe(204);
     });
 
+    it('holds the works again when a paid invoice stops being paid, and freezes a paid invoice’s items', async () => {
+        const { buyer, works } = await setup('Refund', [100000, 20000]);
+        let inv = (await call('POST', '/admin/invoices', { personId: buyer.id, workIds: [works[0]!.id], taxRateBps: 0 })).body;
+        inv = (await call('POST', `/admin/invoices/${inv.id}/payments`, { amountCents: 40000, paidOn: '2026-03-01' })).body;
+        inv = (await call('POST', `/admin/invoices/${inv.id}/payments`, { amountCents: 60000, paidOn: '2026-03-02' })).body;
+        expect(inv.status).toBe('paid');
+        expect((await call('GET', `/admin/works/${works[0]!.id}`)).body.status).toBe('sold');
+
+        // A paid invoice's works and prices can't change.
+        expect((await call('POST', `/admin/invoices/${inv.id}/items`, { workId: works[1]!.id })).status).toBe(409);
+        expect((await call('PATCH', `/admin/invoices/${inv.id}/items/${inv.items[0].id}`, { priceCents: 1 })).status).toBe(409);
+        expect((await call('DELETE', `/admin/invoices/${inv.id}/items/${inv.items[0].id}`)).status).toBe(409);
+
+        // A payment is taken back: partly paid, so the work is held for the buyer again rather than sold.
+        inv = (await call('DELETE', `/admin/invoices/${inv.id}/payments/${inv.payments[1].id}`)).body;
+        expect(inv.status).toBe('partial');
+        const w = (await call('GET', `/admin/works/${works[0]!.id}`)).body;
+        expect([w.status, w.buyer?.id, w.soldOn, w.salePriceCents]).toEqual(['on_hold', buyer.id, null, null]);
+        expect((await call('GET', `/admin/works/${works[0]!.id}/history`)).body.items[0].note).toBe(`Invoice ${inv.number} no longer paid`);
+    });
+
+    it('puts the works back on sale when an unpaid invoice is deleted; a paid one can’t be deleted', async () => {
+        const { buyer, works } = await setup('Dropped', [1000, 2000]);
+        const inv = (await call('POST', '/admin/invoices', { personId: buyer.id, workIds: works.map((w) => w.id) })).body;
+        expect((await call('DELETE', `/admin/invoices/${inv.id}`)).status).toBe(204);
+        for (const w of works) {
+            const after = (await call('GET', `/admin/works/${w.id}`)).body;
+            expect([after.status, after.buyer]).toEqual(['available', null]);
+        }
+        expect((await call('GET', `/admin/works/${works[0]!.id}/history`)).body.items[0].note).toBe(`Invoice ${inv.number} deleted`);
+
+        // Marked paid by hand (no payments): deleting it would orphan the sale.
+        const { buyer: b2, works: w2 } = await setup('Settled', [1000]);
+        let paid = (await call('POST', '/admin/invoices', { personId: b2.id, workIds: [w2[0]!.id] })).body;
+        paid = (await call('PATCH', `/admin/invoices/${paid.id}`, { updatedAt: paid.updatedAt, status: 'paid' })).body;
+        expect((await call('DELETE', `/admin/invoices/${paid.id}`)).status).toBe(409);
+    });
+
     it('edits fields with an optimistic lock, recomputes totals, and manages items', async () => {
         const { buyer, works } = await setup('Pair', [260000, 260000]);
         let inv = (await call('POST', '/admin/invoices', { personId: buyer.id, workIds: [works[0]!.id] })).body;

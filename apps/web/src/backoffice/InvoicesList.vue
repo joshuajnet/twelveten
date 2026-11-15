@@ -1,64 +1,22 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
-import { RouterLink, useRoute, useRouter, type LocationQueryRaw } from 'vue-router';
-import { formatDate, INVOICE_STATUSES, INVOICES_PAGE_SIZE, invoiceStatus, type InvoiceSummary, type NumberedPage } from '@twelveten/shared';
-import { errorMessage } from '@/admin/api';
+import { RouterLink } from 'vue-router';
+import { formatDate, INVOICE_STATUSES, INVOICES_PAGE_SIZE, invoiceStatus } from '@twelveten/shared';
 import { btnOutline, btnPrimary } from '@/admin/ui/buttons';
 import { boApi } from './api';
 import { money } from './format';
-import InvoiceStatusBadge from './InvoiceStatusBadge.vue';
+import StatusBadge from './StatusBadge.vue';
 import Pagination from './Pagination.vue';
+import { useListQuery, usePagedList } from './useListQuery';
 
 /** Every invoice, newest first, filterable by status and searchable by number, collector or work. */
-const route = useRoute();
-const router = useRouter();
+const { q, page, enumParam, setQuery, goToPage, search } = useListQuery();
+const status = enumParam('status', invoiceStatus);
 
-const q = computed(() => String(route.query.q ?? ''));
-const status = computed(() => {
-    const p = invoiceStatus.safeParse(route.query.status);
-    return p.success ? p.data : null;
-});
-const page = computed(() => Math.max(1, Number.parseInt(String(route.query.page ?? '1'), 10) || 1));
-
-function setQuery(patch: Record<string, string | null>) {
-    const query: LocationQueryRaw = { ...route.query, page: null, ...patch };
-    for (const [k, v] of Object.entries(query)) if (v === null || v === '') delete query[k];
-    void router.replace({ query });
-}
-
-const search = ref(q.value);
-let timer: ReturnType<typeof setTimeout> | undefined;
-watch(search, (v) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => setQuery({ q: v.trim() || null }), 250);
-});
-
-const result = ref<NumberedPage<InvoiceSummary> | null>(null);
-const loading = ref(false);
-const error = ref('');
-let seq = 0;
-async function load() {
-    const mine = ++seq;
-    loading.value = true;
-    error.value = '';
-    try {
-        const r = await boApi.invoices({ q: q.value, status: status.value, page: page.value, limit: INVOICES_PAGE_SIZE });
-        if (mine !== seq) return;
-        result.value = r;
-        const last = Math.max(1, Math.ceil(r.total / r.pageSize));
-        if (!r.items.length && page.value > last) goToPage(last);
-    } catch (e) {
-        if (mine === seq) error.value = errorMessage(e);
-    } finally {
-        if (mine === seq) loading.value = false;
-    }
-}
-watch([q, status, page], load, { immediate: true });
-
-function goToPage(n: number) {
-    setQuery({ page: n > 1 ? String(n) : null });
-    window.scrollTo({ top: 0 });
-}
+const { result, loading, error } = usePagedList(
+    [q, status, page],
+    () => boApi.invoices({ q: q.value, status: status.value, page: page.value, limit: INVOICES_PAGE_SIZE }),
+    goToPage,
+);
 </script>
 
 <template>
@@ -114,7 +72,7 @@ function goToPage(n: number) {
                         <td class="max-w-56 truncate px-3 py-2 italic text-slate-700">{{ i.titles }}</td>
                         <td class="px-3 py-2 text-right tabular-nums">{{ money(i.totalCents, i.currency) }}</td>
                         <td class="px-3 py-2 text-right tabular-nums">{{ i.balanceCents ? money(i.balanceCents, i.currency) : '—' }}</td>
-                        <td class="px-3 py-2"><InvoiceStatusBadge :status="i.status" /></td>
+                        <td class="px-3 py-2"><StatusBadge :status="i.status" /></td>
                     </tr>
                     <tr v-if="result && !result.items.length">
                         <td colspan="7" class="px-3 py-8 text-center text-slate-500">No invoices match.</td>

@@ -132,7 +132,7 @@ export interface Person {
     addresses: AddressLink[];
     artistProfile: ArtistProfile | null;
     collectorProfile: CollectorProfile | null;
-    /** Works this person bought. */
+    /** Works this person bought, when they have no collector profile (which lists them by artist instead). */
     purchases: WorkSummary[];
     updatedAt: string;
 }

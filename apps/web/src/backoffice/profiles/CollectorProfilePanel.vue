@@ -10,7 +10,6 @@ import { btnDanger, btnOutline, btnPrimary } from '@/admin/ui/buttons';
 import { boApi } from '../api';
 import { money } from '../format';
 import StatusBadge from '../StatusBadge.vue';
-import InvoiceStatusBadge from '../InvoiceStatusBadge.vue';
 
 /** Collector profile: their collection grouped by artist, their invoices, and private notes. */
 const props = defineProps<{ person: Person }>();
@@ -175,7 +174,7 @@ async function removeProfile() {
                             <td class="max-w-56 truncate py-1.5 pr-3 italic">{{ i.titles }}</td>
                             <td class="py-1.5 pr-3 text-right tabular-nums">{{ money(i.totalCents, i.currency) }}</td>
                             <td class="py-1.5 pr-3 text-right tabular-nums">{{ i.balanceCents ? money(i.balanceCents, i.currency) : '—' }}</td>
-                            <td class="py-1.5"><InvoiceStatusBadge :status="i.status" /></td>
+                            <td class="py-1.5"><StatusBadge :status="i.status" /></td>
                         </tr>
                     </tbody>
                 </table>

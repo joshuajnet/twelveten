@@ -5,8 +5,9 @@ import { adminApi, errorMessage } from './api';
 import { toast } from './state';
 import { resetInfiniteList } from '@/composables/useInfiniteList';
 import { btnOutline } from './ui/buttons';
+import { dateTime as fmt } from '@/backoffice/format';
 
-/** Recently deleted exhibitions, fairs, news posts and press items, with restore. */
+/** Recently deleted exhibitions, fairs, news posts, press, people and works, with restore. */
 const open = defineModel<boolean>('open', { required: true });
 type Item = Awaited<ReturnType<typeof adminApi.deleted>>[number];
 const items = ref<Item[]>([]);
@@ -24,7 +25,6 @@ watch(open, async (o) => {
     }
 });
 
-const fmt = (iso: string) => new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
 
 async function restore(item: Item) {
     try {

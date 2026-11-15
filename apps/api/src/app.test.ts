@@ -34,4 +34,15 @@ describe('origin verification', () => {
         expect((await app.request('/api/health', { headers: { 'x-origin-verify': 'a-very-long-origin-secret' } })).status).toBe(200);
         await db.destroy();
     });
+
+    it('also guards the auth endpoints', async () => {
+        const db = createDb(process.env.DATABASE_URL!, 1);
+        const auth = { handler: async () => new Response('signed in') } as never;
+        const app = createApp({ db: () => db, auth, resolveUser: async () => null, originVerifySecret: 'a-very-long-origin-secret' });
+        const signIn = (headers: Record<string, string> = {}) => app.request('/api/auth/sign-in/email', { method: 'POST', headers });
+        expect((await signIn()).status).toBe(403);
+        expect((await signIn({ 'x-origin-verify': 'wrong' })).status).toBe(403);
+        expect((await signIn({ 'x-origin-verify': 'a-very-long-origin-secret' })).status).toBe(200);
+        await db.destroy();
+    });
 });

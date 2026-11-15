@@ -1,6 +1,7 @@
 import { sql } from 'kysely';
 import type { ArtworkLink, CollectionArtist, NumberedPage, Work, WorkChange, WorkImage, WorkStatus, WorkSummary } from '@twelveten/shared';
 import type { DB } from '../db/index.ts';
+import { likePattern, numberedPage } from '../lib/paging.ts';
 import { invoicesForWork } from '../invoices/queries.ts';
 import type { WorkImageRow, WorkLocationName, WorkStatusName } from '../db/types.ts';
 
@@ -121,24 +122,15 @@ export interface WorkFilters {
 
 /** Inventory list, newest first, one numbered page at a time with the total number of matches. */
 export async function listWorks(db: Q, f: WorkFilters, page: number, pageSize: number): Promise<NumberedPage<WorkSummary>> {
-    let q = summaryQuery(db)
-        .select(sql<number>`count(*) over ()`.as('total'))
-        .orderBy('w.created_at', 'desc')
-        .orderBy('w.id', 'desc')
-        .limit(pageSize)
-        .offset((page - 1) * pageSize);
+    let q = summaryQuery(db).orderBy('w.created_at', 'desc').orderBy('w.id', 'desc');
     if (f.artistId) q = q.where('w.artist_id', '=', f.artistId);
     if (f.status) q = q.where('w.status', '=', f.status);
     if (f.location) q = q.where('w.location', '=', f.location as WorkLocationName);
     if (f.q) {
-        const like = `%${f.q.replace(/[\\%_]/g, (m) => `\\${m}`)}%`;
+        const like = likePattern(f.q);
         q = q.where((eb) => eb.or([eb('w.title', 'ilike', like), eb('w.inventory_number', 'ilike', like), eb('p.name', 'ilike', like), eb('w.medium', 'ilike', like)]));
     }
-    const rows = await q.execute();
-    // Past the last page: count the matches so the client can go back.
-    let total = Number(rows[0]?.total ?? 0);
-    if (!rows.length && page > 1) total = Number((await q.offset(0).limit(1).execute())[0]?.total ?? 0);
-    return { items: rows.map(toSummary), page, pageSize, total };
+    return numberedPage(q, page, pageSize, toSummary);
 }
 
 export async function getWork(db: Q, id: string): Promise<Work | null> {

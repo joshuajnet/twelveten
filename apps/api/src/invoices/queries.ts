@@ -1,6 +1,7 @@
 import { sql } from 'kysely';
 import type { Invoice, InvoiceSettingsBase, InvoiceStatus, InvoiceSummary, NumberedPage } from '@twelveten/shared';
 import type { DB } from '../db/index.ts';
+import { likePattern, numberedPage } from '../lib/paging.ts';
 import type { InvoiceSettingsRow } from '../db/types.ts';
 
 type Q = Pick<DB, 'selectFrom'>;
@@ -71,17 +72,11 @@ export interface InvoiceFilters {
 
 /** Newest first, one numbered page at a time. */
 export async function listInvoices(db: Q, f: InvoiceFilters, page: number, pageSize: number): Promise<NumberedPage<InvoiceSummary>> {
-    let q = summaryQuery(db)
-        .select(sql<number>`count(*) over ()`.as('total'))
-        .orderBy('i.issued_on', 'desc')
-        .orderBy('i.created_at', 'desc')
-        .orderBy('i.id', 'desc')
-        .limit(pageSize)
-        .offset((page - 1) * pageSize);
+    let q = summaryQuery(db).orderBy('i.issued_on', 'desc').orderBy('i.created_at', 'desc').orderBy('i.id', 'desc');
     if (f.status) q = q.where('i.status', '=', f.status);
     if (f.personId) q = q.where('i.person_id', '=', f.personId);
     if (f.q) {
-        const like = `%${f.q.replace(/[\\%_]/g, (m) => `\\${m}`)}%`;
+        const like = likePattern(f.q);
         q = q.where((eb) =>
             eb.or([
                 eb('i.number', 'ilike', like),
@@ -90,10 +85,7 @@ export async function listInvoices(db: Q, f: InvoiceFilters, page: number, pageS
             ]),
         );
     }
-    const rows = await q.execute();
-    let total = Number(rows[0]?.total ?? 0);
-    if (!rows.length && page > 1) total = Number((await q.offset(0).limit(1).execute())[0]?.total ?? 0);
-    return { items: rows.map(toSummary), page, pageSize, total };
+    return numberedPage(q, page, pageSize, toSummary);
 }
 
 export async function invoicesForPerson(db: Q, personId: string): Promise<InvoiceSummary[]> {

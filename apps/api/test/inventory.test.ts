@@ -90,7 +90,7 @@ describe('works', () => {
         expect(await historyCount()).toBe(before + 1);
     });
 
-    it('records a sale with a buyer, shown in the buyer’s purchases', async () => {
+    it('records a sale with a buyer, shown in the buyer’s collection', async () => {
         const artist = await newArtist('Sally Sold');
         const buyer = (await call('POST', '/admin/persons', { name: 'Bea Buyer' })).body;
         const w = (await call('POST', '/admin/works', { artistId: artist.id, title: 'Green', priceCents: 50000 })).body;
@@ -107,7 +107,12 @@ describe('works', () => {
         expect(history.find((h: { field: string }) => h.field === 'sale').newValue).toMatchObject({ buyerName: 'Bea Buyer', cents: 45000, soldOn: '2026-11-01' });
         expect(history.find((h: { field: string }) => h.field === 'status')).toMatchObject({ oldValue: 'available', newValue: 'sold' });
 
-        const person = (await call('GET', `/admin/persons/${buyer.id}`)).body;
+        // Buying made them a collector: the work is in their collection (purchases are for people without one).
+        let person = (await call('GET', `/admin/persons/${buyer.id}`)).body;
+        expect(person.collectorProfile.collection[0].works.map((p: { id: string }) => p.id)).toEqual([w.id]);
+        expect(person.purchases).toEqual([]);
+        await call('DELETE', `/admin/persons/${buyer.id}/collector-profile`);
+        person = (await call('GET', `/admin/persons/${buyer.id}`)).body;
         expect(person.purchases.map((p: { id: string }) => p.id)).toEqual([w.id]);
         expect((await call('PATCH', `/admin/works/${w.id}`, { updatedAt: sold.body.updatedAt, buyerId: '00000000-0000-4000-8000-000000000000' })).status).toBe(400);
     });

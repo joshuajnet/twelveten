@@ -301,6 +301,31 @@ resources:
           HeadersConfig:
             HeaderBehavior: whitelist
             Headers: [Origin, Content-Type, Accept, User-Agent, Referer, CloudFront-Viewer-Address]
+    # Baseline security headers for pages, assets and the API.
+    SiteHeadersPolicy:
+      Type: AWS::CloudFront::ResponseHeadersPolicy
+      Properties:
+        ResponseHeadersPolicyConfig:
+          Name: twelveten-${sls:stage}-site
+          SecurityHeadersConfig:
+            ContentTypeOptions: { Override: true }
+            FrameOptions: { FrameOption: SAMEORIGIN, Override: true }
+            ReferrerPolicy: { ReferrerPolicy: strict-origin-when-cross-origin, Override: true }
+            StrictTransportSecurity: { AccessControlMaxAgeSec: 31536000, IncludeSubdomains: false, Override: true }
+    # Uploaded media is served from the site's origin: an uploaded SVG must not be able to run script
+    # with the admin's session. (No `sandbox`: Chrome won't show sandboxed PDFs.)
+    MediaHeadersPolicy:
+      Type: AWS::CloudFront::ResponseHeadersPolicy
+      Properties:
+        ResponseHeadersPolicyConfig:
+          Name: twelveten-${sls:stage}-media
+          SecurityHeadersConfig:
+            ContentTypeOptions: { Override: true }
+            ReferrerPolicy: { ReferrerPolicy: strict-origin-when-cross-origin, Override: true }
+            StrictTransportSecurity: { AccessControlMaxAgeSec: 31536000, IncludeSubdomains: false, Override: true }
+            ContentSecurityPolicy:
+              Override: true
+              ContentSecurityPolicy: "default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'self'"
     Distribution:
       Type: AWS::CloudFront::Distribution
       Properties:
@@ -334,6 +359,7 @@ resources:
             ViewerProtocolPolicy: redirect-to-https
             Compress: true
             CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # Managed-CachingOptimized (honours Cache-Control)
+            ResponseHeadersPolicyId: !Ref SiteHeadersPolicy
             FunctionAssociations:
               - EventType: viewer-request
                 FunctionARN: !GetAtt ViewerRequestFunction.FunctionMetadata.FunctionARN
@@ -346,16 +372,19 @@ resources:
               Compress: true
               CachePolicyId: !Ref ApiCachePolicy
               OriginRequestPolicyId: !Ref ApiOriginRequestPolicy
+              ResponseHeadersPolicyId: !Ref SiteHeadersPolicy
             - PathPattern: /media/*
               TargetOriginId: media
               ViewerProtocolPolicy: redirect-to-https
               Compress: true
               CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+              ResponseHeadersPolicyId: !Ref MediaHeadersPolicy
             - PathPattern: /assets/*
               TargetOriginId: site
               ViewerProtocolPolicy: redirect-to-https
               Compress: true
               CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+              ResponseHeadersPolicyId: !Ref SiteHeadersPolicy
           CustomErrorResponses:
             # Unknown paths have no prerendered page: S3 answers 403/404 → the site's 404 page.
             - { ErrorCode: 403, ResponseCode: 404, ResponsePagePath: /404.html, ErrorCachingMinTTL: 60 }

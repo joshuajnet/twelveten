@@ -19,10 +19,7 @@ import type {
     UploadRequest,
     UploadTicket,
 } from '@twelveten/shared';
-import { api, ApiError } from '@/api/client';
-
-const send = <T>(method: string, path: string, body?: unknown) =>
-    api.request<T>(`/admin${path}`, { method, body: body === undefined ? undefined : JSON.stringify(body) });
+import { adminSend as send, api, ApiError, qs } from '@/api/client';
 
 export const adminApi = {
     exhibition: (id: string) => send<Exhibition>('GET', `/exhibitions/${id}`),
@@ -42,7 +39,7 @@ export const adminApi = {
     deletePress: (id: string) => send<void>('DELETE', `/press/${id}`),
     patchHome: (patch: HomePatch) => send<HomePage>('PATCH', '/home', patch),
     revisions: (entity: RevisionEntityName, id: string | null) =>
-        send<{ items: RevisionSummary[] }>('GET', `/revisions?entity=${entity}${id ? `&id=${id}` : ''}`).then((r) => r.items),
+        send<{ items: RevisionSummary[] }>('GET', `/revisions${qs({ entity, id })}`).then((r) => r.items),
     restore: (revisionId: string) => send<{ ok: true }>('POST', `/revisions/${revisionId}/restore`),
     deleted: () =>
         send<{ items: { revisionId: string; entity: string; entityId: string; title: string; detail: string; deletedAt: string; userName: string | null }[] }>('GET', '/deleted').then(

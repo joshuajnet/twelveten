@@ -32,12 +32,17 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     return (res.status === 204 ? undefined : await res.json()) as T;
 }
 
-const qs = (params: Record<string, string | number | null | undefined>) => {
+/** `?a=1&b=2`, leaving out empty values ('' when nothing is left). */
+export const qs = (params: Record<string, string | number | null | undefined>) => {
     const s = new URLSearchParams();
     for (const [k, v] of Object.entries(params)) if (v !== null && v !== undefined && v !== '') s.set(k, String(v));
     const out = s.toString();
     return out ? `?${out}` : '';
 };
+
+/** A JSON request to an admin endpoint (`/api/admin…`). */
+export const adminSend = <T>(method: string, path: string, body?: unknown) =>
+    request<T>(`/admin${path}`, { method, body: body === undefined ? undefined : JSON.stringify(body) });
 
 export const api = {
     request,

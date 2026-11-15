@@ -1,47 +1,17 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
-import { RouterLink, useRoute, useRouter, type LocationQueryRaw } from 'vue-router';
+import { RouterLink } from 'vue-router';
 import { WORK_LOCATIONS, WORK_STATUSES, workLocation, workStatus, type PersonSummary } from '@twelveten/shared';
 import { btnPrimary } from '@/admin/ui/buttons';
 import PersonPicker from './PersonPicker.vue';
 import InventoryTable from './InventoryTable.vue';
+import { useListQuery } from './useListQuery';
 
 /** Every work across artists, filterable by artist, status and location. */
-const route = useRoute();
-const router = useRouter();
-
-const q = computed(() => String(route.query.q ?? ''));
-const artist = computed(() => (route.query.artist ? String(route.query.artist) : null));
-const artistName = computed(() => (route.query.artistName ? String(route.query.artistName) : null));
-const status = computed(() => {
-    const p = workStatus.safeParse(route.query.status);
-    return p.success ? p.data : null;
-});
-const location = computed(() => {
-    const p = workLocation.safeParse(route.query.location);
-    return p.success ? p.data : null;
-});
-
-const page = computed(() => Math.max(1, Number.parseInt(String(route.query.page ?? '1'), 10) || 1));
-
-/** Change filters (back to page 1 unless the patch sets the page). */
-function setQuery(patch: Record<string, string | null>) {
-    const query: LocationQueryRaw = { ...route.query, page: null, ...patch };
-    for (const [k, v] of Object.entries(query)) if (v === null || v === '') delete query[k];
-    void router.replace({ query });
-}
-
-const search = ref(q.value);
-let timer: ReturnType<typeof setTimeout> | undefined;
-watch(search, (v) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => setQuery({ q: v.trim() || null }), 250);
-});
-
-function goToPage(n: number) {
-    setQuery({ page: n > 1 ? String(n) : null });
-    window.scrollTo({ top: 0 });
-}
+const { q, page, param, enumParam, setQuery, goToPage, search } = useListQuery();
+const artist = param('artist');
+const artistName = param('artistName');
+const status = enumParam('status', workStatus);
+const location = enumParam('location', workLocation);
 
 function chooseArtist(p: PersonSummary) {
     setQuery({ artist: p.id, artistName: p.name });

@@ -1,5 +1,7 @@
+import { reactive, ref } from 'vue';
 import { MAX_UPLOAD_BYTES, UPLOAD_TYPES, type UploadRequest } from '@twelveten/shared';
-import { adminApi } from './api';
+import { adminApi, errorMessage } from './api';
+import { toast } from './state';
 
 export type UploadKind = 'image' | 'video' | 'pdf' | 'media' | 'document';
 
@@ -39,4 +41,31 @@ export async function uploadFile(file: File, onProgress?: (fraction: number) => 
         xhr.send(file);
     });
     return ticket.url;
+}
+
+/** A readable default alt text from a file name: 'studio_view-2.jpg' → 'studio view 2'. */
+export const altFromFilename = (name: string) => name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
+
+/**
+ * Pick several files and upload them one by one, showing each in `uploads` (name and progress, for
+ * `UploadProgress`) until it is done. `onUploaded` saves each one; failures are toasted per file.
+ */
+export function useUploadQueue() {
+    const uploads = ref<{ name: string; progress: number }[]>([]);
+
+    async function pickAndUpload(kind: UploadKind, onUploaded: (url: string, file: File) => Promise<void> | void) {
+        for (const file of await pickFiles(kind, true)) {
+            const entry = reactive({ name: file.name, progress: 0 });
+            uploads.value.push(entry);
+            try {
+                await onUploaded(await uploadFile(file, (f) => (entry.progress = f)), file);
+            } catch (e) {
+                toast(`${file.name}: ${errorMessage(e)}`, 'error');
+            } finally {
+                uploads.value = uploads.value.filter((u) => u !== entry);
+            }
+        }
+    }
+
+    return { uploads, pickAndUpload };
 }

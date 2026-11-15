@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import type { Transaction } from 'kysely';
+import { sql, type Transaction } from 'kysely';
 import {
     addressAttachSchema,
     addressLinkPatchSchema,
@@ -21,9 +21,10 @@ import type { DB } from '../../db/index.ts';
 import type { Database } from '../../db/types.ts';
 import { addressesFor, getPerson, listPersons, toAddress, type PersonSort } from '../../people/queries.ts';
 import { renderCvPdf } from '../../people/cvPdf.ts';
+import { createPress } from './site.ts';
 import { body, HttpError } from './errors.ts';
 import { ensureBaseline, recordRevision } from './revisions.ts';
-import { columns, conflictOr404, ensureCollectorProfile, isUuid, sameVersion, uniqueSlug } from './util.ts';
+import { columns, conflictOr404, ensureCollectorProfile, findOr404, idParam, isUuid, nextPosition, pageParams, pdfResponse, sameVersion, touch, uniqueSlug } from './util.ts';
 
 const PERSON_COLUMNS = {
     name: 'name',
@@ -47,15 +48,19 @@ const ADDRESS_COLUMNS = {
     notes: 'notes',
 } as const;
 
-const EMPTY_DOC = JSON.stringify({ type: 'doc', content: [] });
-
 /** Snapshot of an artist profile for revisions: the row plus its linked exhibitions and press. */
 async function profileSnapshot(trx: Transaction<Database> | DB, personId: string) {
     const row = await trx.selectFrom('artist_profiles').selectAll().where('person_id', '=', personId).executeTakeFirst();
     if (!row) return null;
-    const links = await trx.selectFrom('exhibition_artists').select('exhibition_id').where('artist_id', '=', personId).orderBy('position').execute();
+    const links = await trx.selectFrom('exhibition_artists').select(['exhibition_id', 'position']).where('artist_id', '=', personId).orderBy('position').execute();
     const press = await trx.selectFrom('press_artists').select('press_item_id').where('artist_id', '=', personId).orderBy('created_at').execute();
-    return { ...row, exhibition_ids: links.map((l) => l.exhibition_id), press_ids: press.map((p) => p.press_item_id) };
+    return { ...row, exhibitions: links, exhibition_ids: links.map((l) => l.exhibition_id), press_ids: press.map((p) => p.press_item_id) };
+}
+
+/** Give a person an artist profile (bio and CV start empty), with its first revision. */
+export async function createArtistProfile(trx: Transaction<Database>, personId: string, values: { slug: string } & Record<string, unknown>, userId: string | null) {
+    await trx.insertInto('artist_profiles').values({ ...values, person_id: personId } as never).execute();
+    await recordRevision(trx, { entity: 'artist_profile', entityId: personId, action: 'create', snapshot: await profileSnapshot(trx, personId), userId });
 }
 
 /** Owners an address can be attached to must exist. */
@@ -76,11 +81,7 @@ async function clearPrimary(trx: Transaction<Database>, entity: AddressEntity, e
 export function peopleRoutes() {
     const app = new Hono<AppEnv>();
 
-    const personOr404 = async (db: DB, id: string) => {
-        const person = isUuid(id) ? await getPerson(db, id) : null;
-        if (!person) throw new HttpError(404, 'Not found');
-        return person;
-    };
+    const personOr404 = (db: DB, id: string) => findOr404((x) => getPerson(db, x), id);
 
     // ---------- People ----------
 
@@ -90,10 +91,7 @@ export function peopleRoutes() {
         if (parsedProfile && !parsedProfile.success) throw new HttpError(400, 'Unknown profile type');
         const sort = c.req.query('sort') ?? 'name';
         if (!['name', 'updated'].includes(sort)) throw new HttpError(400, 'Unknown sort');
-        const page = Number(c.req.query('page') ?? 1);
-        const pageSize = Number(c.req.query('limit') ?? PEOPLE_PAGE_SIZE);
-        if (!Number.isInteger(page) || page < 1) throw new HttpError(400, 'Invalid page');
-        if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100) throw new HttpError(400, 'limit must be 1–100');
+        const { page, pageSize } = pageParams(c, PEOPLE_PAGE_SIZE);
         const q = c.req.query('q')?.trim() || undefined;
         return c.json(await listPersons(c.var.db, { profile: parsedProfile?.data, q, sort: sort as PersonSort }, page, pageSize));
     });
@@ -110,20 +108,17 @@ export function peopleRoutes() {
                 .returningAll()
                 .executeTakeFirstOrThrow();
             await recordRevision(trx, { entity: 'person', entityId: created.id, action: 'create', snapshot: created, userId: c.var.userId });
-            if (slug) {
-                const profile = await trx.insertInto('artist_profiles').values({ person_id: created.id, slug }).returningAll().executeTakeFirstOrThrow();
-                await recordRevision(trx, { entity: 'artist_profile', entityId: created.id, action: 'create', snapshot: { ...profile, exhibition_ids: [] }, userId: c.var.userId });
-            }
+            if (slug) await createArtistProfile(trx, created.id, { slug }, c.var.userId);
             if (input.profiles?.includes('collector')) await ensureCollectorProfile(trx, created.id);
             return created.id;
         });
         return c.json(await getPerson(db, id), 201);
     });
 
-    app.get('/persons/:id', async (c) => c.json(await personOr404(c.var.db, c.req.param('id'))));
+    app.get('/persons/:id', async (c) => c.json(await personOr404(c.var.db, idParam(c))));
 
     app.patch('/persons/:id', async (c) => {
-        const id = c.req.param('id');
+        const id = idParam(c);
         const patch = await body(c, personPatchSchema);
         const db = c.var.db;
         await personOr404(db, id);
@@ -140,7 +135,7 @@ export function peopleRoutes() {
     });
 
     app.delete('/persons/:id', async (c) => {
-        const id = c.req.param('id');
+        const id = idParam(c);
         const db = c.var.db;
         await personOr404(db, id);
         if (await db.selectFrom('artist_profiles').select('person_id').where('person_id', '=', id).executeTakeFirst()) {
@@ -151,7 +146,19 @@ export function peopleRoutes() {
         }
         await db.transaction().execute(async (trx) => {
             const existing = await trx.selectFrom('persons').selectAll().where('id', '=', id).executeTakeFirstOrThrow();
-            await recordRevision(trx, { entity: 'person', entityId: id, action: 'delete', snapshot: existing, userId: c.var.userId });
+            // The collector profile and address links go with the person (the latter by trigger): keep them for restore.
+            const collector = await trx.selectFrom('collector_profiles').selectAll().where('person_id', '=', id).executeTakeFirst();
+            const addresses = await trx
+                .selectFrom('address_links as l')
+                .innerJoin('addresses as a', 'a.id', 'l.address_id')
+                .select(['l.label', 'l.is_primary', 'l.position'])
+                .select(sql<Record<string, unknown>>`to_jsonb(a)`.as('address'))
+                .where('l.entity', '=', 'person')
+                .where('l.entity_id', '=', id)
+                .orderBy('l.position')
+                .execute();
+            const snapshot = { ...existing, collector_profile: collector ?? null, addresses };
+            await recordRevision(trx, { entity: 'person', entityId: id, action: 'delete', snapshot, userId: c.var.userId });
             await trx.deleteFrom('collector_profiles').where('person_id', '=', id).execute();
             await trx.deleteFrom('persons').where('id', '=', id).execute();
         });
@@ -161,7 +168,7 @@ export function peopleRoutes() {
     // ---------- Collector profile ----------
 
     app.put('/persons/:id/collector-profile', async (c) => {
-        const id = c.req.param('id');
+        const id = idParam(c);
         const input = await body(c, collectorProfilePutSchema);
         const db = c.var.db;
         const person = await personOr404(db, id);
@@ -183,7 +190,7 @@ export function peopleRoutes() {
     });
 
     app.delete('/persons/:id/collector-profile', async (c) => {
-        const id = c.req.param('id');
+        const id = idParam(c);
         const db = c.var.db;
         const person = await personOr404(db, id);
         if (!person.collectorProfile) throw new HttpError(404, 'This person has no collector profile');
@@ -195,7 +202,7 @@ export function peopleRoutes() {
     // ---------- Artist profile ----------
 
     app.put('/persons/:id/artist-profile', async (c) => {
-        const id = c.req.param('id');
+        const id = idParam(c);
         const input = await body(c, artistProfilePutSchema);
         const db = c.var.db;
         const person = await personOr404(db, id);
@@ -208,14 +215,7 @@ export function peopleRoutes() {
 
         if (!existing) {
             const slug = input.slug ?? (await uniqueSlug(db, 'artist_profiles', person.name));
-            await db.transaction().execute(async (trx) => {
-                const created = await trx
-                    .insertInto('artist_profiles')
-                    .values({ person_id: id, bio: EMPTY_DOC, cv: EMPTY_DOC, ...values, slug } as never)
-                    .returningAll()
-                    .executeTakeFirstOrThrow();
-                await recordRevision(trx, { entity: 'artist_profile', entityId: id, action: 'create', snapshot: { ...created, exhibition_ids: [] }, userId: c.var.userId });
-            });
+            await db.transaction().execute((trx) => createArtistProfile(trx, id, { ...values, slug }, c.var.userId));
             return c.json(await getPerson(db, id), 201);
         }
 
@@ -238,7 +238,7 @@ export function peopleRoutes() {
     });
 
     app.post('/persons/:id/artist-profile/press', async (c) => {
-        const id = c.req.param('id');
+        const id = idParam(c);
         const input = await body(c, artistPressAddSchema);
         const db = c.var.db;
         const person = await personOr404(db, id);
@@ -254,18 +254,12 @@ export function peopleRoutes() {
                 const existing = await trx.selectFrom('press_items').select('id').where('url', '=', input.press.url).executeTakeFirst();
                 if (existing) pressId = existing.id;
                 else {
-                    const p = input.press;
-                    const created = await trx
-                        .insertInto('press_items')
-                        .values({ outlet: p.outlet, title: p.title, url: p.url, published_on: p.publishedOn, issue_label: p.issueLabel ?? null, byline: p.byline ?? null, published: false })
-                        .returningAll()
-                        .executeTakeFirstOrThrow();
-                    await recordRevision(trx, { entity: 'press_item', entityId: created.id, action: 'create', snapshot: created, userId: c.var.userId });
-                    pressId = created.id;
+                    // Linked straight to an artist, it stays off the public press list.
+                    pressId = (await createPress(trx, { ...input.press, published: false }, c.var.userId)).id;
                 }
             }
             await trx.insertInto('press_artists').values({ press_item_id: pressId!, artist_id: id }).onConflict((oc) => oc.columns(['press_item_id', 'artist_id']).doNothing()).execute();
-            await trx.updateTable('artist_profiles').set({ updated_at: new Date() }).where('person_id', '=', id).execute();
+            await touch(trx, 'artist_profiles', id);
             await recordRevision(trx, { entity: 'artist_profile', entityId: id, action: 'update', snapshot: await profileSnapshot(trx, id), userId: c.var.userId });
         });
         return c.json(await getPerson(db, id), 201);
@@ -273,7 +267,7 @@ export function peopleRoutes() {
 
     /** Unlink press from the artist. Press that then belongs nowhere (no artist, no exhibition, not on the site) is deleted. */
     app.delete('/persons/:id/artist-profile/press/:pressId', async (c) => {
-        const id = c.req.param('id');
+        const id = idParam(c);
         const pressId = c.req.param('pressId');
         const db = c.var.db;
         const person = await personOr404(db, id);
@@ -289,14 +283,14 @@ export function peopleRoutes() {
                 await recordRevision(trx, { entity: 'press_item', entityId: pressId, action: 'delete', snapshot: item, userId: c.var.userId });
                 await trx.deleteFrom('press_items').where('id', '=', pressId).execute();
             }
-            await trx.updateTable('artist_profiles').set({ updated_at: new Date() }).where('person_id', '=', id).execute();
+            await touch(trx, 'artist_profiles', id);
             await recordRevision(trx, { entity: 'artist_profile', entityId: id, action: 'update', snapshot: await profileSnapshot(trx, id), userId: c.var.userId });
         });
         return c.json(await getPerson(db, id));
     });
 
     app.delete('/persons/:id/artist-profile', async (c) => {
-        const id = c.req.param('id');
+        const id = idParam(c);
         const db = c.var.db;
         const person = await personOr404(db, id);
         if (!person.artistProfile) throw new HttpError(404, 'This person has no artist profile');
@@ -309,7 +303,7 @@ export function peopleRoutes() {
     });
 
     app.put('/persons/:id/artist-profile/exhibitions', async (c) => {
-        const id = c.req.param('id');
+        const id = idParam(c);
         const { exhibitionIds } = await body(c, artistExhibitionsPutSchema);
         const db = c.var.db;
         const person = await personOr404(db, id);
@@ -326,28 +320,19 @@ export function peopleRoutes() {
             for (const exhibitionId of ids) {
                 if (before.has(exhibitionId)) continue;
                 // New links go after the exhibition's existing artists.
-                const max = await trx
-                    .selectFrom('exhibition_artists')
-                    .select((eb) => eb.fn.max('position').as('max'))
-                    .where('exhibition_id', '=', exhibitionId)
-                    .executeTakeFirst();
-                await trx.insertInto('exhibition_artists').values({ exhibition_id: exhibitionId, artist_id: id, position: Number(max?.max ?? -1) + 1 }).execute();
+                const position = await nextPosition(trx, 'exhibition_artists', { exhibition_id: exhibitionId });
+                await trx.insertInto('exhibition_artists').values({ exhibition_id: exhibitionId, artist_id: id, position }).execute();
             }
-            await trx.updateTable('artist_profiles').set({ updated_at: new Date() }).where('person_id', '=', id).execute();
+            await touch(trx, 'artist_profiles', id);
             await recordRevision(trx, { entity: 'artist_profile', entityId: id, action: 'update', snapshot: await profileSnapshot(trx, id), userId: c.var.userId });
         });
         return c.json(await getPerson(db, id));
     });
 
     app.get('/persons/:id/artist-profile/cv.pdf', async (c) => {
-        const person = await personOr404(c.var.db, c.req.param('id'));
+        const person = await personOr404(c.var.db, idParam(c));
         if (!person.artistProfile) throw new HttpError(404, 'This person has no artist profile');
-        const pdf = await renderCvPdf(person, person.artistProfile.cv);
-        return c.body(new Uint8Array(pdf), 200, {
-            'Content-Type': 'application/pdf',
-            'Content-Disposition': `attachment; filename="${person.artistProfile.slug}-cv.pdf"`,
-            'Cache-Control': 'private, no-store',
-        });
+        return pdfResponse(c, await renderCvPdf(person, person.artistProfile.cv), `${person.artistProfile.slug}-cv.pdf`);
     });
 
     // ---------- Addresses ----------
@@ -372,14 +357,9 @@ export function peopleRoutes() {
                 const created = await trx.insertInto('addresses').values(columns(input.address!, ADDRESS_COLUMNS) as never).returning('id').executeTakeFirstOrThrow();
                 addressId = created.id;
             }
-            const existing = await trx
-                .selectFrom('address_links')
-                .select((eb) => [eb.fn.countAll<number>().as('n'), eb.fn.max('position').as('max')])
-                .where('entity', '=', input.entity)
-                .where('entity_id', '=', input.entityId)
-                .executeTakeFirstOrThrow();
+            const position = await nextPosition(trx, 'address_links', { entity: input.entity, entity_id: input.entityId });
             // The first address becomes the primary one.
-            const isPrimary = input.isPrimary ?? Number(existing.n) === 0;
+            const isPrimary = input.isPrimary ?? position === 0;
             if (isPrimary) await clearPrimary(trx, input.entity, input.entityId);
             await trx
                 .insertInto('address_links')
@@ -389,7 +369,7 @@ export function peopleRoutes() {
                     entity_id: input.entityId,
                     label: input.label ?? null,
                     is_primary: isPrimary,
-                    position: Number(existing.max ?? -1) + 1,
+                    position,
                 })
                 .execute();
         });
@@ -397,7 +377,7 @@ export function peopleRoutes() {
     });
 
     app.patch('/addresses/:id', async (c) => {
-        const id = c.req.param('id');
+        const id = idParam(c);
         const patch = await body(c, addressPatchSchema);
         const db = c.var.db;
         if (!isUuid(id)) throw new HttpError(404, 'Not found');
@@ -411,16 +391,8 @@ export function peopleRoutes() {
         return c.json(toAddress(row));
     });
 
-    app.delete('/addresses/:id', async (c) => {
-        const id = c.req.param('id');
-        if (!isUuid(id)) throw new HttpError(404, 'Not found');
-        const deleted = await c.var.db.deleteFrom('addresses').where('id', '=', id).executeTakeFirst();
-        if (!deleted.numDeletedRows) throw new HttpError(404, 'Not found');
-        return c.body(null, 204);
-    });
-
     app.patch('/address-links/:id', async (c) => {
-        const id = c.req.param('id');
+        const id = idParam(c);
         const patch = await body(c, addressLinkPatchSchema);
         const db = c.var.db;
         if (!isUuid(id)) throw new HttpError(404, 'Not found');
@@ -445,7 +417,7 @@ export function peopleRoutes() {
     });
 
     app.delete('/address-links/:id', async (c) => {
-        const id = c.req.param('id');
+        const id = idParam(c);
         const db = c.var.db;
         if (!isUuid(id)) throw new HttpError(404, 'Not found');
         const link = await db.selectFrom('address_links').selectAll().where('id', '=', id).executeTakeFirst();

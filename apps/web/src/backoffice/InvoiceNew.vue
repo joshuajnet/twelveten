@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
-import { formatPercent, invoiceTotals, parsePercent, type NumberedPage, type PersonSummary, type WorkStatus, type WorkSummary } from '@twelveten/shared';
+import { formatPercent, invoiceTotals, parsePercent, todayIso, type NumberedPage, type PersonSummary, type WorkStatus, type WorkSummary } from '@twelveten/shared';
 import Field from '@/admin/ui/Field.vue';
 import { errorMessage } from '@/admin/api';
 import { toast } from '@/admin/state';
 import { btnPrimary } from '@/admin/ui/buttons';
 import { boApi } from './api';
-import { money, todayIso } from './format';
+import { money, percentInput } from './format';
 import PersonPicker from './PersonPicker.vue';
 import Pagination from './Pagination.vue';
 import StatusBadge from './StatusBadge.vue';
@@ -23,7 +23,7 @@ const buyer = ref<PersonSummary | null>(null);
 const selected = ref<WorkSummary[]>([]);
 const form = reactive({ issuedOn: todayIso() as string | null, discount: '' as string | null, tax: '' as string | null });
 boApi.invoiceSettings().then(
-    (s) => (form.tax = s.defaultTaxRateBps ? String(s.defaultTaxRateBps / 100) : ''),
+    (s) => (form.tax = percentInput(s.defaultTaxRateBps)),
     () => {},
 );
 

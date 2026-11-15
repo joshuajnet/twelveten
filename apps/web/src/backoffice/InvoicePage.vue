@@ -8,6 +8,7 @@ import {
     invoiceTotals,
     parsePercent,
     parsePrice,
+    todayIso,
     type Invoice,
     type InvoicePatch,
     type InvoiceStatus,
@@ -21,8 +22,8 @@ import { askConflict, toast } from '@/admin/state';
 import { btnDanger, btnGhost, btnOutline, btnPrimary } from '@/admin/ui/buttons';
 import { boApi } from './api';
 import { useUnsavedGuard } from './guard';
-import { money, todayIso } from './format';
-import InvoiceStatusBadge from './InvoiceStatusBadge.vue';
+import { amountInput, money, percentInput } from './format';
+import StatusBadge from './StatusBadge.vue';
 
 /** One invoice: the printed fields, its line items, payments, and the PDF. */
 const route = useRoute();
@@ -33,7 +34,6 @@ const invoice = ref<Invoice | null>(null);
 const inv = computed(() => invoice.value as Invoice);
 const notFound = ref(false);
 
-const cents = (c: number) => (c ? (c / 100).toFixed(2) : '');
 const form = reactive({
     number: '' as string | null,
     issuedOn: '' as string | null,
@@ -53,9 +53,9 @@ function reset(i: Invoice) {
         issuedOn: i.issuedOn,
         status: i.status,
         billTo: i.billTo,
-        discount: i.discountBps ? String(i.discountBps / 100) : '',
-        tax: i.taxRateBps ? String(i.taxRateBps / 100) : '',
-        shipping: cents(i.shippingCents),
+        discount: percentInput(i.discountBps),
+        tax: percentInput(i.taxRateBps),
+        shipping: i.shippingCents ? amountInput(i.shippingCents) : '',
         terms: i.terms,
         notes: i.notes,
     });
@@ -208,6 +208,7 @@ const statusHint = computed(() => {
     if (form.status === 'paid' && was !== 'paid') return 'Saving as Paid records the works as sold to this collector.';
     if (form.status === 'cancelled' && was !== 'cancelled') return 'Cancelled: the buyer didn’t pay. Saving removes its works from their collection and puts them back on sale.';
     if (was === 'cancelled' && form.status !== 'cancelled') return 'Reopening holds its works for this collector again (if still available).';
+    if (was === 'paid' && form.status !== 'paid') return 'No longer paid: saving puts its works back on hold for this collector instead of sold.';
     return 'Recording payments sets Open / Partial payment / Paid automatically.';
 });
 </script>
@@ -223,7 +224,7 @@ const statusHint = computed(() => {
 
         <div class="flex flex-wrap items-center gap-3">
             <h1 class="text-2xl font-semibold">Invoice {{ inv.number }}</h1>
-            <InvoiceStatusBadge :status="inv.status" />
+            <StatusBadge :status="inv.status" />
             <RouterLink :to="{ name: 'bo-person', params: { id: inv.personId, profile: 'collector' } }" class="text-sm text-sky-900 hover:underline">{{ inv.personName }}</RouterLink>
             <span class="flex-1" />
             <span v-if="dirty" class="text-xs text-amber-700">● Unsaved changes</span>
@@ -253,24 +254,33 @@ const statusHint = computed(() => {
                             <label class="w-32 text-right">
                                 <span class="sr-only">Price of {{ it.title }}</span>
                                 <input
-                                    :value="(it.priceCents / 100).toFixed(2)"
+                                    :value="amountInput(it.priceCents)"
                                     inputmode="decimal"
-                                    class="w-full rounded border border-slate-300 px-2 py-1 text-right text-sm tabular-nums focus:border-sky-700 focus:outline-none"
+                                    :disabled="inv.status === 'paid'"
+                                    class="w-full rounded border border-slate-300 px-2 py-1 text-right text-sm tabular-nums focus:border-sky-700 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                                     @change="setItemPrice(it.id, ($event.target as HTMLInputElement).value)"
                                 />
                             </label>
-                            <button type="button" class="text-xs text-red-700 hover:underline" :disabled="inv.items.length === 1" :title="inv.items.length === 1 ? 'An invoice needs at least one item' : ''" @click="removeItem(it.id)">
+                            <button
+                                v-if="inv.status !== 'paid'"
+                                type="button"
+                                class="text-xs text-red-700 hover:underline"
+                                :disabled="inv.items.length === 1"
+                                :title="inv.items.length === 1 ? 'An invoice needs at least one item' : ''"
+                                @click="removeItem(it.id)"
+                            >
                                 Remove
                             </button>
                         </li>
                     </ul>
-                    <div v-if="addOptions.length" class="mt-2 flex flex-wrap items-center gap-2">
+                    <div v-if="addOptions.length && inv.status !== 'paid'" class="mt-2 flex flex-wrap items-center gap-2">
                         <select v-model="toAdd" aria-label="Add a work" class="min-w-0 flex-1 rounded border border-slate-300 bg-white px-2 py-1.5 text-sm">
                             <option value="">Add another work on hold for {{ inv.personName }}…</option>
                             <option v-for="w in addOptions" :key="w.id" :value="w.id">{{ w.artistName }} — {{ w.title || 'Untitled' }}</option>
                         </select>
                         <button type="button" :class="btnOutline" :disabled="!toAdd" @click="addItem">Add</button>
                     </div>
+                    <p v-if="inv.status === 'paid'" class="mt-2 text-xs text-slate-500">This invoice is paid, so its works and prices are fixed. Reopen it or remove a payment to change them.</p>
                     <p class="mt-2 text-xs text-slate-500">Line items keep the caption and price as invoiced; changing the work later doesn’t change this invoice.</p>
                 </section>
 
@@ -336,7 +346,7 @@ const statusHint = computed(() => {
                     <p v-else class="mb-3 text-slate-500">No payments recorded.</p>
                     <form v-if="inv.balanceCents > 0" class="space-y-1 border-t border-slate-100 pt-2" @submit.prevent="addPayment()">
                         <div class="grid grid-cols-2 gap-x-2">
-                            <Field v-model="pay.amount" label="Amount" :placeholder="(inv.balanceCents / 100).toFixed(2)" />
+                            <Field v-model="pay.amount" label="Amount" :placeholder="amountInput(inv.balanceCents)" />
                             <Field v-model="pay.paidOn" label="Received" type="date" />
                         </div>
                         <label class="block py-1">
@@ -354,13 +364,14 @@ const statusHint = computed(() => {
                 </section>
 
                 <div class="border-t border-slate-200 pt-4">
-                    <button type="button" :class="btnDanger" :disabled="inv.payments.length > 0" @click="confirmDelete = true">Delete invoice…</button>
+                    <button type="button" :class="btnDanger" :disabled="inv.payments.length > 0 || inv.status === 'paid'" @click="confirmDelete = true">Delete invoice…</button>
                     <p v-if="inv.payments.length" class="mt-1 text-xs text-slate-500">Invoices with payments can’t be deleted.</p>
+                    <p v-else-if="inv.status === 'paid'" class="mt-1 text-xs text-slate-500">A paid invoice can’t be deleted; reopen it first.</p>
                 </div>
             </div>
         </div>
 
-        <Dialog v-model:open="confirmDelete" title="Delete this invoice?" description="The works stay on hold for the collector. This can’t be undone.">
+        <Dialog v-model:open="confirmDelete" title="Delete this invoice?" description="Its works go back on sale (unless another open invoice for this collector lists them). This can’t be undone.">
             <template #footer>
                 <button type="button" :class="btnOutline" @click="confirmDelete = false">Cancel</button>
                 <button type="button" :class="btnDanger" class="!bg-red-700 !text-white" @click="remove">Delete</button>

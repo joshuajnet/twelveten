@@ -7,6 +7,7 @@ import { errorMessage, isConflict } from '@/admin/api';
 import { askConflict, toast } from '@/admin/state';
 import { btnPrimary } from '@/admin/ui/buttons';
 import { boApi } from './api';
+import { percentInput } from './format';
 import { useUnsavedGuard } from './guard';
 
 /** What every invoice prints: gallery details, default tax and terms. Payment details are read-only (server env). */
@@ -29,7 +30,7 @@ function reset(s: InvoiceSettings) {
         email: s.email,
         phone: s.phone,
         defaultTerms: s.defaultTerms,
-        tax: s.defaultTaxRateBps ? String(s.defaultTaxRateBps / 100) : '',
+        tax: percentInput(s.defaultTaxRateBps),
         numberPrefix: s.numberPrefix,
     });
     baseline.value = JSON.stringify(form);

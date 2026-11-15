@@ -50,14 +50,41 @@ export function createAuth({
             cookiePrefix: 'twelveten',
             useSecureCookies: siteUrl.startsWith('https://'),
             defaultCookieAttributes: { sameSite: 'lax', httpOnly: true },
-            // CloudFront (and the Vite dev proxy) pass the visitor's address in X-Forwarded-For.
-            ipAddress: { ipAddressHeaders: ['x-forwarded-for'] },
+            // Set by withClientIp from CloudFront's viewer address. Locally (no CloudFront) the Vite proxy's
+            // single-value X-Forwarded-For is used instead.
+            ipAddress: { ipAddressHeaders: [CLIENT_IP_HEADER, 'x-forwarded-for'] },
         },
         plugins: [admin({ defaultRole: 'user', adminRoles: ['admin'] })],
     });
 }
 
 export type Auth = ReturnType<typeof createAuth>;
+
+/** Header carrying the visitor's address to Better Auth (for rate limits). Never taken from the client. */
+export const CLIENT_IP_HEADER = 'x-twelveten-client-ip';
+
+/** The IP from CloudFront-Viewer-Address ('198.51.100.10:46532', '2001:db8::1:46532' or '[2001:db8::1]:46532'). */
+export function viewerIp(value: string | null): string | null {
+    if (!value) return null;
+    const v = value.trim();
+    if (v.startsWith('[')) return v.slice(1, v.indexOf(']')) || null;
+    const colon = v.lastIndexOf(':');
+    return colon > 0 ? v.slice(0, colon) : null;
+}
+
+/**
+ * The request as Better Auth should see it. X-Forwarded-For can't be trusted for rate limits: CloudFront
+ * appends to whatever the client sent, and Better Auth falls back to one shared bucket for a multi-value
+ * header, so a client could use up everyone's sign-in attempts. CloudFront-Viewer-Address is set by
+ * CloudFront itself, and the origin check makes sure requests come through CloudFront.
+ */
+export function withClientIp(req: Request): Request {
+    const headers = new Headers(req.headers);
+    headers.delete(CLIENT_IP_HEADER);
+    const ip = viewerIp(headers.get('cloudfront-viewer-address'));
+    if (ip) headers.set(CLIENT_IP_HEADER, ip);
+    return new Request(req, { headers });
+}
 
 /** Resolve the signed-in user (if any) from request headers. */
 export async function resolveUserFrom(auth: Auth, headers: Headers): Promise<{ id: string; role: string } | null> {

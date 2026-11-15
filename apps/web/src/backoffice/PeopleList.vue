@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue';
-import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router';
+import { computed, reactive, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import { PROFILE_TYPES, profileFilter, type ProfileFilter } from '@twelveten/shared';
 import Dialog from '@/admin/ui/Dialog.vue';
 import Field from '@/admin/ui/Field.vue';
@@ -10,24 +10,19 @@ import { btnOutline, btnPrimary } from '@/admin/ui/buttons';
 import { boApi, type PersonSort } from './api';
 import PeopleTable from './PeopleTable.vue';
 import { peopleListQuery } from './nav';
+import { useListQuery } from './useListQuery';
 
 /** Everyone the gallery knows, filtered by profile type (artists, …) and searchable. */
-const route = useRoute();
 const router = useRouter();
+const { route, q, page, enumParam, setQuery, goToPage, search } = useListQuery();
 watch(
     () => route.query,
     (q) => (peopleListQuery.value = { ...q }),
     { immediate: true },
 );
 
-// The filter, search and sort live in the URL so they survive reloads and back navigation.
-const profile = computed<ProfileFilter | null>(() => {
-    const parsed = profileFilter.safeParse(route.query.profile);
-    return parsed.success ? parsed.data : null;
-});
+const profile = enumParam('profile', profileFilter);
 const sort = computed<PersonSort>(() => (route.query.sort === 'updated' ? 'updated' : 'name'));
-const page = computed(() => Math.max(1, Number.parseInt(String(route.query.page ?? '1'), 10) || 1));
-const q = computed(() => String(route.query.q ?? ''));
 
 const filters = computed(() => [
     { value: null, label: 'All' },
@@ -35,29 +30,6 @@ const filters = computed(() => [
     { value: 'none' as ProfileFilter, label: 'No profile' },
 ]);
 const heading = computed(() => (profile.value && profile.value !== 'none' ? PROFILE_TYPES.find((p) => p.key === profile.value)!.plural : 'People'));
-
-/** Change filters (back to page 1 unless the patch sets the page). */
-function setQuery(patch: Record<string, string | null>) {
-    const query: LocationQueryRaw = { ...route.query, page: null, ...patch };
-    for (const [k, v] of Object.entries(query)) if (v === null || v === '') delete query[k];
-    void router.replace({ query });
-}
-
-// Debounced search box.
-const search = ref(q.value);
-let timer: ReturnType<typeof setTimeout> | undefined;
-watch(search, (v) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => setQuery({ q: v.trim() || null }), 250);
-});
-watch(q, (v) => {
-    if (v !== search.value.trim()) search.value = v;
-});
-
-function goToPage(n: number) {
-    setQuery({ page: n > 1 ? String(n) : null });
-    window.scrollTo({ top: 0 });
-}
 
 // New person
 const creating = reactive({ open: false, name: '' as string | null, email: null as string | null, artist: false, collector: false, busy: false });

@@ -25,12 +25,12 @@ import HistoryDialog from '@/admin/HistoryDialog.vue';
 import { ApiError } from '@/api/client';
 import { errorMessage, isConflict } from '@/admin/api';
 import { askConflict, toast } from '@/admin/state';
-import { pickFiles, uploadFile } from '@/admin/upload';
+import { altFromFilename, useUploadQueue } from '@/admin/upload';
+import UploadProgress from '@/admin/ui/UploadProgress.vue';
 import { btnDanger, btnGhost, btnOutline, btnPrimary } from '@/admin/ui/buttons';
 import { boApi } from './api';
 import { useUnsavedGuard } from './guard';
 import { dateTime, locationLabel, money, statusLabel } from './format';
-import InvoiceStatusBadge from './InvoiceStatusBadge.vue';
 import PersonPicker from './PersonPicker.vue';
 import StatusBadge from './StatusBadge.vue';
 
@@ -200,23 +200,13 @@ onMounted(() => window.addEventListener('keydown', onKey));
 
 // ---- Images ----
 const images = computed(() => (isNew.value ? pendingImages.value.map((img, position) => ({ id: `pending-${position}`, position, ...img })) : (work.value?.images ?? [])));
-const uploads = ref<{ name: string; progress: number }[]>([]);
-async function addImages() {
-    for (const file of await pickFiles('image', true)) {
-        const entry = reactive({ name: file.name, progress: 0 });
-        uploads.value.push(entry);
-        try {
-            const url = await uploadFile(file, (f) => (entry.progress = f));
-            const alt = file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
-            if (isNew.value) pendingImages.value.push({ url, alt });
-            else work.value = await boApi.addWorkImage(id.value, url, alt);
-        } catch (e) {
-            toast(`${file.name}: ${errorMessage(e)}`, 'error');
-        } finally {
-            uploads.value = uploads.value.filter((u) => u !== entry);
-        }
-    }
-}
+const { uploads, pickAndUpload } = useUploadQueue();
+const addImages = () =>
+    pickAndUpload('image', async (url, file) => {
+        const alt = altFromFilename(file.name);
+        if (isNew.value) pendingImages.value.push({ url, alt });
+        else work.value = await boApi.addWorkImage(id.value, url, alt);
+    });
 async function removeImage(imageId: string, index: number) {
     if (isNew.value) return void pendingImages.value.splice(index, 1);
     try {
@@ -407,12 +397,7 @@ async function createInvoice() {
                         <span class="flex-1" />
                         <button type="button" :class="btnOutline" @click="addImages">+ Add images</button>
                     </div>
-                    <div v-if="uploads.length" class="mb-2 space-y-1 text-xs">
-                        <div v-for="u in uploads" :key="u.name" class="flex items-center gap-2">
-                            <span class="w-48 truncate">{{ u.name }}</span>
-                            <span class="h-1.5 flex-1 rounded bg-slate-200"><span class="block h-1.5 rounded bg-sky-800" :style="{ width: `${u.progress * 100}%` }" /></span>
-                        </div>
-                    </div>
+                    <UploadProgress :uploads="uploads" class="mb-2" />
                     <ol v-if="images.length" ref="grid" class="grid grid-cols-2 gap-3 sm:grid-cols-3">
                         <li v-for="(img, i) in images" :key="img.id" class="overflow-hidden rounded border border-slate-200 bg-white">
                             <div class="relative aspect-square bg-slate-100">
@@ -487,7 +472,7 @@ async function createInvoice() {
                         <li v-for="i in work.invoices" :key="i.id" class="flex flex-wrap items-center gap-2 py-1.5">
                             <RouterLink :to="{ name: 'bo-invoice', params: { id: i.id } }" class="font-medium text-sky-900 hover:underline">{{ i.number }}</RouterLink>
                             <span class="text-slate-600">{{ i.personName }}</span>
-                            <InvoiceStatusBadge :status="i.status" />
+                            <StatusBadge :status="i.status" />
                             <span class="ml-auto tabular-nums">{{ money(i.totalCents, i.currency) }}</span>
                         </li>
                     </ul>

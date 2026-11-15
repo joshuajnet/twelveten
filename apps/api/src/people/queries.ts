@@ -1,6 +1,7 @@
 import { sql } from 'kysely';
 import type { Address, AddressEntity, AddressLink, ArtistProfile, CollectorProfile, NumberedPage, Person, PersonSummary, ProfileFilter, ProfileType } from '@twelveten/shared';
 import type { DB } from '../db/index.ts';
+import { likePattern, numberedPage } from '../lib/paging.ts';
 import type { AddressRow } from '../db/types.ts';
 import { collectionOf, worksByArtist, worksByBuyer } from '../inventory/queries.ts';
 import { invoicesForPerson } from '../invoices/queries.ts';
@@ -131,12 +132,9 @@ export async function getCollectorProfile(db: Q, personId: string): Promise<Coll
 export async function getPerson(db: Q, id: string): Promise<Person | null> {
     const row = await db.selectFrom('persons').selectAll().where('id', '=', id).executeTakeFirst();
     if (!row) return null;
-    const [addresses, artistProfile, collectorProfile, purchases] = await Promise.all([
-        addressesFor(db, 'person', id),
-        getArtistProfile(db, id),
-        getCollectorProfile(db, id),
-        worksByBuyer(db, id),
-    ]);
+    const [addresses, artistProfile, collectorProfile] = await Promise.all([addressesFor(db, 'person', id), getArtistProfile(db, id), getCollectorProfile(db, id)]);
+    // A collector profile lists their works by artist; purchases only cover people without one.
+    const purchases = collectorProfile ? [] : await worksByBuyer(db, id);
     const profiles: ProfileType[] = [...(artistProfile ? (['artist'] as const) : []), ...(collectorProfile ? (['collector'] as const) : [])];
     return {
         id: row.id,
@@ -223,7 +221,6 @@ export async function listPersons(db: Q, f: PersonFilters, page: number, pageSiz
                     .whereRef('inv.person_id', '=', 'p.id')
                     .where('inv.status', 'in', ['open', 'partial'])
                     .as('open_invoices'),
-            sql<number>`count(*) over ()`.as('total'),
             (eb) => eb.selectFrom('works as w').select((e) => e.fn.countAll<number>().as('n')).whereRef('w.artist_id', '=', 'p.id').as('works'),
             (eb) =>
                 eb
@@ -243,15 +240,13 @@ export async function listPersons(db: Q, f: PersonFilters, page: number, pageSiz
                     .as('last_exhibition'),
         ])
         .orderBy(sortKey, desc ? 'desc' : 'asc')
-        .orderBy('p.id', desc ? 'desc' : 'asc')
-        .limit(pageSize)
-        .offset((page - 1) * pageSize);
+        .orderBy('p.id', desc ? 'desc' : 'asc');
 
     if (f.profile === 'artist') q = q.where('ap.person_id', 'is not', null);
     if (f.profile === 'collector') q = q.where('cp.person_id', 'is not', null);
     if (f.profile === 'none') q = q.where('ap.person_id', 'is', null).where('cp.person_id', 'is', null);
     if (f.q) {
-        const like = `%${f.q.replace(/[\\%_]/g, (m) => `\\${m}`)}%`;
+        const like = likePattern(f.q);
         q = q.where((eb) =>
             eb.or([
                 eb('p.name', 'ilike', like),
@@ -271,31 +266,21 @@ export async function listPersons(db: Q, f: PersonFilters, page: number, pageSiz
         );
     }
 
-    let rows = await q.execute();
-    // Past the last page: count the matches so the client can go back.
-    let total = Number(rows[0]?.total ?? 0);
-    if (!rows.length && page > 1) total = Number((await q.offset(0).limit(1).execute())[0]?.total ?? 0);
-    rows = rows.slice(0, pageSize);
-    return {
-        page,
-        pageSize,
-        total,
-        items: rows.map((r) => ({
-            id: r.id,
-            name: r.name,
-            sortName: r.sort_name,
-            birthDate: r.birth_date,
-            email: r.email,
-            phone: r.phone,
-            portrait: r.portrait,
-            city: r.city ?? null,
-            profiles: [...(r.artist_slug ? (['artist'] as const) : []), ...(r.collector_id ? (['collector'] as const) : [])],
-            artist: r.artist_slug
-                ? { slug: r.artist_slug, works: Number(r.works ?? 0), available: Number(r.available ?? 0), lastExhibition: r.last_exhibition ?? null }
-                : null,
-            collector: r.collector_id
-                ? { works: Number(r.collected ?? 0), artists: Number(r.collected_artists ?? 0), openInvoices: Number(r.open_invoices ?? 0) }
-                : null,
-        })),
-    };
+    return numberedPage(q, page, pageSize, (r) => ({
+        id: r.id,
+        name: r.name,
+        sortName: r.sort_name,
+        birthDate: r.birth_date,
+        email: r.email,
+        phone: r.phone,
+        portrait: r.portrait,
+        city: r.city ?? null,
+        profiles: [...(r.artist_slug ? (['artist'] as const) : []), ...(r.collector_id ? (['collector'] as const) : [])],
+        artist: r.artist_slug
+            ? { slug: r.artist_slug, works: Number(r.works ?? 0), available: Number(r.available ?? 0), lastExhibition: r.last_exhibition ?? null }
+            : null,
+        collector: r.collector_id
+            ? { works: Number(r.collected ?? 0), artists: Number(r.collected_artists ?? 0), openInvoices: Number(r.open_invoices ?? 0) }
+            : null,
+    }));
 }

@@ -50,3 +50,79 @@ export function isUuid(v: string | undefined | null): v is string {
 export async function ensureCollectorProfile(trx: Transaction<Database> | DB, personId: string): Promise<void> {
     await trx.insertInto('collector_profiles').values({ person_id: personId }).onConflict((oc) => oc.column('person_id').doNothing()).execute();
 }
+
+type Exec = Transaction<Database> | DB;
+
+/** `?page=&limit=` for numbered lists, validated (limit 1–100). */
+export function pageParams(c: { req: { query: (k: string) => string | undefined } }, defaultSize: number): { page: number; pageSize: number } {
+    const page = Number(c.req.query('page') ?? 1);
+    const pageSize = Number(c.req.query('limit') ?? defaultSize);
+    if (!Number.isInteger(page) || page < 1) throw new HttpError(400, 'Invalid page');
+    if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100) throw new HttpError(400, 'limit must be 1–100');
+    return { page, pageSize };
+}
+
+/** Load something by uuid or answer 404 (malformed ids included). */
+export async function findOr404<T>(load: (id: string) => Promise<T | null | undefined>, id: string | undefined): Promise<T> {
+    const found = isUuid(id) ? await load(id) : null;
+    if (!found) throw new HttpError(404, 'Not found');
+    return found;
+}
+
+/** Tables whose rows keep a 0..n-1 `position` within a scope (e.g. a work's images). */
+type PositionedTable = 'artworks' | 'work_images' | 'invoice_items' | 'address_links' | 'exhibition_artists';
+
+const whereScope = (scope: Record<string, string>) =>
+    sql.join(
+        Object.entries(scope).map(([column, value]) => sql`${sql.ref(column)} = ${value}`),
+        sql` AND `,
+    );
+
+/** The position after the last row in the scope. */
+export async function nextPosition(db: Exec, table: PositionedTable, scope: Record<string, string>): Promise<number> {
+    const { rows } = await sql<{ max: number | null }>`SELECT max(position) AS max FROM ${sql.table(table)} WHERE ${whereScope(scope)}`.execute(db);
+    return Number(rows[0]?.max ?? -1) + 1;
+}
+
+/** After removing the row at `position`, move the later ones up so positions stay 0..n-1. */
+export async function closeGap(trx: Exec, table: PositionedTable, scope: Record<string, string>, position: number): Promise<void> {
+    await sql`UPDATE ${sql.table(table)} SET position = position - 1 WHERE ${whereScope(scope)} AND position > ${position}`.execute(trx);
+}
+
+/**
+ * Set positions from `ids`, which must list every row in the scope exactly once. The position
+ * uniqueness constraints are deferred, so swaps are fine inside the transaction.
+ */
+export async function reorder(trx: Transaction<Database>, table: 'artworks' | 'work_images', scope: Record<string, string>, ids: string[], what: string): Promise<void> {
+    const { rows } = await sql<{ id: string }>`SELECT id FROM ${sql.table(table)} WHERE ${whereScope(scope)}`.execute(trx);
+    const known = new Set(rows.map((r) => r.id));
+    if (ids.length !== known.size || new Set(ids).size !== ids.length || ids.some((x) => !known.has(x))) {
+        throw new HttpError(400, `The order must list every ${what} exactly once`);
+    }
+    for (const [position, id] of ids.entries()) await sql`UPDATE ${sql.table(table)} SET position = ${position} WHERE id = ${id}`.execute(trx);
+}
+
+/** Bump `updated_at` (the version clients send back) after changing a row's children. */
+export async function touch(trx: Exec, table: 'works' | 'invoices' | 'artist_profiles' | 'exhibitions', id: string): Promise<void> {
+    const key = table === 'artist_profiles' ? 'person_id' : 'id';
+    await sql`UPDATE ${sql.table(table)} SET updated_at = now() WHERE ${sql.ref(key)} = ${id}`.execute(trx);
+}
+
+/** A PDF download (or inline view) that is never cached. */
+export function pdfResponse(c: { body: (data: Uint8Array, status: 200, headers: Record<string, string>) => Response }, pdf: Uint8Array | Buffer, filename: string, inline = false): Response {
+    return c.body(new Uint8Array(pdf), 200, {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `${inline ? 'inline' : 'attachment'}; filename="${filename.replace(/["\\\r\n]/g, '')}"`,
+        'Cache-Control': 'private, no-store',
+    });
+}
+
+/** A uuid route parameter; anything else is a 404 (rather than a Postgres "invalid input" 400). */
+export function idParam(c: { req: { param: (name: string) => string | undefined } }, name = 'id'): string {
+    const v = c.req.param(name);
+    if (!isUuid(v)) throw new HttpError(404, 'Not found');
+    return v;
+}
+
+/** Re-render public pages after a change (failures are logged; the next save or a rebuild retries). */
+export type Publish = (paths: string[]) => Promise<void>;

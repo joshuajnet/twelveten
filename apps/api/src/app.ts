@@ -1,10 +1,11 @@
+import { timingSafeEqual } from 'node:crypto';
 import { Hono } from 'hono';
 import { sql } from 'kysely';
 import type { DB } from './db/index.ts';
 import type { AppEnv } from './env.ts';
 import { publicRoutes } from './routes/public.ts';
 import { InvalidCursorError } from './content/cursor.ts';
-import { resolveUserFrom, type Auth } from './auth/auth.ts';
+import { resolveUserFrom, withClientIp, type Auth } from './auth/auth.ts';
 import { adminRoutes, handleError } from './routes/admin/index.ts';
 import { noopPublisher, type Publisher } from './publish/publisher.ts';
 import type { Storage } from './storage/uploads.ts';
@@ -32,20 +33,23 @@ export function createApp(deps: AppDeps) {
 
     const resolveUser = deps.resolveUser ?? (deps.auth ? (h: Headers) => resolveUserFrom(deps.auth!, h) : null);
 
+    // Behind CloudFront, only requests carrying the shared origin secret are served. This runs before
+    // every route (auth included): Hono runs handlers in registration order.
+    const originSecret = deps.originVerifySecret ?? config().ORIGIN_VERIFY_SECRET;
+    if (originSecret) {
+        const expected = Buffer.from(originSecret);
+        app.use('*', async (c, next) => {
+            const got = Buffer.from(c.req.header('x-origin-verify') ?? '');
+            if (got.length !== expected.length || !timingSafeEqual(got, expected)) return c.json({ error: 'Forbidden' }, 403);
+            await next();
+        });
+    }
+
     if (deps.auth) {
         const auth = deps.auth;
         app.on(['GET', 'POST'], '/auth/*', (c) => {
             c.header('Cache-Control', 'no-store');
-            return auth.handler(c.req.raw);
-        });
-    }
-
-    // Behind CloudFront, only requests carrying the shared origin secret are served.
-    const originSecret = deps.originVerifySecret ?? config().ORIGIN_VERIFY_SECRET;
-    if (originSecret) {
-        app.use('*', async (c, next) => {
-            if (c.req.header('x-origin-verify') !== originSecret) return c.json({ error: 'Forbidden' }, 403);
-            await next();
+            return auth.handler(withClientIp(c.req.raw));
         });
     }
 

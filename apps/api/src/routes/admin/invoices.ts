@@ -14,6 +14,7 @@ import {
     invoiceTotals,
     INVOICES_PAGE_SIZE,
     statusFromPayments,
+    todayIso,
     type InvoiceStatus,
 } from '@twelveten/shared';
 import type { AppEnv } from '../../env.ts';
@@ -27,11 +28,9 @@ import { config } from '../../config.ts';
 import type { Storage } from '../../storage/uploads.ts';
 import { body, HttpError } from './errors.ts';
 import { recordWorkChanges } from './inventory.ts';
-import { columns, conflictOr404, ensureCollectorProfile, isUuid, sameVersion } from './util.ts';
+import { closeGap, columns, conflictOr404, ensureCollectorProfile, findOr404, idParam, isUuid, nextPosition, pageParams, pdfResponse, sameVersion } from './util.ts';
 
 type Trx = Transaction<Database>;
-
-const today = () => new Date().toISOString().slice(0, 10);
 
 /** The next free number like 'INV-2026-007' (per prefix and year). */
 async function nextNumber(trx: Trx, prefix: string, issuedOn: string): Promise<string> {
@@ -59,6 +58,11 @@ function assertInvoiceable(w: Pick<WorkRow, 'status' | 'buyer_id' | 'title'>, pe
     if (w.status === 'sold' && w.buyer_id !== personId) throw new HttpError(400, `“${label}” is already sold`);
 }
 
+/** The works on a paid invoice are sold: its items stay as they were paid for. */
+function assertNotPaid(inv: { status: InvoiceStatus }) {
+    if (inv.status === 'paid') throw new HttpError(409, 'This invoice is paid; reopen it (or remove a payment) before changing its works');
+}
+
 /** Put a work on hold for the invoiced person (when it isn't already theirs). */
 async function holdFor(trx: Trx, workId: string, personId: string, number: string, userId: string | null) {
     const before = await trx.selectFrom('works').selectAll().where('id', '=', workId).forUpdate().executeTakeFirstOrThrow();
@@ -75,13 +79,12 @@ async function appendItem(trx: Trx, invoiceId: string, workId: string) {
         .select((eb) => eb.selectFrom('work_images as i').select('i.url').whereRef('i.work_id', '=', 'w.id').orderBy('i.position').limit(1).as('image_url'))
         .where('w.id', '=', workId)
         .executeTakeFirstOrThrow();
-    const max = await trx.selectFrom('invoice_items').select((eb) => eb.fn.max('position').as('max')).where('invoice_id', '=', invoiceId).executeTakeFirst();
     await trx
         .insertInto('invoice_items')
         .values({
             invoice_id: invoiceId,
             work_id: workId,
-            position: Number(max?.max ?? -1) + 1,
+            position: await nextPosition(trx, 'invoice_items', { invoice_id: invoiceId }),
             artist_name: w.artist_name,
             title: w.title,
             date_text: w.date_text,
@@ -94,7 +97,36 @@ async function appendItem(trx: Trx, invoiceId: string, workId: string) {
 }
 
 /**
- * Recompute totals; once payments exist they set the status. When the invoice becomes paid, its
+ * Put an unpaid invoice's works back on sale (cancelled or deleted), unless another unpaid invoice of the
+ * same buyer lists them.
+ */
+async function releaseWorks(trx: Trx, inv: Pick<InvoiceRow, 'id' | 'number' | 'person_id'>, items: { work_id: string | null }[], note: string, userId: string | null) {
+    for (const item of items) {
+        if (!item.work_id) continue;
+        const elsewhere = await trx
+            .selectFrom('invoice_items as it')
+            .innerJoin('invoices as i', 'i.id', 'it.invoice_id')
+            .select('i.id')
+            .where('it.work_id', '=', item.work_id)
+            .where('i.id', '!=', inv.id)
+            .where('i.person_id', '=', inv.person_id)
+            .where('i.status', 'in', ['open', 'partial'])
+            .executeTakeFirst();
+        if (elsewhere) continue;
+        const before = await trx.selectFrom('works').selectAll().where('id', '=', item.work_id).forUpdate().executeTakeFirstOrThrow();
+        if (before.buyer_id !== inv.person_id || (before.status !== 'on_hold' && before.status !== 'sold')) continue;
+        const released = await trx
+            .updateTable('works')
+            .set({ status: 'available', buyer_id: null, sold_on: null, sale_price_cents: null })
+            .where('id', '=', item.work_id)
+            .returningAll()
+            .executeTakeFirstOrThrow();
+        await recordWorkChanges(trx, before, released, note, userId);
+    }
+}
+
+/**
+ * Recompute totals (the update also bumps the invoice's version); once payments exist they set the status. When the invoice becomes paid, its
  * works are recorded as sold to the buyer.
  */
 async function refresh(trx: Trx, id: string, userId: string | null, explicitStatus?: InvoiceStatus): Promise<InvoiceRow> {
@@ -123,7 +155,7 @@ async function refresh(trx: Trx, id: string, userId: string | null, explicitStat
         .executeTakeFirstOrThrow();
 
     if (status === 'paid' && inv.status !== 'paid') {
-        const soldOn = pay.last ?? today();
+        const soldOn = pay.last ?? todayIso();
         for (const item of items) {
             if (!item.work_id) continue;
             const before = await trx.selectFrom('works').selectAll().where('id', '=', item.work_id).forUpdate().executeTakeFirstOrThrow();
@@ -141,31 +173,25 @@ async function refresh(trx: Trx, id: string, userId: string | null, explicitStat
         await ensureCollectorProfile(trx, inv.person_id);
     }
 
-    if (status === 'cancelled' && inv.status !== 'cancelled') {
-        // The buyer didn't pay and never received the works: they leave the collection and go back on sale,
-        // unless another unpaid invoice of theirs lists them.
+    if (inv.status === 'paid' && status !== 'paid') {
+        // No longer fully paid: the works are held for the buyer again, not sold.
         for (const item of items) {
             if (!item.work_id) continue;
-            const elsewhere = await trx
-                .selectFrom('invoice_items as it')
-                .innerJoin('invoices as i', 'i.id', 'it.invoice_id')
-                .select('i.id')
-                .where('it.work_id', '=', item.work_id)
-                .where('i.id', '!=', id)
-                .where('i.person_id', '=', inv.person_id)
-                .where('i.status', 'in', ['open', 'partial'])
-                .executeTakeFirst();
-            if (elsewhere) continue;
             const before = await trx.selectFrom('works').selectAll().where('id', '=', item.work_id).forUpdate().executeTakeFirstOrThrow();
-            if (before.buyer_id !== inv.person_id || (before.status !== 'on_hold' && before.status !== 'sold')) continue;
-            const released = await trx
+            if (before.status !== 'sold' || before.buyer_id !== inv.person_id) continue;
+            const held = await trx
                 .updateTable('works')
-                .set({ status: 'available', buyer_id: null, sold_on: null, sale_price_cents: null })
+                .set({ status: 'on_hold', sold_on: null, sale_price_cents: null })
                 .where('id', '=', item.work_id)
                 .returningAll()
                 .executeTakeFirstOrThrow();
-            await recordWorkChanges(trx, before, released, `Invoice ${inv.number} cancelled`, userId);
+            await recordWorkChanges(trx, before, held, `Invoice ${inv.number} no longer paid`, userId);
         }
+    }
+
+    if (status === 'cancelled' && inv.status !== 'cancelled') {
+        // The buyer didn't pay and never received the works: they leave the collection and go back on sale.
+        await releaseWorks(trx, inv, items, `Invoice ${inv.number} cancelled`, userId);
     } else if (inv.status === 'cancelled' && status !== 'cancelled') {
         // Reopened: hold the works for the buyer again where they're still free.
         for (const item of items) {
@@ -211,11 +237,7 @@ async function loadImages(storage: Storage | undefined, urls: (string | null)[])
 export function invoiceRoutes(deps: { storage?: Storage } = {}) {
     const app = new Hono<AppEnv>();
 
-    const invoiceOr404 = async (db: DB, id: string) => {
-        const inv = isUuid(id) ? await getInvoice(db, id) : null;
-        if (!inv) throw new HttpError(404, 'Not found');
-        return inv;
-    };
+    const invoiceOr404 = (db: DB, id: string) => findOr404((x) => getInvoice(db, x), id);
 
     // ---------- Settings ----------
 
@@ -248,10 +270,7 @@ export function invoiceRoutes(deps: { storage?: Storage } = {}) {
         const person = c.req.query('person');
         if (status && !invoiceStatus.safeParse(status).success) throw new HttpError(400, 'Unknown status');
         if (person && !isUuid(person)) throw new HttpError(400, 'Invalid person');
-        const page = Number(c.req.query('page') ?? 1);
-        const pageSize = Number(c.req.query('limit') ?? INVOICES_PAGE_SIZE);
-        if (!Number.isInteger(page) || page < 1) throw new HttpError(400, 'Invalid page');
-        if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100) throw new HttpError(400, 'limit must be 1–100');
+        const { page, pageSize } = pageParams(c, INVOICES_PAGE_SIZE);
         return c.json(await listInvoices(c.var.db, { status: status as InvoiceStatus | undefined, personId: person, q: c.req.query('q')?.trim() || undefined }, page, pageSize));
     });
 
@@ -266,7 +285,7 @@ export function invoiceRoutes(deps: { storage?: Storage } = {}) {
         for (const w of works) assertInvoiceable(w, input.personId);
 
         const settings = await getSettings(db);
-        const issuedOn = input.issuedOn ?? today();
+        const issuedOn = input.issuedOn ?? todayIso();
         const id = await db.transaction().execute(async (trx) => {
             const number = await nextNumber(trx, settings.numberPrefix, issuedOn);
             const created = await trx
@@ -294,10 +313,10 @@ export function invoiceRoutes(deps: { storage?: Storage } = {}) {
         return c.json(await getInvoice(db, id), 201);
     });
 
-    app.get('/invoices/:id', async (c) => c.json(await invoiceOr404(c.var.db, c.req.param('id'))));
+    app.get('/invoices/:id', async (c) => c.json(await invoiceOr404(c.var.db, idParam(c))));
 
     app.patch('/invoices/:id', async (c) => {
-        const id = c.req.param('id');
+        const id = idParam(c);
         const patch = await body(c, invoicePatchSchema);
         const db = c.var.db;
         await invoiceOr404(db, id);
@@ -330,22 +349,29 @@ export function invoiceRoutes(deps: { storage?: Storage } = {}) {
     });
 
     app.delete('/invoices/:id', async (c) => {
-        const id = c.req.param('id');
+        const id = idParam(c);
         const db = c.var.db;
         const inv = await invoiceOr404(db, id);
         if (inv.payments.length) throw new HttpError(409, 'This invoice has payments recorded; remove them before deleting it');
-        await db.deleteFrom('invoices').where('id', '=', id).execute();
+        if (inv.status === 'paid') throw new HttpError(409, 'A paid invoice can’t be deleted; reopen it first');
+        await db.transaction().execute(async (trx) => {
+            const items = await trx.selectFrom('invoice_items').select('work_id').where('invoice_id', '=', id).execute();
+            await trx.deleteFrom('invoices').where('id', '=', id).execute();
+            // Its works were held for the buyer: put them back on sale (cancelled invoices already did).
+            if (inv.status !== 'cancelled') await releaseWorks(trx, { id, number: inv.number, person_id: inv.personId }, items, `Invoice ${inv.number} deleted`, c.var.userId);
+        });
         return c.body(null, 204);
     });
 
     // ---------- Items ----------
 
     app.post('/invoices/:id/items', async (c) => {
-        const id = c.req.param('id');
+        const id = idParam(c);
         const { workId } = await body(c, invoiceItemAddSchema);
         const db = c.var.db;
         const inv = await invoiceOr404(db, id);
         if (inv.status === 'cancelled') throw new HttpError(409, 'Reopen this invoice before adding works');
+        assertNotPaid(inv);
         if (inv.items.some((i) => i.workId === workId)) throw new HttpError(409, 'That work is already on this invoice');
         const work = await db.selectFrom('works').select(['status', 'buyer_id', 'title']).where('id', '=', workId).executeTakeFirst();
         if (!work) throw new HttpError(400, 'Work not found');
@@ -353,7 +379,6 @@ export function invoiceRoutes(deps: { storage?: Storage } = {}) {
         await db.transaction().execute(async (trx) => {
             await appendItem(trx, id, workId);
             await holdFor(trx, workId, inv.personId, inv.number, c.var.userId);
-            await trx.updateTable('invoices').set({ updated_at: new Date() }).where('id', '=', id).execute();
             await refresh(trx, id, c.var.userId);
         });
         return c.json(await getInvoice(db, id), 201);
@@ -364,13 +389,12 @@ export function invoiceRoutes(deps: { storage?: Storage } = {}) {
         const patch = await body(c, invoiceItemPatchSchema);
         const db = c.var.db;
         if (!isUuid(itemId)) throw new HttpError(404, 'Not found');
-        await invoiceOr404(db, id);
+        assertNotPaid(await invoiceOr404(db, id));
         const values = columns(patch, { priceCents: 'price_cents', artistName: 'artist_name', title: 'title', dateText: 'date_text', medium: 'medium', dimensions: 'dimensions' });
         if (!Object.keys(values).length) throw new HttpError(400, 'Nothing to update');
         await db.transaction().execute(async (trx) => {
             const updated = await trx.updateTable('invoice_items').set(values).where('id', '=', itemId).where('invoice_id', '=', id).executeTakeFirst();
             if (!updated.numUpdatedRows) throw new HttpError(404, 'Not found');
-            await trx.updateTable('invoices').set({ updated_at: new Date() }).where('id', '=', id).execute();
             await refresh(trx, id, c.var.userId);
         });
         return c.json(await getInvoice(db, id));
@@ -380,17 +404,11 @@ export function invoiceRoutes(deps: { storage?: Storage } = {}) {
         const { id, itemId } = c.req.param();
         const db = c.var.db;
         if (!isUuid(itemId)) throw new HttpError(404, 'Not found');
-        await invoiceOr404(db, id);
+        assertNotPaid(await invoiceOr404(db, id));
         await db.transaction().execute(async (trx) => {
             const item = await trx.deleteFrom('invoice_items').where('id', '=', itemId).where('invoice_id', '=', id).returning('position').executeTakeFirst();
             if (!item) throw new HttpError(404, 'Not found');
-            await trx
-                .updateTable('invoice_items')
-                .set((eb) => ({ position: eb('position', '-', 1) }))
-                .where('invoice_id', '=', id)
-                .where('position', '>', item.position)
-                .execute();
-            await trx.updateTable('invoices').set({ updated_at: new Date() }).where('id', '=', id).execute();
+            await closeGap(trx, 'invoice_items', { invoice_id: id }, item.position);
             await refresh(trx, id, c.var.userId);
         });
         return c.json(await getInvoice(db, id));
@@ -399,7 +417,7 @@ export function invoiceRoutes(deps: { storage?: Storage } = {}) {
     // ---------- Payments ----------
 
     app.post('/invoices/:id/payments', async (c) => {
-        const id = c.req.param('id');
+        const id = idParam(c);
         const input = await body(c, invoicePaymentCreateSchema);
         const db = c.var.db;
         await invoiceOr404(db, id);
@@ -408,7 +426,6 @@ export function invoiceRoutes(deps: { storage?: Storage } = {}) {
                 .insertInto('invoice_payments')
                 .values({ invoice_id: id, amount_cents: input.amountCents, paid_on: input.paidOn, method: input.method ?? null, note: input.note ?? null, user_id: c.var.userId })
                 .execute();
-            await trx.updateTable('invoices').set({ updated_at: new Date() }).where('id', '=', id).execute();
             await refresh(trx, id, c.var.userId);
         });
         return c.json(await getInvoice(db, id), 201);
@@ -423,7 +440,6 @@ export function invoiceRoutes(deps: { storage?: Storage } = {}) {
             const deleted = await trx.deleteFrom('invoice_payments').where('id', '=', paymentId).where('invoice_id', '=', id).executeTakeFirst();
             if (!deleted.numDeletedRows) throw new HttpError(404, 'Not found');
             const left = await trx.selectFrom('invoice_payments').select('id').where('invoice_id', '=', id).executeTakeFirst();
-            await trx.updateTable('invoices').set({ updated_at: new Date() }).where('id', '=', id).execute();
             // With no payments left the invoice is open again.
             await refresh(trx, id, c.var.userId, left ? undefined : 'open');
         });
@@ -433,16 +449,12 @@ export function invoiceRoutes(deps: { storage?: Storage } = {}) {
     // ---------- PDF ----------
 
     app.get('/invoices/:id/invoice.pdf', async (c) => {
-        const inv = await invoiceOr404(c.var.db, c.req.param('id'));
+        const inv = await invoiceOr404(c.var.db, idParam(c));
         const settings = await getSettings(c.var.db);
         const images = await loadImages(deps.storage, inv.items.map((i) => i.imageUrl));
         const pdf = await renderInvoicePdf(inv, settings, paymentDetails(), images);
         const name = `${inv.number}${inv.titles ? ` ${inv.titles}` : ''}`.replace(/[^\w\- ,]+/g, '').slice(0, 80);
-        return c.body(new Uint8Array(pdf), 200, {
-            'Content-Type': 'application/pdf',
-            'Content-Disposition': `${c.req.query('download') === '1' ? 'attachment' : 'inline'}; filename="${name}.pdf"`,
-            'Cache-Control': 'private, no-store',
-        });
+        return pdfResponse(c, pdf, `${name}.pdf`, c.req.query('download') !== '1');
     });
 
     return app;

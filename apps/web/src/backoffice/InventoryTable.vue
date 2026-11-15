@@ -1,18 +1,15 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
 import { RouterLink } from "vue-router";
 import {
   formatPrice,
   WORKS_PAGE_SIZE,
-  type NumberedPage,
   type WorkStatus,
-  type WorkSummary,
 } from "@twelveten/shared";
-import { errorMessage } from "@/admin/api";
 import { boApi } from "./api";
 import { locationLabel } from "./format";
 import StatusBadge from "./StatusBadge.vue";
 import Pagination from "./Pagination.vue";
+import { usePagedList } from "./useListQuery";
 
 /** One page of works for the current filters. */
 const props = defineProps<{
@@ -24,39 +21,18 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ page: [page: number] }>();
 
-const result = ref<NumberedPage<WorkSummary> | null>(null);
-const loading = ref(false);
-const error = ref("");
-let seq = 0;
-
-async function load() {
-  const mine = ++seq;
-  loading.value = true;
-  error.value = "";
-  try {
-    const r = await boApi.works({
+const { result, loading, error, reload } = usePagedList(
+  () => [props.q, props.artist, props.status, props.location, props.page],
+  () =>
+    boApi.works({
       q: props.q,
       artist: props.artist,
       status: props.status,
       location: props.location,
       page: props.page,
       limit: WORKS_PAGE_SIZE,
-    });
-    if (mine !== seq) return;
-    result.value = r;
-    // A page past the end (e.g. after deletions): go to the last page.
-    const last = Math.max(1, Math.ceil(r.total / r.pageSize));
-    if (!r.items.length && props.page > last) emit("page", last);
-  } catch (e) {
-    if (mine === seq) error.value = errorMessage(e);
-  } finally {
-    if (mine === seq) loading.value = false;
-  }
-}
-watch(
-  () => [props.q, props.artist, props.status, props.location, props.page],
-  load,
-  { immediate: true },
+    }),
+  (page) => emit("page", page),
 );
 </script>
 
@@ -142,7 +118,7 @@ watch(
         role="alert"
       >
         Couldn’t load works: {{ error }}
-        <button type="button" class="text-sky-800 underline" @click="load">
+        <button type="button" class="text-sky-800 underline" @click="reload">
           Retry
         </button>
       </p>

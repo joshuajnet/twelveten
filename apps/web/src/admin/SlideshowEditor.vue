@@ -3,7 +3,8 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'v
 import Sortable from 'sortablejs';
 import type { Artwork, ArtworkPatch } from '@twelveten/shared';
 import { adminApi, errorMessage, isConflict } from './api';
-import { pickFiles, uploadFile } from './upload';
+import { altFromFilename, useUploadQueue } from './upload';
+import UploadProgress from './ui/UploadProgress.vue';
 import { toast } from './state';
 import Dialog from './ui/Dialog.vue';
 import Field from './ui/Field.vue';
@@ -50,28 +51,13 @@ onMounted(() => {
 });
 onBeforeUnmount(() => sortable?.destroy());
 
-const uploads = ref<{ name: string; progress: number }[]>([]);
-async function addSlides() {
-    const files = await pickFiles('media', true);
-    for (const file of files) {
-        const entry = reactive({ name: file.name, progress: 0 });
-        uploads.value.push(entry);
-        try {
-            const url = await uploadFile(file, (f) => (entry.progress = f));
-            const isVideo = file.type.startsWith('video/');
-            const created = await adminApi.addArtwork(props.exhibitionId, {
-                image: isVideo ? null : url,
-                video: isVideo ? url : null,
-                alt: file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' '),
-            });
-            slides.value = [...slides.value, created];
-        } catch (e) {
-            toast(`${file.name}: ${errorMessage(e)}`, 'error');
-        } finally {
-            uploads.value = uploads.value.filter((u) => u !== entry);
-        }
-    }
-}
+const { uploads, pickAndUpload } = useUploadQueue();
+const addSlides = () =>
+    pickAndUpload('media', async (url, file) => {
+        const isVideo = file.type.startsWith('video/');
+        const created = await adminApi.addArtwork(props.exhibitionId, { image: isVideo ? null : url, video: isVideo ? url : null, alt: altFromFilename(file.name) });
+        slides.value = [...slides.value, created];
+    });
 
 async function patch(slide: Artwork, changes: Omit<ArtworkPatch, 'updatedAt'>) {
     try {
@@ -150,12 +136,7 @@ async function replaceMedia(slide: Artwork, url: string, file: File) {
                 </span>
                 <button type="button" :class="btnPrimary" class="ml-auto" @click="addSlides">+ Add images or videos</button>
             </div>
-            <div v-if="uploads.length" class="mb-3 space-y-1 text-xs">
-                <div v-for="u in uploads" :key="u.name" class="flex items-center gap-2">
-                    <span class="w-48 truncate">{{ u.name }}</span>
-                    <span class="h-1.5 flex-1 rounded bg-slate-200"><span class="block h-1.5 rounded bg-sky-800" :style="{ width: `${u.progress * 100}%` }" /></span>
-                </div>
-            </div>
+            <UploadProgress :uploads="uploads" class="mb-3" />
             <ol ref="grid" class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
                 <li
                     v-for="s in slides"
