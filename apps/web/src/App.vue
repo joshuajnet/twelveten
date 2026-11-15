@@ -12,8 +12,8 @@ onMounted(() => void loadSession());
 </script>
 
 <template>
-    <!-- The back office has its own layout (no site header, footer or editing bar). -->
-    <router-view v-if="$route.meta.backoffice" />
+    <!-- The back office and viewing rooms have their own layout (no site header, footer or editing bar). -->
+    <router-view v-if="$route.meta.backoffice || $route.meta.bare" />
     <div v-else id="app" class="relative flex grow flex-col w-full font-gentium-book text-slate-900">
         <Header @menu="menuActive = $event" />
 

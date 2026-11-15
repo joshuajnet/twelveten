@@ -98,5 +98,5 @@ export async function sitemapXml(db: DB, siteUrl: string): Promise<string> {
 }
 
 export function robotsTxt(siteUrl: string): string {
-    return `User-agent: *\nDisallow: /admin\nDisallow: /api/\n\nSitemap: ${siteUrl.replace(/\/+$/, '')}/sitemap.xml\n`;
+    return `User-agent: *\nDisallow: /admin\nDisallow: /rooms\nDisallow: /api/\n\nSitemap: ${siteUrl.replace(/\/+$/, '')}/sitemap.xml\n`;
 }

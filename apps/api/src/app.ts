@@ -94,7 +94,7 @@ export function createApp(deps: AppDeps) {
     });
 
     app.route('/', publicRoutes());
-    app.route('/', roomPublicRoutes({ siteUrl: deps.siteUrl ?? config().SITE_URL }));
+    app.route('/', roomPublicRoutes({ siteUrl: deps.siteUrl ?? config().SITE_URL, trustedOrigins: config().TRUSTED_ORIGINS }));
     app.route('/admin', adminRoutes({ publisher: deps.publisher ?? noopPublisher, storage: deps.storage }));
 
     app.notFound((c) => c.json({ error: 'Not found' }, 404));

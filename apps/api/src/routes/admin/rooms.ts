@@ -233,6 +233,15 @@ export function roomRoutes() {
         return c.json(d);
     });
 
+    /** Forget one visitor's activity in a room (visits, stats, events, remembered browsers). The person stays. */
+    app.delete('/rooms/:id/visitors/:visitorId', async (c) => {
+        const visitorId = c.req.param('visitorId');
+        if (!isUuid(visitorId)) throw new HttpError(404, 'Not found');
+        const gone = await c.var.db.deleteFrom('viewing_room_visitors').where('id', '=', visitorId).where('room_id', '=', idParam(c)).returning('id').executeTakeFirst();
+        if (!gone) throw new HttpError(404, 'Not found');
+        return c.body(null, 204);
+    });
+
     /** Packed pointer samples for one work (or every work), for heatmaps. */
     app.get('/rooms/:id/visitors/:visitorId/pointer', async (c) => {
         const roomId = idParam(c);

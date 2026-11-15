@@ -38,4 +38,26 @@ describe('GallerySlideshow', () => {
         wrapper.vm.next();
         expect(wrapper.vm.indexVisible).toBe(0);
     });
+
+    it('opens the zoom viewer on the current image slide and returns to the last one viewed', async () => {
+        vi.useFakeTimers();
+        const wrapper = mount(GallerySlideshow, {
+            props: { slides: [slide('one'), slide('video', { image: null, video: '/v.mp4' }), slide('three')] },
+            global: { directives: { lazy: {} }, stubs: { teleport: true } },
+        });
+        wrapper.vm.next();
+        await wrapper.vm.$nextTick();
+        // A video slide has nothing to zoom.
+        expect(wrapper.find('[data-testid="slideshow-zoom"]').exists()).toBe(false);
+        wrapper.vm.next();
+        await wrapper.vm.$nextTick();
+        await wrapper.find('[data-testid="slideshow-zoom"]').trigger('click');
+        expect(wrapper.vm.zoomOpen).toBe(true);
+        expect(wrapper.vm.zoomImages[wrapper.vm.zoomIndex].url).toBe('/images/test/three.jpg');
+        expect(wrapper.vm.paused).toBe(true);
+        wrapper.vm.zoomIndex = 0;
+        wrapper.vm.zoomOpen = false;
+        await wrapper.vm.$nextTick();
+        expect(wrapper.vm.indexVisible).toBe(0);
+    });
 });

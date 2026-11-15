@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
-import { formatPercent, invoiceTotals, parsePercent, todayIso, type NumberedPage, type PersonSummary, type WorkStatus, type WorkSummary } from '@twelveten/shared';
+import { formatPercent, invoiceTotals, parsePercent, todayIso, type PersonSummary, type WorkSummary } from '@twelveten/shared';
 import Field from '@/admin/ui/Field.vue';
 import { errorMessage } from '@/admin/api';
 import { toast } from '@/admin/state';
@@ -9,15 +9,13 @@ import { btnPrimary } from '@/admin/ui/buttons';
 import { boApi } from './api';
 import { money, percentInput } from './format';
 import PersonPicker from './PersonPicker.vue';
-import Pagination from './Pagination.vue';
-import StatusBadge from './StatusBadge.vue';
+import WorkPicker from './WorkPicker.vue';
 
 /**
  * Start an invoice from scratch: choose the buyer, then any works from the inventory (any artists).
  * Creating it puts available works on hold for the buyer.
  */
 const router = useRouter();
-const PAGE_SIZE = 12;
 
 const buyer = ref<PersonSummary | null>(null);
 const selected = ref<WorkSummary[]>([]);
@@ -26,40 +24,6 @@ boApi.invoiceSettings().then(
     (s) => (form.tax = percentInput(s.defaultTaxRateBps)),
     () => {},
 );
-
-// ---- Work search ----
-const q = ref('');
-const status = ref<WorkStatus | ''>('available');
-const page = ref(1);
-const result = ref<NumberedPage<WorkSummary> | null>(null);
-const loading = ref(false);
-let seq = 0;
-async function load() {
-    const mine = ++seq;
-    loading.value = true;
-    try {
-        const r = await boApi.works({ q: q.value.trim(), status: status.value || null, page: page.value, limit: PAGE_SIZE });
-        if (mine === seq) result.value = r;
-    } catch (e) {
-        if (mine === seq) toast(errorMessage(e), 'error');
-    } finally {
-        if (mine === seq) loading.value = false;
-    }
-}
-let timer: ReturnType<typeof setTimeout> | undefined;
-watch(q, () => {
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-        page.value = 1;
-        void load();
-    }, 250);
-});
-watch(status, () => {
-    page.value = 1;
-    void load();
-});
-watch(page, () => void load());
-void load();
 
 /** Why a work can't go on this buyer's invoice, or '' when it can. */
 function blocked(w: WorkSummary): string {
@@ -70,6 +34,7 @@ function blocked(w: WorkSummary): string {
     return w.status === 'nfs' ? 'Not for sale' : 'Returned to artist';
 }
 const isSelected = (w: WorkSummary) => selected.value.some((s) => s.id === w.id);
+const selectedIds = computed(() => selected.value.map((w) => w.id));
 function toggle(w: WorkSummary) {
     if (isSelected(w)) selected.value = selected.value.filter((s) => s.id !== w.id);
     else if (!blocked(w)) selected.value = [...selected.value, w];
@@ -131,59 +96,7 @@ async function create() {
                 <!-- 2. Works -->
                 <section aria-labelledby="works-h" class="rounded-md border border-slate-200 bg-white p-4">
                     <h2 id="works-h" class="mb-2 text-sm font-semibold">2. Works <span class="font-normal text-slate-500">(any artists)</span></h2>
-                    <div class="mb-3 grid gap-2 sm:grid-cols-[1fr_12rem]">
-                        <label class="block">
-                            <span class="block text-xs font-medium text-slate-600">Search</span>
-                            <input
-                                v-model="q"
-                                type="search"
-                                aria-label="Search works"
-                                placeholder="Artist, title, inventory no.…"
-                                class="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm focus:border-sky-700 focus:outline-none"
-                            />
-                        </label>
-                        <label class="block">
-                            <span class="block text-xs font-medium text-slate-600">Show</span>
-                            <select v-model="status" aria-label="Show works" class="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm">
-                                <option value="available">Available</option>
-                                <option value="on_hold">On hold</option>
-                                <option value="">All works</option>
-                            </select>
-                        </label>
-                    </div>
-                    <ul class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4" :aria-busy="loading" data-testid="invoice-work-results">
-                        <li v-for="w in result?.items ?? []" :key="w.id">
-                            <label
-                                class="block h-full cursor-pointer overflow-hidden rounded-md border bg-white text-xs leading-snug"
-                                :class="[isSelected(w) ? 'border-sky-700 ring-2 ring-sky-700/30' : 'border-slate-200 hover:border-sky-700', blocked(w) && !isSelected(w) ? 'cursor-not-allowed opacity-50' : '']"
-                                :title="blocked(w)"
-                            >
-                                <div class="relative flex aspect-square items-center justify-center bg-slate-100">
-                                    <img v-if="w.image" :src="w.image.url" :alt="w.image.alt" class="h-full w-full object-contain" loading="lazy" />
-                                    <span v-else class="text-slate-400">No image</span>
-                                    <input
-                                        type="checkbox"
-                                        class="absolute left-2 top-2 h-4 w-4"
-                                        :checked="isSelected(w)"
-                                        :disabled="Boolean(blocked(w)) && !isSelected(w)"
-                                        :aria-label="`${w.artistName}, ${w.title || 'Untitled'}`"
-                                        @change="toggle(w)"
-                                    />
-                                </div>
-                                <div class="space-y-0.5 p-2">
-                                    <div class="text-slate-600">{{ w.artistName }}</div>
-                                    <div class="font-medium italic">{{ w.title || 'Untitled' }}<span v-if="w.dateText" class="not-italic">, {{ w.dateText }}</span></div>
-                                    <div class="flex items-center justify-between gap-1 pt-0.5">
-                                        <StatusBadge :status="w.status" />
-                                        <span class="font-medium tabular-nums">{{ w.priceCents === null ? 'No price' : money(w.priceCents, w.currency) }}</span>
-                                    </div>
-                                    <div v-if="blocked(w)" class="text-[11px] text-slate-500">{{ blocked(w) }}</div>
-                                </div>
-                            </label>
-                        </li>
-                    </ul>
-                    <p v-if="result && !result.items.length" class="py-6 text-center text-sm text-slate-500">No works match.</p>
-                    <Pagination v-if="result" :page="page" :page-size="result.pageSize" :total="result.total" label="works" @page="(n) => (page = n)" />
+                    <WorkPicker :selected-ids="selectedIds" :blocked="blocked" testid="invoice-work-results" @toggle="toggle" />
                 </section>
             </div>
 

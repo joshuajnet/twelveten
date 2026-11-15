@@ -31,6 +31,18 @@ import type {
     WorkPatch,
     WorkStatus,
     WorkSummary,
+    PersonDuplicate,
+    PersonMerge,
+    PointerData,
+    RoomArtistsPut,
+    RoomCreate,
+    RoomDashboard,
+    RoomPatch,
+    RoomStatus,
+    RoomSummary,
+    RoomWorksPut,
+    ViewingRoom,
+    VisitorDashboard,
 } from '@twelveten/shared';
 import { adminSend as send, qs } from '@/api/client';
 
@@ -57,6 +69,13 @@ export interface InvoiceQuery {
     q?: string;
     status?: InvoiceStatus | null;
     person?: string | null;
+    page?: number;
+    limit?: number;
+}
+
+export interface RoomQuery {
+    q?: string;
+    status?: RoomStatus | null;
     page?: number;
     limit?: number;
 }
@@ -110,4 +129,28 @@ export const boApi = {
     putInvoiceSettings: (input: InvoiceSettingsPut) => send<InvoiceSettings>('PUT', '/invoice-settings', input),
 
     linkArtwork: (artworkId: string, input: ArtworkLinkInput) => send<Artwork>('POST', `/artworks/${artworkId}/link`, input),
+
+    duplicates: (page = 1) => send<NumberedPage<PersonDuplicate>>('GET', `/persons/duplicates${qs({ page })}`),
+    duplicateCount: () => send<{ count: number }>('GET', '/persons/duplicates/count').then((r) => r.count),
+    duplicatesOf: (id: string) => send<{ items: PersonDuplicate[] }>('GET', `/persons/${id}/duplicates`).then((r) => r.items),
+    dismissDuplicate: (aId: string, bId: string) => send<void>('POST', '/persons/duplicates/dismiss', { aId, bId }),
+    mergePerson: (id: string, input: PersonMerge) => send<Person>('POST', `/persons/${id}/merge`, input),
+    putPersonEmails: (id: string, emails: string[]) => send<Person>('PUT', `/persons/${id}/emails`, { emails }),
+
+    rooms: (p: RoomQuery = {}) => send<NumberedPage<RoomSummary>>('GET', `/rooms${qs({ ...p })}`),
+    room: (id: string) => send<ViewingRoom>('GET', `/rooms/${id}`),
+    createRoom: (input: RoomCreate) => send<ViewingRoom>('POST', '/rooms', input),
+    patchRoom: (id: string, patch: RoomPatch) => send<ViewingRoom>('PATCH', `/rooms/${id}`, patch),
+    deleteRoom: (id: string) => send<void>('DELETE', `/rooms/${id}`),
+    putRoomWorks: (id: string, input: RoomWorksPut) => send<ViewingRoom>('PUT', `/rooms/${id}/works`, input),
+    putRoomArtists: (id: string, input: RoomArtistsPut) => send<ViewingRoom>('PUT', `/rooms/${id}/artists`, input),
+    newRoomLink: (id: string) => send<ViewingRoom>('POST', `/rooms/${id}/token`),
+    roomDashboard: (id: string) => send<RoomDashboard>('GET', `/rooms/${id}/dashboard`),
+    visitorDashboard: (roomId: string, visitorId: string) => send<VisitorDashboard>('GET', `/rooms/${roomId}/visitors/${visitorId}`),
+    deleteVisitor: (roomId: string, visitorId: string) => send<void>('DELETE', `/rooms/${roomId}/visitors/${visitorId}`),
+    visitorPointer: (roomId: string, visitorId: string, workId?: string) =>
+        send<{ items: PointerData[] }>('GET', `/rooms/${roomId}/visitors/${visitorId}/pointer${qs({ work: workId })}`).then((r) => r.items),
 };
+
+/** The public link of a viewing room. */
+export const roomUrl = (token: string) => `${location.origin}/rooms/${token}`;

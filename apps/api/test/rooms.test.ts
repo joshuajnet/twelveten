@@ -254,6 +254,12 @@ describe('viewing a room', () => {
         // A room with visitors can't be deleted, and the person can't be either.
         expect((await call('DELETE', `/admin/rooms/${room.id}`)).status).toBe(409);
         expect((await call('DELETE', `/admin/persons/${visitor.person_id}`)).status).toBe(409);
+
+        // Forgetting the visitor removes their activity; then both can go.
+        expect((await call('DELETE', `/admin/rooms/${room.id}/visitors/${visitor.id}`)).status).toBe(204);
+        expect(await db.selectFrom('viewing_room_work_stats').select('work_id').where('visitor_id', '=', visitor.id).execute()).toEqual([]);
+        expect((await b.req('GET', path)).body.gate).toBeTruthy();
+        expect((await call('DELETE', `/admin/rooms/${room.id}`)).status).toBe(204);
     });
 
     it('starts a new visit after 30 minutes away and counts revisits per work', async () => {

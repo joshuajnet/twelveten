@@ -21,6 +21,7 @@ describe('CloudFront viewer-request function', () => {
         ['/admin/people', '/index.html'],
         ['/admin/people/0190a1b2-0000-7000-8000-000000000000/artist', '/index.html'],
         ['/admin/works/new', '/index.html'],
+        ['/rooms/AbCdEfGhIjKlMnOpQrStUvWxYz0123456789-_abcde', '/index.html'],
     ])('%s → %s', (uri, expected) => expect(run(uri).uri).toBe(expected));
 
     it('redirects legacy URLs permanently, matching the shared route table', () => {

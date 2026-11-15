@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router';
 import { useHead } from '@unhead/vue';
 import '@/admin/admin.css';
@@ -9,6 +9,8 @@ import { conflict } from '@/admin/state';
 import { signOut } from '@/admin/api';
 import { btnDanger, btnOutline } from '@/admin/ui/buttons';
 import { session, setHint } from '@/session';
+import { boApi } from './api';
+import { duplicateCount } from './nav';
 
 /** Back office shell: sidebar navigation, account controls, toasts and the conflict prompt. */
 const route = useRoute();
@@ -35,7 +37,14 @@ const nav = computed(() => [
     { label: 'Collectors', to: { name: 'bo-people', query: { profile: 'collector' } }, active: viewedProfile.value === 'collector' },
     { label: 'Inventory', to: { name: 'bo-inventory' }, active: route.name === 'bo-inventory' || route.name === 'bo-work' },
     { label: 'Invoices', to: { name: 'bo-invoices' }, active: String(route.name ?? '').startsWith('bo-invoice') },
+    { label: 'Viewing rooms', to: { name: 'bo-rooms' }, active: String(route.name ?? '').startsWith('bo-room') },
+    { label: 'Duplicates', to: { name: 'bo-duplicates' }, active: route.name === 'bo-duplicates', badge: duplicateCount.value || null },
 ]);
+
+// Refresh the duplicates badge on each page change (cheap; one count query).
+const refreshCount = () => boApi.duplicateCount().then((n) => (duplicateCount.value = n)).catch(() => {});
+onMounted(refreshCount);
+watch(() => route.name, refreshCount);
 
 async function logout() {
     await signOut().catch(() => {});
@@ -74,7 +83,10 @@ function closeConflict(o: boolean) {
                     :class="item.active ? 'bg-slate-100 font-medium text-sky-900' : 'text-slate-700'"
                     :aria-current="item.active ? 'page' : undefined"
                 >
-                    {{ item.label }}
+                    <span class="flex items-center justify-between gap-2">
+                        {{ item.label }}
+                        <span v-if="'badge' in item && item.badge" class="rounded-full bg-amber-100 px-1.5 text-xs font-medium tabular-nums text-amber-800" :aria-label="`${item.badge} possible duplicates`">{{ item.badge }}</span>
+                    </span>
                 </RouterLink>
             </nav>
             <div class="space-y-1 border-t border-slate-200 p-3 text-sm">

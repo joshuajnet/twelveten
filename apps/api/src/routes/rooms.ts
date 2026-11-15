@@ -30,9 +30,10 @@ const cookiePath = (token: string) => `/api/rooms/${token}`;
  * Public viewing room routes. Anyone with the link sees the gate; after entering a name and email,
  * a per-room HttpOnly cookie remembers the visitor in this browser. Nothing here is cached.
  */
-export function roomPublicRoutes(opts: { siteUrl: string }) {
+export function roomPublicRoutes(opts: { siteUrl: string; trustedOrigins?: string[] }) {
     const app = new Hono<AppEnv>();
-    const siteOrigin = new URL(opts.siteUrl).origin;
+    // The same origins Better Auth trusts.
+    const origins = new Set([opts.siteUrl, ...(opts.trustedOrigins ?? [])].map((o) => new URL(o).origin));
     const secure = opts.siteUrl.startsWith('https://');
 
     app.use('/rooms/*', async (c, next) => {
@@ -43,7 +44,7 @@ export function roomPublicRoutes(opts: { siteUrl: string }) {
         // Writes only from the site itself (browsers always send Origin on POST).
         if (c.req.method === 'POST') {
             const origin = c.req.header('origin');
-            if (origin && origin !== siteOrigin) throw new HttpError(403, 'Forbidden');
+            if (origin && !origins.has(origin)) throw new HttpError(403, 'Forbidden');
         }
         await next();
     });

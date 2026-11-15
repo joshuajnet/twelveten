@@ -10,6 +10,8 @@ import { btnDanger, btnOutline, btnPrimary } from '@/admin/ui/buttons';
 import { boApi } from '../api';
 import { money } from '../format';
 import StatusBadge from '../StatusBadge.vue';
+import EngagementDots from '../rooms/EngagementDots.vue';
+import { duration, when } from '../rooms/time';
 
 /** Collector profile: their collection grouped by artist, their invoices, and private notes. */
 const props = defineProps<{ person: Person }>();
@@ -180,6 +182,60 @@ async function removeProfile() {
                 </table>
             </div>
             <p v-else class="text-sm text-slate-500">No invoices yet.</p>
+        </section>
+
+        <!-- Viewing rooms -->
+        <section aria-labelledby="rooms-h" class="rounded-md border border-slate-200 bg-white p-4" data-testid="collector-rooms">
+            <h3 id="rooms-h" class="mb-2 text-sm font-semibold">Viewing rooms ({{ profile.viewingRooms.length }})</h3>
+            <div v-if="profile.viewingRooms.length" class="overflow-x-auto">
+                <table class="w-full min-w-[36rem] text-left text-sm">
+                    <thead class="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+                        <tr>
+                            <th scope="col" class="py-1.5 pr-3 font-medium">Room</th>
+                            <th scope="col" class="py-1.5 pr-3 font-medium">Last visit</th>
+                            <th scope="col" class="py-1.5 pr-3 text-right font-medium">Visits</th>
+                            <th scope="col" class="py-1.5 pr-3 text-right font-medium">Time</th>
+                            <th scope="col" class="py-1.5 pr-3 text-right font-medium">Works seen</th>
+                            <th scope="col" class="py-1.5 font-medium">Engagement</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr v-for="v in profile.viewingRooms" :key="v.id">
+                            <td class="py-1.5 pr-3">
+                                <RouterLink :to="{ name: 'bo-room-visitor', params: { id: v.roomId, visitorId: v.id } }" class="font-medium text-sky-900 hover:underline">{{ v.roomTitle }}</RouterLink>
+                                <span v-if="v.inquiries" class="ml-1.5 rounded bg-rose-50 px-1 text-[11px] font-medium text-rose-800">Inquired</span>
+                                <span v-if="v.enteredName !== person.name || v.enteredEmail !== (person.email || '').toLowerCase()" class="block text-xs text-slate-500" title="What they typed at the gate (not verified)">as {{ v.enteredName }} · {{ v.enteredEmail }}</span>
+                            </td>
+                            <td class="py-1.5 pr-3 text-slate-600">{{ when(v.lastSeenAt) }}</td>
+                            <td class="py-1.5 pr-3 text-right tabular-nums">{{ v.visits }}</td>
+                            <td class="py-1.5 pr-3 text-right tabular-nums">{{ duration(v.activeMs) }}</td>
+                            <td class="py-1.5 pr-3 text-right tabular-nums">{{ v.worksViewed }} / {{ v.worksTotal }}</td>
+                            <td class="py-1.5"><EngagementDots :score="v.engagement" /></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p v-else class="text-sm text-slate-500">{{ person.name }} hasn’t visited a viewing room.</p>
+
+            <div v-if="profile.topWorks.length" class="mt-4">
+                <h4 class="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Works they looked at most</h4>
+                <ul class="grid grid-cols-3 gap-3 sm:grid-cols-6">
+                    <li v-for="w in profile.topWorks" :key="w.workId">
+                        <RouterLink
+                            :to="w.roomId && w.visitorId ? { name: 'bo-room-visitor', params: { id: w.roomId, visitorId: w.visitorId }, hash: `#work-${w.workId}` } : { name: 'bo-work', params: { id: w.workId } }"
+                            class="group block"
+                            :title="`${w.artistName}, ${w.title} — interest ${w.interest}/100`"
+                        >
+                            <div class="flex aspect-square items-center justify-center overflow-hidden rounded bg-slate-100">
+                                <img v-if="w.image" :src="w.image" alt="" class="h-full w-full object-contain" loading="lazy" />
+                            </div>
+                            <div class="mt-1 truncate text-xs italic text-slate-800 group-hover:text-sky-900">{{ w.title || 'Untitled' }}</div>
+                            <div class="truncate text-[11px] text-slate-500">{{ w.artistName }}</div>
+                            <div class="mt-0.5 h-1 rounded bg-slate-100"><div class="h-1 rounded bg-sky-700" :style="{ width: `${w.interest}%` }" /></div>
+                        </RouterLink>
+                    </li>
+                </ul>
+            </div>
         </section>
 
         <!-- Notes -->

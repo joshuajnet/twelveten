@@ -1,5 +1,8 @@
 <script>
+import ZoomViewer from './ZoomViewer.vue';
+
 export default {
+    components: { ZoomViewer },
     props: {
         slides: Object,
         worksAvailable: {
@@ -16,7 +19,21 @@ export default {
             scrollView: false,
             availableView: false,
             visibleSlides: [],
+            zoomOpen: false,
+            zoomIndex: 0,
         };
+    },
+    computed: {
+        /** Image slides, for the zoom viewer (videos can't be zoomed). */
+        zoomSlides() {
+            return this.visibleSlides.filter((s) => s.image);
+        },
+        zoomImages() {
+            return this.zoomSlides.map((s) => ({ url: s.image, alt: s.alt || [s.author, s.title].filter(Boolean).join(', ') }));
+        },
+        currentHasImage() {
+            return Boolean(this.visibleSlides[this.indexVisible]?.image);
+        },
     },
     mounted() {
         for (let slide of this.slides) {
@@ -131,6 +148,19 @@ export default {
                 this.availableView = true;
             }
         },
+        openZoom(slide) {
+            const i = this.zoomSlides.indexOf(slide ?? this.visibleSlides[this.indexVisible]);
+            if (i < 0) return;
+            this.autoPlay(false);
+            this.stopVideo();
+            this.zoomIndex = i;
+            this.zoomOpen = true;
+        },
+        /** Leave the slideshow on the work last looked at. */
+        zoomClosed() {
+            const i = this.visibleSlides.indexOf(this.zoomSlides[this.zoomIndex]);
+            if (i >= 0 && !this.scrollView) this.indexVisible = i;
+        },
         createMailTo(slide) {
             let url = `https://twelvetengallery.com${slide.image}`;
             let encodeSubject = encodeURIComponent(`Inquiry into work by ${slide.author}`);
@@ -158,6 +188,17 @@ export default {
                 <div v-if="paused" class="cursor-pointer text-lg hover:text-sky-900" @click="autoPlay(true)">
                     <i class="las la-play"></i>
                 </div>
+                <button
+                    v-if="currentHasImage"
+                    type="button"
+                    class="cursor-pointer text-lg hover:text-sky-900"
+                    aria-label="Zoom in on this work"
+                    title="Zoom"
+                    data-testid="slideshow-zoom"
+                    @click="openZoom()"
+                >
+                    <i class="las la-search-plus"></i>
+                </button>
             </div>
             <div class="font-roboto font-light text-sm">
                 <span v-if="worksAvailable">
@@ -297,7 +338,9 @@ export default {
                             <img
                                 v-if="slide.image"
                                 v-lazy="slide.image"
-                                class="lazy-image max-w-full max-h-full mb-2"
+                                class="lazy-image max-w-full max-h-full mb-2 cursor-zoom-in"
+                                title="Zoom"
+                                @click="openZoom(slide)"
                             />
                             <div class="max-w-sm text-sm">
                                 <div v-if="slide.author">{{ slide.author }}</div>
@@ -320,6 +363,7 @@ export default {
                 </div>
             </div>
         </transition>
+        <ZoomViewer v-model:open="zoomOpen" v-model:index="zoomIndex" :images="zoomImages" @close="zoomClosed" />
     </div>
 </template>
 <style scoped>

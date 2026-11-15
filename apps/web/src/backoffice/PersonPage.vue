@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { DropdownMenuContent, DropdownMenuItem, DropdownMenuPortal, DropdownMenuRoot, DropdownMenuTrigger, TabsList, TabsRoot, TabsTrigger } from 'reka-ui';
-import { formatPrice, PROFILE_TYPES, type Person, type PersonPatch, type ProfileType } from '@twelveten/shared';
+import { formatPrice, PROFILE_TYPES, type Person, type PersonDuplicate, type PersonPatch, type ProfileType } from '@twelveten/shared';
 import Field from '@/admin/ui/Field.vue';
 import Dialog from '@/admin/ui/Dialog.vue';
 import HistoryDialog from '@/admin/HistoryDialog.vue';
@@ -19,6 +19,7 @@ import { PROFILE_PANELS } from './profiles';
 import Avatar from './Avatar.vue';
 import AddressesEditor from './AddressesEditor.vue';
 import StatusBadge from './StatusBadge.vue';
+import MergeDialog from './MergeDialog.vue';
 
 /** One person: their details first, then the management panel of one of their profiles. */
 const route = useRoute();
@@ -54,6 +55,40 @@ async function load() {
     }
 }
 watch(id, () => void load(), { immediate: true });
+
+// ---- Other emails (aliases) ----
+const newAlias = ref('');
+async function saveAliases(emails: string[]) {
+    try {
+        onPanelUpdate(await boApi.putPersonEmails(id.value, emails));
+        newAlias.value = '';
+    } catch (e) {
+        toast(errorMessage(e), 'error');
+    }
+}
+function addAlias() {
+    const v = newAlias.value.trim().toLowerCase();
+    if (!v || !person.value) return;
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) return void toast('That doesn’t look like an email', 'error');
+    void saveAliases([...person.value.emails, v]);
+}
+
+// ---- Possible duplicates and merge ----
+const duplicates = ref<PersonDuplicate[]>([]);
+watch(id, async (pid) => {
+    duplicates.value = [];
+    duplicates.value = await boApi.duplicatesOf(pid).catch(() => []);
+}, { immediate: true });
+const other = (d: PersonDuplicate) => (d.a.id === id.value ? d.b : d.a);
+const merge = ref<{ open: boolean; other: string | null }>({ open: false, other: null });
+async function notSame(d: PersonDuplicate) {
+    try {
+        await boApi.dismissDuplicate(d.a.id, d.b.id);
+        duplicates.value = duplicates.value.filter((x) => x !== d);
+    } catch (e) {
+        toast(errorMessage(e), 'error');
+    }
+}
 
 // Open a profile tab when the URL names none (or one the person doesn't have).
 watch([person, activeProfile], ([p, active]) => {
@@ -163,9 +198,21 @@ const backTo = computed(() => ({ name: 'bo-people', query: peopleListQuery.value
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
                     <span v-if="detailsDirty" class="text-xs text-amber-700">● Unsaved changes</span>
+                    <button type="button" :class="btnGhost" @click="merge = { open: true, other: null }">Merge…</button>
                     <button type="button" :class="btnGhost" @click="historyOpen = true">History</button>
                     <button type="button" :class="btnPrimary" :disabled="!detailsDirty || saving" title="Save (Ctrl+S)" @click="save()">{{ saving ? 'Saving…' : 'Save details' }}</button>
                 </div>
+            </div>
+
+            <div v-if="duplicates.length" class="border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm" role="note" data-testid="possible-duplicates">
+                <p v-for="d in duplicates.slice(0, 3)" :key="other(d).id" class="flex flex-wrap items-center gap-x-2 gap-y-1 py-0.5">
+                    <span class="text-amber-900">Possibly the same as</span>
+                    <RouterLink :to="{ name: 'bo-person', params: { id: other(d).id } }" class="font-medium text-sky-900 hover:underline">{{ other(d).name }}</RouterLink>
+                    <span class="text-xs text-amber-800">({{ d.reasons.join(', ').toLowerCase() }})</span>
+                    <span class="flex-1" />
+                    <button type="button" class="text-xs text-slate-600 hover:underline" @click="notSame(d)">Not the same</button>
+                    <button type="button" class="text-xs font-medium text-sky-900 hover:underline" @click="merge = { open: true, other: other(d).id }">Compare &amp; merge</button>
+                </p>
             </div>
 
             <form class="grid gap-x-6 p-4 md:grid-cols-2" @submit.prevent="save()">
@@ -188,6 +235,27 @@ const backTo = computed(() => ({ name: 'bo-people', query: peopleListQuery.value
                         <a v-if="p.email" :href="`mailto:${p.email}`" class="text-sky-800 hover:underline">Email {{ p.name.split(' ')[0] }}</a>
                         <a v-if="p.phone" :href="`tel:${p.phone.replace(/[^+\d]/g, '')}`" class="text-sky-800 hover:underline">Call</a>
                     </p>
+                    <div class="py-1.5" data-testid="other-emails">
+                        <span class="block text-xs font-medium text-slate-600">Other emails</span>
+                        <ul v-if="p.emails.length" class="mt-1 flex flex-wrap gap-1.5">
+                            <li v-for="e in p.emails" :key="e" class="inline-flex items-center gap-1 rounded-full bg-slate-100 py-0.5 pl-2.5 pr-1 text-xs">
+                                {{ e }}
+                                <button type="button" class="rounded-full px-1 text-slate-500 hover:bg-slate-200 hover:text-red-700" :aria-label="`Remove ${e}`" @click="saveAliases(p.emails.filter((x) => x !== e))">×</button>
+                            </li>
+                        </ul>
+                        <div class="mt-1 flex gap-1.5">
+                            <input
+                                v-model="newAlias"
+                                type="email"
+                                aria-label="Add another email"
+                                placeholder="Add another email…"
+                                class="min-w-0 flex-1 rounded border border-slate-300 bg-white px-2 py-1 text-sm focus:border-sky-700 focus:outline-none"
+                                @keydown.enter.prevent="addAlias"
+                            />
+                            <button type="button" :class="btnOutline" :disabled="!newAlias.trim()" @click="addAlias">Add</button>
+                        </div>
+                        <p class="mt-0.5 text-[11px] text-slate-500">Viewing room sign-ups with any of these emails are matched to {{ p.name.split(' ')[0] }}.</p>
+                    </div>
                     <h3 class="mb-2 mt-3 text-xs font-medium text-slate-600">Addresses</h3>
                     <AddressesEditor :key="p.id" entity="person" :entity-id="p.id" :initial="p.addresses" />
                 </div>
@@ -261,6 +329,7 @@ const backTo = computed(() => ({ name: 'bo-people', query: peopleListQuery.value
         </div>
 
         <HistoryDialog v-model:open="historyOpen" entity="person" :id="p.id" @restored="load" />
+        <MergeDialog v-model:open="merge.open" :first-id="p.id" :second-id="merge.other" />
         <Dialog v-model:open="confirmDelete" title="Delete this person?" description="Their contact details and addresses are removed. It can be restored from History.">
             <template #footer>
                 <button type="button" :class="btnOutline" @click="confirmDelete = false">Cancel</button>
