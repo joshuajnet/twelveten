@@ -7,6 +7,7 @@ import { boApi } from './api';
 import { money } from './format';
 import Pagination from './Pagination.vue';
 import StatusBadge from './StatusBadge.vue';
+import ArtImage from '@/components/ArtImage.vue';
 
 /**
  * Search the whole inventory (any artists) and tick works. `blocked` explains why a work can't be
@@ -93,7 +94,7 @@ function toggle(w: WorkSummary) {
                     :title="blocked(w)"
                 >
                     <div class="relative flex aspect-square items-center justify-center bg-slate-100">
-                        <img v-if="w.image" :src="w.image.url" :alt="w.image.alt" class="h-full w-full object-contain" loading="lazy" />
+                        <ArtImage sizes="200px" v-if="w.image" :src="w.image.url" :alt="w.image.alt" class="h-full w-full object-contain" />
                         <span v-else class="text-slate-400">No image</span>
                         <input
                             type="checkbox"

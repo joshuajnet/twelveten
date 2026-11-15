@@ -21,7 +21,6 @@ const artist = (id, name) => ({ id, name, portrait: null, bioHtml: `<p>${name} b
 const room = {
     title: 'Room',
     introHtml: null,
-    inquiryEmail: 'gallery@example.com',
     works: [work('w1', 'a1', 'Ann'), work('w2', 'a2', 'Bo')],
     artists: [artist('a1', 'Ann'), artist('a2', 'Bo')],
     viewer: { name: 'Pat' },

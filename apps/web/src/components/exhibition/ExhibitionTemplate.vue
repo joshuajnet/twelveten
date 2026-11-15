@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { formatDateRange, joinArtists, type Exhibition } from '@twelveten/shared';
 import GallerySlideshow from '@/components/GallerySlideshow.vue';
 import RichContent from '@/components/RichContent.vue';
+import ArtImage from '@/components/ArtImage.vue';
 import ExhibitionHeader from './ExhibitionHeader.vue';
 
 /** The single layout shared by every exhibition and fair page. */
@@ -11,7 +12,9 @@ const props = defineProps<{ exhibition: Exhibition }>();
 /** GallerySlideshow's slide shape. */
 const slides = computed(() =>
     props.exhibition.artworks.map((a) => ({
+        id: a.id,
         image: a.image,
+        alt: a.alt,
         video: a.video,
         author: a.author,
         title: a.title,
@@ -41,11 +44,14 @@ const heroAlt = computed(() => {
             class="container mx-auto grid gap-6 px-3"
             :class="exhibition.heroImage ? 'md:grid-cols-2' : 'max-w-(--breakpoint-sm) md:grid-cols-1'"
         >
-            <img
+            <ArtImage
                 v-if="exhibition.heroImage"
-                v-lazy="{ src: exhibition.heroImage }"
-                class="max-w-full w-auto h-auto mx-auto"
+                :src="exhibition.heroImage"
                 :alt="heroAlt"
+                eager
+                sharpest
+                sizes="(min-width: 768px) 50vw, 100vw"
+                class="max-w-full w-auto h-auto mx-auto"
             />
             <div id="press-release">
                 <ExhibitionHeader :exhibition="exhibition" />

@@ -6,6 +6,7 @@ import { pressCreateSchema } from './admin.ts';
 import type { WorkSummary } from './inventory.ts';
 import type { InvoiceSummary } from './invoices.ts';
 import type { RoomVisitorSummary, WorkInterest } from './rooms.ts';
+import type { InquirySummary } from './inquiries.ts';
 
 const { isoDate, isoTimestamp, uuid, slug } = schemas;
 const text = z.string().trim();
@@ -115,6 +116,8 @@ export interface CollectorProfile {
     /** On-hold and sold works where this person is the buyer, grouped by artist (A–Z). */
     collection: CollectionArtist[];
     invoices: InvoiceSummary[];
+    /** Their inquiries, newest first. */
+    inquiries: InquirySummary[];
     /** Viewing rooms this person entered, most recent first. */
     viewingRooms: RoomVisitorSummary[];
     /** The works they looked at most across viewing rooms (top 6 by interest). */

@@ -130,6 +130,9 @@ export async function mergePersons(
     // ---- Purchases, holds, invoices ----
     await trx.updateTable('works').set({ buyer_id: targetId }).where('buyer_id', '=', sourceId).execute();
     await trx.updateTable('invoices').set({ person_id: targetId }).where('person_id', '=', sourceId).execute();
+    await trx.updateTable('inquiries').set({ person_id: targetId }).where('person_id', '=', sourceId).execute();
+    // Browsers that knew the merged person now know the kept one.
+    await trx.updateTable('visitor_identities').set({ person_id: targetId }).where('person_id', '=', sourceId).execute();
 
     // ---- Collector profile ----
     if (sourceCollector) {

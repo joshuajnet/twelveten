@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { artistList, formatDateRange, formatEvent, type Exhibition } from '@twelveten/shared';
-import { INQUIRE_EMAIL } from '@/config';
+import { computed, ref } from 'vue';
+import { artistList, formatDateRange, formatEvent, type Exhibition, type InquiryItem } from '@twelveten/shared';
+import InquiryDialog from '@/components/InquiryDialog.vue';
 
 const props = defineProps<{ exhibition: Exhibition }>();
 
@@ -9,7 +9,13 @@ const artists = computed(() => artistList(props.exhibition.artists));
 const dates = computed(() => formatDateRange(props.exhibition.startsOn, props.exhibition.endsOn));
 const events = computed(() => props.exhibition.events.map((e) => formatEvent(e, props.exhibition.timezone)));
 const venueLines = computed(() => (props.exhibition.venueText ?? '').split('\n').filter(Boolean));
-const inquireHref = computed(() => `mailto:${INQUIRE_EMAIL}?subject=${encodeURIComponent(props.exhibition.title)}`);
+const inquiring = ref(false);
+const inquiryItem = computed<InquiryItem>(() => ({
+    title: props.exhibition.title,
+    artist: artists.value.join(', ') || null,
+    date: dates.value,
+    image: props.exhibition.thumbnail ?? props.exhibition.heroImage,
+}));
 const isInternal = (url: string) => url.startsWith('/') && !url.startsWith('/media/');
 </script>
 
@@ -38,13 +44,16 @@ const isInternal = (url: string) => url.startsWith('/') && !url.startsWith('/med
             <template v-for="e in events" :key="e">{{ e }}<br /></template>
             <template v-for="line in venueLines" :key="line">{{ line }}<br /></template>
             <template v-if="exhibition.hoursText">{{ exhibition.hoursText }}<br /></template>
-            <a
+            <button
                 v-if="exhibition.showInquire"
-                :href="inquireHref"
-                class="py-1 px-3 inline-block cursor-pointer hover:text-sky-600 no-underline! border hover:shadow-sm mt-3 font-roboto font-light text-sm"
+                type="button"
+                class="py-1 px-3 inline-block cursor-pointer hover:text-sky-600 border hover:shadow-sm mt-3 font-roboto font-light text-sm"
+                data-testid="exhibition-inquire"
+                @click="inquiring = true"
             >
                 Inquire
-            </a>
+            </button>
+            <InquiryDialog v-if="exhibition.showInquire" v-model:open="inquiring" :item="inquiryItem" :target="{ kind: 'exhibition', exhibitionId: exhibition.id }" />
         </div>
     </div>
 </template>

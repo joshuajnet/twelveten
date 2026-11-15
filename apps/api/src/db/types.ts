@@ -361,7 +361,6 @@ export interface ViewingRoomTable {
     intro: JsonWithDefault<RichDoc>;
     show_prices: Generated<boolean>;
     hide_unavailable: Generated<boolean>;
-    inquiry_email: string | null;
     status: Generated<'draft' | 'live' | 'closed'>;
     opens_at: string | null;
     closes_at: string | null;
@@ -463,6 +462,44 @@ export interface ViewingRoomPointerTable {
     created_at: CreatedAt;
 }
 
+export interface VisitorIdentityTable {
+    hash: string;
+    person_id: string;
+    created_at: CreatedAt;
+    last_seen_at: Timestamp;
+}
+
+export interface InquiryItem {
+    title: string;
+    artist?: string | null;
+    date?: string | null;
+    medium?: string | null;
+    dimensions?: string | null;
+    image?: string | null;
+    price?: string | null;
+    /** The exhibition or room it was asked from. */
+    context?: string | null;
+}
+
+export interface InquiryTable {
+    id: Generated<string>;
+    person_id: string;
+    source: 'exhibition' | 'slide' | 'room';
+    exhibition_id: string | null;
+    artwork_id: string | null;
+    work_id: string | null;
+    room_id: string | null;
+    item: JsonWithDefault<InquiryItem>;
+    page_url: string | null;
+    note: Generated<string>;
+    entered_name: string | null;
+    entered_email: string | null;
+    match: 'email' | 'alias' | 'new' | 'known';
+    seen_at: string | null;
+    seen_by: string | null;
+    created_at: CreatedAt;
+}
+
 export interface SeedStateTable {
     key: string;
     applied_at: CreatedAt;
@@ -504,6 +541,8 @@ export interface Database {
     viewing_room_artist_stats: ViewingRoomArtistStatTable;
     viewing_room_events: ViewingRoomEventTable;
     viewing_room_pointer: ViewingRoomPointerTable;
+    visitor_identities: VisitorIdentityTable;
+    inquiries: InquiryTable;
 }
 
 export type ExhibitionRow = Selectable<ExhibitionTable>;

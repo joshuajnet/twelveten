@@ -14,6 +14,7 @@ import { btnDanger, btnGhost, btnOutline, btnPrimary } from '@/admin/ui/buttons'
 import { api } from '@/api/client';
 import { boApi } from '../api';
 import StatusBadge from '../StatusBadge.vue';
+import ArtImage from '@/components/ArtImage.vue';
 
 /** Artist profile: bio, CV (with PDF), exhibitions with us, and the works gallery. */
 const props = defineProps<{ person: Person }>();
@@ -305,7 +306,7 @@ function downloadCv(e: MouseEvent) {
                     <RouterLink :to="{ name: 'bo-work', params: { id: w.id } }" class="group block overflow-hidden rounded-md border border-slate-200 bg-white hover:border-sky-700 focus-visible:outline-2 focus-visible:outline-sky-700">
                         <figure>
                             <div class="flex aspect-square items-center justify-center bg-slate-100">
-                                <img v-if="w.image" :src="w.image.url" :alt="w.image.alt" class="h-full w-full object-contain" loading="lazy" />
+                                <ArtImage sizes="240px" v-if="w.image" :src="w.image.url" :alt="w.image.alt" class="h-full w-full object-contain" />
                                 <span v-else class="text-xs text-slate-400">No image</span>
                             </div>
                             <figcaption class="space-y-0.5 p-2 text-xs leading-snug">

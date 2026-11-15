@@ -44,6 +44,8 @@ async function cleanup(r: APIRequestContext) {
     for (const q of [VIEWER, 'Vera V']) {
         for (const p of (await a.get(`/persons?q=${encodeURIComponent(q)}&limit=50`)).items ?? []) {
             if (!p.name.startsWith('Vera')) continue;
+            const full = await a.get(`/persons/${p.id}`);
+            for (const i of full.collectorProfile?.inquiries ?? []) await a.send('DELETE', `/inquiries/${i.id}`);
             await a.send('DELETE', `/persons/${p.id}/collector-profile`);
             await a.send('DELETE', `/persons/${p.id}`);
         }
@@ -135,14 +137,17 @@ test('a visitor enters through the gate and the browser is remembered', async ({
     await expect(page.getByTestId('room-gate')).toHaveCount(0);
     await expect(page.getByText(`Welcome, ${VIEWER}.`)).toBeVisible();
 
-    // Prices are off: no price, and Inquire asks about the work.
+    // Prices are off: no price. Inquire opens a form that already knows the viewer.
     await expect(page.getByTestId('room-price')).toHaveCount(0);
-    const href = await page.getByTestId('room-inquire').getAttribute('href');
-    const mail = new URL(href!);
-    expect(mail.searchParams.get('subject')).toBe(`Inquiry: ${ARTIST}, Roomtest Harbour, 2025`);
-    expect(mail.searchParams.get('body')).toContain(`— ${VIEWER}`);
-    await page.getByTestId('room-inquire').evaluate((a) => a.addEventListener('click', (e) => e.preventDefault()));
     await page.getByTestId('room-inquire').click();
+    const inquiry = page.getByTestId('inquiry-dialog');
+    await expect(inquiry.getByTestId('inquiry-item')).toContainText('Roomtest Harbour');
+    await expect(inquiry.getByTestId('inquiry-known')).toContainText(VIEWER);
+    await inquiry.getByLabel(/Note/).fill('Is this framed?');
+    await inquiry.getByRole('button', { name: 'Send inquiry' }).click();
+    await expect(inquiry.getByTestId('inquiry-sent')).toBeVisible();
+    await inquiry.getByRole('button', { name: 'Close' }).last().click();
+    await expect(inquiry).not.toBeVisible();
 
     // Zoom with the keyboard, then close.
     await page.getByRole('button', { name: 'Zoom', exact: true }).click();
@@ -195,7 +200,7 @@ test('the collector profile shows the room, engagement and the visitor dashboard
 
     await expect(page.getByRole('heading', { name: `${VIEWER} in “${TITLE}”` })).toBeVisible();
     await expect(page.getByTestId('visitor-work').first()).toContainText('Roomtest Harbour');
-    await expect(page.getByTestId('visitor-timeline')).toContainText('Inquired about Roomtest Harbour');
+    await expect(page.getByTestId('visitor-timeline')).toContainText('Inquired about Roomtest Harbour: “Is this framed?”');
     await expect(page.getByTestId('visitor-timeline')).toContainText('Read the CV of');
 });
 

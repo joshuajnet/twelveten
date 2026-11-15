@@ -3,6 +3,7 @@ import { nextTick, onMounted, ref, watch } from 'vue';
 import { formatDate, type PublicRoomArtist } from '@twelveten/shared';
 import { api } from '@/api/client';
 import type { RoomTracker } from '@/composables/useRoomTracker';
+import ArtImage from '@/components/ArtImage.vue';
 
 /** The room's artists: bio, CV (expandable, with a PDF) and press, as the gallery chose to show them. */
 const props = defineProps<{ artists: PublicRoomArtist[]; token: string; tracker: RoomTracker; focus: string | null }>();
@@ -47,7 +48,7 @@ watch(() => props.focus, scrollToFocus);
             data-testid="room-artist"
         >
             <div class="mb-4 flex items-center gap-4">
-                <img v-if="a.portrait" :src="a.portrait" alt="" class="h-16 w-16 rounded-full object-cover" loading="lazy" />
+                <ArtImage sizes="64px" fit="cover" v-if="a.portrait" :src="a.portrait" alt="" class="h-16 w-16 rounded-full object-cover" />
                 <div>
                     <h2 class="text-2xl">{{ a.name }}</h2>
                     <button type="button" class="font-roboto text-sm font-light text-sky-900 underline hover:text-slate-900" @click="emit('show-works', a.id)">

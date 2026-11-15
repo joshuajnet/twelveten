@@ -24,6 +24,7 @@ import { boApi } from './api';
 import { useUnsavedGuard } from './guard';
 import { amountInput, money, percentInput } from './format';
 import StatusBadge from './StatusBadge.vue';
+import ArtImage from '@/components/ArtImage.vue';
 
 /** One invoice: the printed fields, its line items, payments, and the PDF. */
 const route = useRoute();
@@ -241,7 +242,7 @@ const statusHint = computed(() => {
                     <ul class="divide-y divide-slate-100" data-testid="invoice-items">
                         <li v-for="it in inv.items" :key="it.id" class="flex flex-wrap items-start gap-3 py-3">
                             <div class="flex h-16 w-20 shrink-0 items-center justify-center bg-slate-100">
-                                <img v-if="it.imageUrl" :src="it.imageUrl" alt="" class="max-h-full max-w-full object-contain" />
+                                <ArtImage sizes="120px" v-if="it.imageUrl" :src="it.imageUrl" alt="" class="max-h-full max-w-full object-contain" />
                             </div>
                             <div class="min-w-0 flex-1 text-sm leading-snug">
                                 <div>{{ it.artistName }}</div>

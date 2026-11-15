@@ -43,6 +43,7 @@ import type {
     RoomWorksPut,
     ViewingRoom,
     VisitorDashboard,
+    InquirySummary,
 } from '@twelveten/shared';
 import { adminSend as send, qs } from '@/api/client';
 
@@ -147,6 +148,11 @@ export const boApi = {
     newRoomLink: (id: string) => send<ViewingRoom>('POST', `/rooms/${id}/token`),
     roomDashboard: (id: string) => send<RoomDashboard>('GET', `/rooms/${id}/dashboard`),
     visitorDashboard: (roomId: string, visitorId: string) => send<VisitorDashboard>('GET', `/rooms/${roomId}/visitors/${visitorId}`),
+    inquiries: (p: { status?: 'new' | 'all'; q?: string; page?: number; limit?: number } = {}) => send<NumberedPage<InquirySummary>>('GET', `/inquiries${qs({ ...p })}`),
+    unseenInquiries: () => send<{ count: number; items: InquirySummary[] }>('GET', '/inquiries/unseen'),
+    dismissInquiry: (id: string) => send<InquirySummary>('POST', `/inquiries/${id}/seen`),
+    dismissAllInquiries: () => send<{ dismissed: number }>('POST', '/inquiries/seen'),
+    deleteInquiry: (id: string) => send<void>('DELETE', `/inquiries/${id}`),
     deleteVisitor: (roomId: string, visitorId: string) => send<void>('DELETE', `/rooms/${roomId}/visitors/${visitorId}`),
     visitorPointer: (roomId: string, visitorId: string, workId?: string) =>
         send<{ items: PointerData[] }>('GET', `/rooms/${roomId}/visitors/${visitorId}/pointer${qs({ work: workId })}`).then((r) => r.items),

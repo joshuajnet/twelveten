@@ -5,6 +5,7 @@ import type { DB } from './db/index.ts';
 import type { AppEnv } from './env.ts';
 import { publicRoutes } from './routes/public.ts';
 import { roomPublicRoutes } from './routes/rooms.ts';
+import { inquiryPublicRoutes } from './routes/inquiries.ts';
 import { InvalidCursorError } from './content/cursor.ts';
 import { resolveUserFrom, withClientIp, type Auth } from './auth/auth.ts';
 import { adminRoutes, handleError } from './routes/admin/index.ts';
@@ -25,6 +26,8 @@ export interface AppDeps {
     storage?: Storage;
     /** Absolute site origin for canonical URLs (defaults to SITE_URL). */
     siteUrl?: string;
+    /** Make image derivatives in the API after uploads (defaults to MEDIA_DERIVE_INLINE). */
+    deriveInline?: boolean;
     /** Overrides ORIGIN_VERIFY_SECRET (tests). */
     originVerifySecret?: string;
 }
@@ -95,7 +98,8 @@ export function createApp(deps: AppDeps) {
 
     app.route('/', publicRoutes());
     app.route('/', roomPublicRoutes({ siteUrl: deps.siteUrl ?? config().SITE_URL, trustedOrigins: config().TRUSTED_ORIGINS }));
-    app.route('/admin', adminRoutes({ publisher: deps.publisher ?? noopPublisher, storage: deps.storage }));
+    app.route('/', inquiryPublicRoutes({ siteUrl: deps.siteUrl ?? config().SITE_URL, trustedOrigins: config().TRUSTED_ORIGINS }));
+    app.route('/admin', adminRoutes({ publisher: deps.publisher ?? noopPublisher, storage: deps.storage, deriveInline: deps.deriveInline }));
 
     app.notFound((c) => c.json({ error: 'Not found' }, 404));
     app.onError((err, c) => {

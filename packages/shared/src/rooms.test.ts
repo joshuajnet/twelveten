@@ -3,7 +3,6 @@ import {
     engagementDots,
     engagementLabel,
     engagementScore,
-    inquiryMailto,
     packPointer,
     pointerFromBase64,
     pointerToBase64,
@@ -102,24 +101,6 @@ describe('pointer packing', () => {
         const many = Array.from({ length: 4001 * 3 }, () => 1);
         expect(trackBatchSchema.safeParse({ visitId, activeMs: 0, pointer: [{ workId, points: many }] }).success).toBe(false);
         expect(trackBatchSchema.safeParse({ visitId, activeMs: 0, pointer: [{ workId, points: [1, 2, 10] }] }).success).toBe(true);
-    });
-});
-
-describe('inquiryMailto', () => {
-    it('puts the work in the subject and the caption, viewer and link in the body', () => {
-        const href = inquiryMailto(
-            { artistName: 'Ana Sol', title: 'Blue Hour', dateText: '2024', medium: 'Oil on linen', dimensions: '24 × 30 in', price: null },
-            { to: 'mail@example.com', viewerName: 'Pat Lee', roomTitle: 'Autumn Preview', roomUrl: 'https://x.test/rooms/abc' },
-        );
-        const url = new URL(href);
-        expect(url.protocol).toBe('mailto:');
-        expect(url.pathname).toBe('mail@example.com');
-        expect(url.searchParams.get('subject')).toBe('Inquiry: Ana Sol, Blue Hour, 2024');
-        const body = url.searchParams.get('body')!;
-        expect(body).toContain('Oil on linen');
-        expect(body).toContain('https://x.test/rooms/abc');
-        expect(body).toContain('— Pat Lee');
-        expect(body).not.toContain('null');
     });
 });
 

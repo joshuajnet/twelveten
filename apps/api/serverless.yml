@@ -76,10 +76,17 @@ provider:
         - Effect: Allow
           Action: [s3:PutObject]
           Resource: !Join ['', [!GetAtt MediaBucket.Arn, '/media/uploads/*']]
-        # Invoice PDFs embed work images.
+        # Invoice PDFs embed work images; the media function reads originals.
         - Effect: Allow
           Action: [s3:GetObject]
           Resource: !Join ['', [!GetAtt MediaBucket.Arn, '/media/*']]
+        # Image derivatives (media function).
+        - Effect: Allow
+          Action: [s3:PutObject]
+          Resource: !Join ['', [!GetAtt MediaBucket.Arn, '/media/derived/*']]
+        - Effect: Allow
+          Action: [s3:ListBucket]
+          Resource: !GetAtt MediaBucket.Arn
 
 functions:
   api:
@@ -103,6 +110,24 @@ functions:
     events:
       # Daily, just after midnight in Chicago: Current / Upcoming / Past change as dates pass.
       - schedule: cron(15 6 * * ? *)
+  media:
+    # Image derivatives for each upload (S3 → EventBridge, so the bucket doesn't reference the
+    # function), and backfills: `osls invoke -f media -d '{"backfill":true,"prefix":"images/"}'`.
+    image:
+      name: api
+      command: ['media.mediaHandler']
+    memorySize: 2048
+    timeout: 300
+    events:
+      - eventBridge:
+          pattern:
+            source: [aws.s3]
+            detail-type: [Object Created]
+            detail:
+              bucket:
+                name: [!Ref MediaBucket]
+              object:
+                key: [{ prefix: media/uploads/ }]
 
 resources:
   Conditions:
@@ -210,6 +235,10 @@ resources:
       DeletionPolicy: Retain
       Properties:
         VersioningConfiguration: { Status: Enabled }
+        # Object-created events go to EventBridge (the media function makes image derivatives).
+        NotificationConfiguration:
+          EventBridgeConfiguration:
+            EventBridgeEnabled: true
         PublicAccessBlockConfiguration:
           BlockPublicAcls: true
           BlockPublicPolicy: true

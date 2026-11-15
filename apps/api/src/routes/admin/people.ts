@@ -231,6 +231,9 @@ export function peopleRoutes() {
         if (await db.selectFrom('invoices').select('id').where('person_id', '=', id).executeTakeFirst()) {
             throw new HttpError(409, 'This person has invoices and can’t be deleted');
         }
+        if (await db.selectFrom('inquiries').select('id').where('person_id', '=', id).executeTakeFirst()) {
+            throw new HttpError(409, 'This person has inquiries; merge them into another person instead of deleting');
+        }
         if (await db.selectFrom('viewing_room_visitors').select('id').where('person_id', '=', id).executeTakeFirst()) {
             throw new HttpError(409, 'This person has visited viewing rooms; merge them into another person instead of deleting');
         }

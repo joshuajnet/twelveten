@@ -38,12 +38,6 @@ const isEmptyDoc = (d: RichDoc | null | undefined) => !d || !htmlToText(richToHt
 
 // ---------- Admin ----------
 
-/** Where inquiries go when a room has no inquiry email of its own: the gallery email in the invoice settings. */
-export async function defaultInquiryEmail(db: Q): Promise<string> {
-    const s = await db.selectFrom('invoice_settings').select('email').executeTakeFirst();
-    return s?.email ?? '';
-}
-
 /** The room's artists with their settings, in room order; press is the artist's full list. */
 async function roomArtistSettings(db: Q, roomId: string): Promise<RoomArtistSettings[]> {
     const rows = await db
@@ -76,7 +70,7 @@ async function roomArtistSettings(db: Q, roomId: string): Promise<RoomArtistSett
 export async function getRoom(db: Q, id: string): Promise<ViewingRoom | null> {
     const row = await db.selectFrom('viewing_rooms').selectAll().where('id', '=', id).executeTakeFirst();
     if (!row) return null;
-    const [works, artists, visitors, fallbackEmail] = await Promise.all([
+    const [works, artists, visitors] = await Promise.all([
         summaryQuery(db)
             .innerJoin('viewing_room_works as rw', 'rw.work_id', 'w.id')
             .select(['rw.show_price', 'rw.hidden', 'rw.position'])
@@ -85,7 +79,6 @@ export async function getRoom(db: Q, id: string): Promise<ViewingRoom | null> {
             .execute(),
         roomArtistSettings(db, id),
         db.selectFrom('viewing_room_visitors').select((eb) => eb.fn.countAll<number>().as('n')).where('room_id', '=', id).executeTakeFirst(),
-        defaultInquiryEmail(db),
     ]);
     return {
         id: row.id,
@@ -94,8 +87,6 @@ export async function getRoom(db: Q, id: string): Promise<ViewingRoom | null> {
         intro: row.intro,
         showPrices: row.show_prices,
         hideUnavailable: row.hide_unavailable,
-        inquiryEmail: row.inquiry_email,
-        defaultInquiryEmail: fallbackEmail,
         status: row.status,
         opensAt: row.opens_at,
         closesAt: row.closes_at,
@@ -478,7 +469,6 @@ export async function publicRoom(db: Q, room: ViewingRoomRow, viewer: { name: st
     return {
         title: room.title,
         introHtml: isEmptyDoc(room.intro) ? null : richToHtmlServer(room.intro),
-        inquiryEmail: room.inquiry_email || (await defaultInquiryEmail(db)),
         works,
         artists,
         viewer,

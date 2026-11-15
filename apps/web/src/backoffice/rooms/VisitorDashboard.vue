@@ -61,6 +61,7 @@ function eventText(e: RoomEvent): string {
     const what = e.workTitle ?? e.artistName ?? '';
     if (e.type === 'view_mode') return `Switched to ${String(e.data?.mode ?? '')}`;
     if (e.type === 'zoom') return `Zoomed into ${what}${e.data?.level ? ` (${e.data.level}×)` : ''}`;
+    if (e.type === 'inquire' && e.data?.note) return `Inquired about ${what}: “${String(e.data.note)}”`;
     if (e.type === 'press_click') return `Opened press about ${e.artistName ?? ''}${e.data?.title ? `: “${e.data.title}”` : ''}`;
     return what ? `${EVENT_LABELS[e.type]} ${what}` : EVENT_LABELS[e.type];
 }

@@ -8,6 +8,7 @@ import Pagination from '../Pagination.vue';
 import { useListQuery, usePagedList } from '../useListQuery';
 import RoomStatusBadge from './RoomStatusBadge.vue';
 import { when } from './time';
+import ArtImage from '@/components/ArtImage.vue';
 
 /** Every viewing room, newest first, with search and a status filter. */
 const { q, page, enumParam, setQuery, goToPage, search } = useListQuery();
@@ -68,7 +69,7 @@ async function copy(r: RoomSummary) {
                         <td class="px-3 py-2">
                             <RouterLink :to="{ name: 'bo-room', params: { id: r.id } }" class="flex items-center gap-3 font-medium text-sky-900 hover:underline">
                                 <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded bg-slate-100">
-                                    <img v-if="r.cover" :src="r.cover" alt="" class="h-full w-full object-cover" loading="lazy" />
+                                    <ArtImage sizes="48px" fit="cover" v-if="r.cover" :src="r.cover" alt="" class="h-full w-full object-cover" />
                                 </span>
                                 {{ r.title }}
                             </RouterLink>

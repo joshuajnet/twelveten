@@ -27,7 +27,6 @@ const ROOM_COLUMNS = {
     title: 'title',
     showPrices: 'show_prices',
     hideUnavailable: 'hide_unavailable',
-    inquiryEmail: 'inquiry_email',
     status: 'status',
     opensAt: 'opens_at',
     closesAt: 'closes_at',

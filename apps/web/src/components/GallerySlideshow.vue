@@ -1,8 +1,10 @@
 <script>
 import ZoomViewer from './ZoomViewer.vue';
+import ArtImage from './ArtImage.vue';
+import InquiryDialog from './InquiryDialog.vue';
 
 export default {
-    components: { ZoomViewer },
+    components: { ZoomViewer, ArtImage, InquiryDialog },
     props: {
         slides: Object,
         worksAvailable: {
@@ -21,6 +23,7 @@ export default {
             visibleSlides: [],
             zoomOpen: false,
             zoomIndex: 0,
+            inquiry: { open: false, item: null, target: null },
         };
     },
     computed: {
@@ -43,6 +46,12 @@ export default {
         }
         this.autoPlay(true);
         this.scrollStop();
+        window.addEventListener('keydown', this.onKey);
+    },
+    beforeUnmount() {
+        window.removeEventListener('keydown', this.onKey);
+        clearInterval(this.interval);
+        if (this.scrollView) this.takeOver(false);
     },
     methods: {
         next() {
@@ -101,12 +110,20 @@ export default {
             this.scrollView = !this.scrollView;
             this.autoPlay(false);
             this.takeOver(this.scrollView);
+            if (this.scrollView) this.$nextTick(() => this.$refs.scrollClose?.focus());
+        },
+        /** Escape leaves Scroll View (the zoom viewer, when open, handles Escape itself). */
+        onKey(e) {
+            if (e.key === 'Escape' && this.scrollView && !this.zoomOpen && !this.inquiry.open) {
+                e.preventDefault();
+                this.toggleScrollView();
+            }
         },
         takeOver(enabled) {
             if (enabled) {
-                document.getElementById('app').classList.add('overlay-enabled');
+                document.getElementById('app')?.classList.add('overlay-enabled');
             } else {
-                document.getElementById('app').classList.remove('overlay-enabled');
+                document.getElementById('app')?.classList.remove('overlay-enabled');
             }
         },
         scrollToPress() {
@@ -161,11 +178,14 @@ export default {
             const i = this.visibleSlides.indexOf(this.zoomSlides[this.zoomIndex]);
             if (i >= 0 && !this.scrollView) this.indexVisible = i;
         },
-        createMailTo(slide) {
-            let url = `https://twelvetengallery.com${slide.image}`;
-            let encodeSubject = encodeURIComponent(`Inquiry into work by ${slide.author}`);
-            let encodeBody = encodeURIComponent(`Please provide me more information on the related work ${url}`);
-            return `mailto:mail@twelvetengallery.com?subject=${encodeSubject}&body=${encodeBody}`;
+        /** Open the inquiry form about this work. */
+        openInquiry(slide) {
+            this.autoPlay(false);
+            this.inquiry = {
+                open: true,
+                item: { title: slide.title || 'Untitled', artist: slide.author, date: slide.date, medium: slide.media, dimensions: slide.dimensions, image: slide.image },
+                target: { kind: 'slide', artworkId: slide.id },
+            };
         },
     },
 };
@@ -245,10 +265,14 @@ export default {
                             Your browser does not support the video tag.
                         </video>
                     </div>
-                    <img
+                    <ArtImage
                         v-if="slide.image"
-                        v-lazy="slide.image"
-                        class="lazy-image mx-auto max-image-h max-w-full mb-3"
+                        :src="slide.image"
+                        :alt="slide.alt || ''"
+                        :eager="index === indexVisible"
+                        :sharpest="index === indexVisible"
+                        sizes="(min-width: 1024px) 70vw, 100vw"
+                        class="mx-auto max-image-h max-w-full mb-3"
                     />
                     <div class="mx-auto text-center max-w-sm text-xs">
                         <div v-if="slide.author">{{ slide.author }}</div>
@@ -260,12 +284,9 @@ export default {
                         <div v-if="slide.dimensions">{{ slide.dimensions }}</div>
                         <div v-if="slide.credit">{{ slide.credit }}</div>
                         <div v-if="slide.available && worksAvailable" class="relative z-20">
-                            <a
-                                :href="createMailTo(slide)"
-                                class="py-1 px-3 inline-block cursor-pointer hover:text-sky-600 no-underline! border hover:shadow-sm mt-3 font-roboto font-light"
-                            >
+                            <button type="button" class="py-1 px-3 inline-block cursor-pointer hover:text-sky-600 border hover:shadow-sm mt-3 font-roboto font-light" data-testid="slide-inquire" @click.stop="openInquiry(slide)">
                                 <i class="las la-envelope mr-1"></i> Inquire
-                            </a>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -300,15 +321,12 @@ export default {
                             class="flex grow bg-slate-50 hover:opacity-50 transition-opacity cursor-pointer"
                             @click="goToSlide(index)"
                         >
-                            <img v-lazy="slide.image" class="lazy-image object-cover w-full h-full" />
+                            <ArtImage :src="slide.image" :alt="slide.alt || ''" fit="cover" sizes="(min-width: 1280px) 20vw, (min-width: 768px) 33vw, 50vw" class="object-cover w-full h-full" />
                         </div>
                         <div v-if="availableView" class="absolute bottom-3 right-3">
-                            <a
-                                :href="createMailTo(slide)"
-                                class="py-1 px-3 inline-block cursor-pointer bg-white/80 hover:text-sky-600 no-underline! border hover:shadow-sm mt-3 font-roboto font-light text-xs"
-                            >
+                            <button type="button" class="py-1 px-3 inline-block cursor-pointer bg-white/80 hover:text-sky-600 border hover:shadow-sm mt-3 font-roboto font-light text-xs" data-testid="slide-inquire" @click.stop="openInquiry(slide)">
                                 <i class="las la-envelope mr-1"></i> Inquire
-                            </a>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -317,9 +335,17 @@ export default {
         <!-- scroll view -->
         <transition name="fade" mode="out-in">
             <div class="fixed top-0 bg-white w-full h-screen left-0 overflow-y-auto z-30" v-if="scrollView">
-                <div class="fixed top-3 md:right-6 right-3 cursor-pointer text-xl mx-3" @click="toggleScrollView()">
-                    <i class="las la-times"></i>
-                </div>
+                <button
+                    ref="scrollClose"
+                    type="button"
+                    class="fixed top-3 md:right-6 right-3 z-40 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full bg-white/90 text-2xl text-slate-600 shadow-sm hover:text-sky-900"
+                    aria-label="Close scroll view"
+                    title="Close (Esc)"
+                    data-testid="scroll-close"
+                    @click="toggleScrollView()"
+                >
+                    <i class="las la-times" aria-hidden="true"></i>
+                </button>
                 <div class="max-w-8xl mx-auto px-3 pt-12 pb-10">
                     <div v-for="(slide, index) in visibleSlides" :key="index">
                         <div class="mb-10 flex flex-col">
@@ -335,12 +361,12 @@ export default {
                                     Your browser does not support the video tag.
                                 </video>
                             </div>
-                            <img
+                            <ArtImage
                                 v-if="slide.image"
-                                v-lazy="slide.image"
-                                class="lazy-image max-w-full max-h-full mb-2 cursor-zoom-in"
-                                title="Zoom"
-                                @click="openZoom(slide)"
+                                :src="slide.image"
+                                :alt="slide.alt || ''"
+                                sizes="100vw"
+                                class="max-w-full max-h-full mb-2"
                             />
                             <div class="max-w-sm text-sm">
                                 <div v-if="slide.author">{{ slide.author }}</div>
@@ -349,13 +375,13 @@ export default {
                                 <div v-if="slide.media" class="text-sm">{{ slide.media }}</div>
                                 <div v-if="slide.dimensions" class="text-sm">{{ slide.dimensions }}</div>
                                 <div v-if="slide.credit" class="text-xs">{{ slide.credit }}</div>
-                                <div v-if="slide.available" class="relative z-20">
-                                    <a
-                                        :href="createMailTo(slide)"
-                                        class="py-1 px-3 inline-block cursor-pointer hover:text-sky-600 no-underline! border hover:shadow-sm mt-3 font-roboto font-light"
-                                    >
+                                <div class="mt-3 flex flex-wrap gap-2 font-roboto font-light">
+                                    <button v-if="slide.image" type="button" class="py-1 px-3 cursor-pointer hover:text-sky-600 border hover:shadow-sm" data-testid="scroll-zoom" @click="openZoom(slide)">
+                                        <i class="las la-search-plus mr-1"></i> Zoom
+                                    </button>
+                                    <button v-if="slide.available && worksAvailable" type="button" class="py-1 px-3 cursor-pointer hover:text-sky-600 border hover:shadow-sm" data-testid="slide-inquire" @click.stop="openInquiry(slide)">
                                         <i class="las la-envelope mr-1"></i> Inquire
-                                    </a>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -364,6 +390,7 @@ export default {
             </div>
         </transition>
         <ZoomViewer v-model:open="zoomOpen" v-model:index="zoomIndex" :images="zoomImages" @close="zoomClosed" />
+        <InquiryDialog v-model:open="inquiry.open" :item="inquiry.item" :target="inquiry.target" />
     </div>
 </template>
 <style scoped>
@@ -402,15 +429,6 @@ export default {
 }
 .max-video-h {
     max-height: calc(100vh - 360px);
-}
-.lazy-image {
-    transition: opacity 0.5s ease-in-out;
-}
-img[lazy='loading'] {
-    opacity: 0;
-}
-img[lazy='loaded'] {
-    opacity: 1;
 }
 .loader {
     @apply border-2 border-sky-900 rounded-full absolute;

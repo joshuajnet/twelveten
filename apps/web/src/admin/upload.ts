@@ -1,3 +1,4 @@
+import { adminSend } from '@/api/client';
 import { reactive, ref } from 'vue';
 import { MAX_UPLOAD_BYTES, UPLOAD_TYPES, type UploadRequest } from '@twelveten/shared';
 import { adminApi, errorMessage } from './api';
@@ -40,6 +41,9 @@ export async function uploadFile(file: File, onProgress?: (fraction: number) => 
         xhr.onerror = () => reject(new Error('Upload failed (network error)'));
         xhr.send(file);
     });
+    // Image derivatives (sizes and the zoom copy): made here in development, by an S3-triggered
+    // function in production. Not waited for; pages fall back to the original until they exist.
+    if (file.type.startsWith('image/')) void adminSend('POST', '/uploads/complete', { url: ticket.url }).catch(() => {});
     return ticket.url;
 }
 

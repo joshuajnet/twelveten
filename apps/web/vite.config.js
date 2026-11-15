@@ -14,6 +14,8 @@ const proxy = {
     '/api': { target: apiTarget, changeOrigin: false, xfwd: true },
     // New uploads live in the (LocalStack) media bucket; existing media is served from .media/ by mediaPlugin.
     '/media/uploads': { target: mediaTarget, changeOrigin: true, rewrite: (path) => `/${mediaBucket}${path}` },
+    // Image derivatives (made by the API after uploads and by `media:derive`) live in the bucket too.
+    '/media/derived': { target: mediaTarget, changeOrigin: true, rewrite: (path) => `/${mediaBucket}${path}` },
 };
 
 export default defineConfig({

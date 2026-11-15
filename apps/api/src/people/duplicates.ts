@@ -56,11 +56,10 @@ async function briefs(db: Q, ids: string[]): Promise<Map<string, PersonBrief>> {
         .leftJoin('artist_profiles as ap', 'ap.person_id', 'p.id')
         .leftJoin('collector_profiles as cp', 'cp.person_id', 'p.id')
         .select(['p.id', 'p.name', 'p.email', 'p.phone', 'p.created_at', 'ap.person_id as artist', 'cp.person_id as collector'])
-        .select((eb) =>
-            eb
-                .exists(eb.selectFrom('viewing_room_visitors as v').select('v.id').whereRef('v.person_id', '=', 'p.id').where('v.match', '=', 'new'))
-                .as('from_room'),
-        )
+        .select((eb) => [
+            eb.exists(eb.selectFrom('viewing_room_visitors as v').select('v.id').whereRef('v.person_id', '=', 'p.id').where('v.match', '=', 'new')).as('from_room'),
+            eb.exists(eb.selectFrom('inquiries as q').select('q.id').whereRef('q.person_id', '=', 'p.id').where('q.match', '=', 'new')).as('from_inquiry'),
+        ])
         .where('p.id', 'in', ids)
         .execute();
     return new Map(
@@ -73,7 +72,7 @@ async function briefs(db: Q, ids: string[]): Promise<Map<string, PersonBrief>> {
                 phone: r.phone,
                 createdAt: r.created_at,
                 profiles: [...(r.artist ? ['artist'] : []), ...(r.collector ? ['collector'] : [])] as ProfileType[],
-                fromViewingRoom: Boolean(r.from_room),
+                source: r.from_room ? 'viewing_room' : r.from_inquiry ? 'inquiry' : null,
             },
         ]),
     );
@@ -97,7 +96,8 @@ export async function listDuplicates(db: Q, page: number, pageSize: number): Pro
     const rows = await sql<{ a_id: string; b_id: string; reasons: string[]; score: number; total: number }>`
 SELECT c.*, count(*) OVER () AS total FROM (${candidatePairs(null)}) c
 ORDER BY c.score DESC,
-  EXISTS (SELECT 1 FROM viewing_room_visitors v WHERE v.person_id IN (c.a_id, c.b_id) AND v.match = 'new') DESC,
+  (EXISTS (SELECT 1 FROM viewing_room_visitors v WHERE v.person_id IN (c.a_id, c.b_id) AND v.match = 'new')
+   OR EXISTS (SELECT 1 FROM inquiries q WHERE q.person_id IN (c.a_id, c.b_id) AND q.match = 'new')) DESC,
   c.a_id, c.b_id
 LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`.execute(db);
     const total = Number(rows.rows[0]?.total ?? 0);

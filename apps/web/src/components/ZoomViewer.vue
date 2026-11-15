@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue';
+import { largeUrl, zoomUrl } from '@twelveten/shared';
 
 /**
  * Full-screen image inspector: wheel / pinch zoom around the pointer, drag to pan, double-click or
@@ -33,6 +34,42 @@ const animate = ref(false);
 let returnFocus: HTMLElement | null = null;
 
 const current = computed(() => props.images[index.value]);
+
+/**
+ * What's on screen: the large display copy first (usually already cached by the page), then, swapped
+ * in silently once it has downloaded in the background, the high-resolution zoom copy. Falls back to
+ * the original.
+ */
+const source = ref<'display' | 'zoom' | 'original'>('display');
+const src = computed(() => {
+    const url = current.value?.url ?? '';
+    if (source.value === 'zoom') return zoomUrl(url) ?? url;
+    if (source.value === 'original') return url;
+    return largeUrl(url);
+});
+let preload: HTMLImageElement | null = null;
+function loadDetail() {
+    preload?.removeAttribute('src');
+    preload = null;
+    const url = current.value?.url;
+    const zoom = url ? zoomUrl(url) : null;
+    if (!url || !zoom) return;
+    const img = new Image();
+    preload = img;
+    img.onload = () => {
+        if (preload !== img) return;
+        source.value = 'zoom';
+    };
+    img.onerror = () => {
+        if (preload !== img) return;
+        source.value = 'original';
+    };
+    img.src = zoom;
+}
+function onImageError() {
+    // The display copy isn't there (yet): show the original.
+    if (source.value !== 'original') source.value = 'original';
+}
 const multiple = computed(() => props.images.length > 1);
 
 /** Image size on screen at scale 1 (fitted inside the stage, never enlarged). */
@@ -228,7 +265,9 @@ function onLoad(e: Event) {
 
 watch(index, () => {
     loaded.value = false;
+    source.value = 'display';
     reset(false);
+    if (open.value) loadDetail();
 });
 
 watch(
@@ -238,6 +277,8 @@ watch(
             returnFocus = document.activeElement as HTMLElement | null;
             document.documentElement.style.overflow = 'hidden';
             reset(false);
+            source.value = 'display';
+            loadDetail();
             window.addEventListener('resize', onResize);
             await nextTick();
             measure();
@@ -246,6 +287,7 @@ watch(
             document.documentElement.style.overflow = '';
             window.removeEventListener('resize', onResize);
             pointers.clear();
+            preload = null;
             returnFocus?.focus?.();
             emit('close');
         }
@@ -312,7 +354,8 @@ defineExpose({ zoomTo, reset, view });
                 <div v-if="!loaded" class="zv-loader" aria-hidden="true" />
                 <img
                     :key="current.url"
-                    :src="current.url"
+                    :src="src"
+                    :data-source="source"
                     :alt="current.alt ?? ''"
                     draggable="false"
                     class="absolute left-1/2 top-1/2 max-w-none"
@@ -323,6 +366,7 @@ defineExpose({ zoomTo, reset, view });
                         transform: `translate(-50%, -50%) translate(${view.tx}px, ${view.ty}px) scale(${view.scale})`,
                     }"
                     @load="onLoad"
+                    @error="onImageError"
                 />
                 <template v-if="multiple && view.scale === 1">
                     <button type="button" class="zv-nav left-2" aria-label="Previous" @click.stop="go(-1)" @pointerdown.stop @dblclick.stop>

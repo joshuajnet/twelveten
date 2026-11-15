@@ -104,11 +104,14 @@ describe('viewing a room', () => {
 
         const entered = await b.req('POST', `${path}/enter`, { name: 'Pat Viewer', email: ' Pat.Viewer@Example.com ' });
         expect(entered.status).toBe(200);
-        const set = entered.headers.getSetCookie()[0]!;
+        const cookies = entered.headers.getSetCookie();
+        const set = cookies.find((c) => c.startsWith('twelveten_vr='))!;
         expect(set).toContain('HttpOnly');
         expect(set).toContain(`Path=/api/rooms/${room.token}`);
         expect(set).toContain('SameSite=Lax');
         expect(set).toContain('Max-Age=31536000');
+        // Also known across the public site (Inquire skips name and email).
+        expect(cookies.find((c) => c.startsWith('twelveten_who='))).toContain('Path=/api;');
         const r = entered.body.room;
         expect(r.viewer).toEqual({ name: 'Pat Viewer' });
         expect(r.visitId).toBeTruthy();
@@ -296,7 +299,7 @@ describe('viewing a room', () => {
         const [a, b] = await Promise.all(people.map(async (p: any) => (await call('GET', `/admin/persons/${p.id}`)).body));
         const dupes = (await call('GET', `/admin/persons/${a.id}/duplicates`)).body.items;
         expect(dupes[0].reasons).toContain('Same name');
-        expect(dupes[0].a.fromViewingRoom).toBe(true);
+        expect(dupes[0].a.source).toBe('viewing_room');
 
         const merged = (await call('POST', `/admin/persons/${b.id}/merge`, { intoId: a.id, updatedAt: b.updatedAt, intoUpdatedAt: a.updatedAt })).body;
         expect(merged.emails).toEqual([b.email]);
@@ -311,6 +314,28 @@ describe('viewing a room', () => {
         // Next time, either email finds the merged person.
         await browser().req('POST', `${path}/enter`, { name: 'D', email: 'dana@two.example' });
         expect((await call('GET', '/admin/persons?q=dana')).body.total).toBe(1);
+    });
+
+    it('takes inquiries about available works and counts them toward engagement', async () => {
+        const { room, works } = await setupRoom('Inquiry Room', { status: 'live', showPrices: true });
+        const b = browser({ ip: '198.51.100.40' });
+        const path = `/rooms/${room.token}`;
+        expect((await b.req('POST', `${path}/inquiries`, { workId: works[0].id, note: 'x' })).status).toBe(401);
+        await b.req('POST', `${path}/enter`, { name: 'Ida Inquirer', email: 'ida@example.com' });
+        const res = await b.req('POST', `${path}/inquiries`, { workId: works[0].id, note: 'Shipping to Toronto?' });
+        expect(res.status).toBe(201);
+        const w1 = (await call('GET', `/admin/works/${works[1].id}`)).body;
+        await call('PATCH', `/admin/works/${works[1].id}`, { updatedAt: w1.updatedAt, status: 'sold' });
+        expect((await b.req('POST', `${path}/inquiries`, { workId: works[1].id, note: '' })).status).toBe(400);
+
+        const visitor = await db.selectFrom('viewing_room_visitors').selectAll().where('entered_email', '=', 'ida@example.com').executeTakeFirstOrThrow();
+        expect(visitor.engagement).toBeGreaterThanOrEqual(25);
+        const vd = (await call('GET', `/admin/rooms/${room.id}/visitors/${visitor.id}`)).body;
+        expect(vd.visitor.inquiries).toBe(1);
+        expect(vd.events.find((e: any) => e.type === 'inquire').data).toEqual({ note: 'Shipping to Toronto?' });
+        const person = (await call('GET', `/admin/persons/${visitor.person_id}`)).body;
+        expect(person.collectorProfile.inquiries[0]).toMatchObject({ source: 'room', room: { id: room.id }, workId: works[0].id, match: 'known' });
+        expect(person.collectorProfile.inquiries[0].item).toMatchObject({ price: '$1,200', context: 'Inquiry Room' });
     });
 
     it('limits gate attempts per address', async () => {

@@ -193,7 +193,8 @@ async function main() {
     if (sitePort !== PREFERRED_SITE_PORT) step(c.yellow(`Port ${PREFERRED_SITE_PORT} is busy; using ${sitePort}`));
     const siteUrl = `http://localhost:${sitePort}`;
     // The API must accept sign-ins from whichever port the site ended up on.
-    const apiEnv = { ...env, LOCAL_MEDIA_DIR: resolve(root, '.media'), SITE_URL: siteUrl, TRUSTED_ORIGINS: [env.TRUSTED_ORIGINS, siteUrl].filter(Boolean).join(',') };
+    // No S3 events locally: the API makes image derivatives right after each upload.
+    const apiEnv = { ...env, LOCAL_MEDIA_DIR: resolve(root, '.media'), MEDIA_DERIVE_INLINE: 'true', SITE_URL: siteUrl, TRUSTED_ORIGINS: [env.TRUSTED_ORIGINS, siteUrl].filter(Boolean).join(',') };
 
     step('Starting API and site…');
     startProcess('api', c.magenta, ['run', 'dev', '-w', 'apps/api'], apiEnv);
@@ -205,6 +206,25 @@ async function main() {
         return shutdown(1);
     }
     banner(env, sitePort, firstRun || seeded, mediaMissing);
+    deriveInBackground(apiEnv);
+}
+
+/** Make any missing image derivatives (first run: a few minutes) without holding up the servers. */
+function deriveInBackground(env: Record<string, string>) {
+    const child = spawn('npm', ['run', '--silent', 'media:derive', '-w', 'apps/api', '--', '--quiet'], {
+        cwd: root,
+        env: { ...process.env, ...env },
+        stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    children.push(child);
+    let out = '';
+    child.stdout!.on('data', (d: Buffer) => (out += d.toString()));
+    child.stderr!.on('data', (d: Buffer) => (out += d.toString()));
+    child.on('exit', (code) => {
+        if (shuttingDown) return;
+        const summary = out.trim().split('\n').pop() ?? '';
+        console.log(code === 0 ? c.dim(`[media] ${summary}`) : c.yellow(`[media] ${summary || 'image derivatives failed'}`));
+    });
 }
 
 main().catch((err: unknown) => {

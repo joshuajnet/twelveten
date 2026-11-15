@@ -33,6 +33,7 @@ import { useUnsavedGuard } from './guard';
 import { dateTime, locationLabel, money, statusLabel } from './format';
 import PersonPicker from './PersonPicker.vue';
 import StatusBadge from './StatusBadge.vue';
+import ArtImage from '@/components/ArtImage.vue';
 
 /** One inventory work: caption, images, price (with history), status, location and sale. */
 const route = useRoute();
@@ -401,7 +402,7 @@ async function createInvoice() {
                     <ol v-if="images.length" ref="grid" class="grid grid-cols-2 gap-3 sm:grid-cols-3">
                         <li v-for="(img, i) in images" :key="img.id" class="overflow-hidden rounded border border-slate-200 bg-white">
                             <div class="relative aspect-square bg-slate-100">
-                                <img :src="img.url" :alt="img.alt" class="h-full w-full object-contain" loading="lazy" />
+                                <ArtImage sizes="240px" :src="img.url" :alt="img.alt" class="h-full w-full object-contain" />
                                 <span data-drag class="absolute left-1 top-1 cursor-grab rounded bg-white/90 px-1 text-sm shadow" title="Drag to reorder">⠿</span>
                                 <span v-if="i === 0" class="absolute right-1 top-1 rounded bg-black/70 px-1 text-[10px] text-white">cover</span>
                             </div>
@@ -418,7 +419,7 @@ async function createInvoice() {
                     <h2 id="slides-h" class="mb-2 text-sm font-semibold">Shown in</h2>
                     <ul class="space-y-1 text-sm">
                         <li v-for="s in work.slides" :key="s.artworkId" class="flex items-center gap-2">
-                            <img v-if="s.image" :src="s.image" alt="" class="h-8 w-8 rounded object-cover" />
+                            <ArtImage sizes="240px" fit="cover" v-if="s.image" :src="s.image" alt="" class="h-8 w-8 rounded object-cover" />
                             <a :href="exhibitionPath({ kind: s.exhibitionKind, slug: s.exhibitionSlug })" target="_blank" rel="noopener" class="text-sky-900 hover:underline">{{ s.exhibitionTitle }}</a>
                             <span class="text-xs text-slate-500">slideshow</span>
                         </li>

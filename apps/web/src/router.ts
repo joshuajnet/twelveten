@@ -43,6 +43,7 @@ const routes: RouteRecordRaw[] = [
             { path: 'invoices/new', name: 'bo-invoice-new', component: () => import('./backoffice/InvoiceNew.vue') },
             { path: 'invoices/settings', name: 'bo-invoice-settings', component: () => import('./backoffice/InvoiceSettings.vue') },
             { path: 'invoices/:id', name: 'bo-invoice', component: () => import('./backoffice/InvoicePage.vue') },
+            { path: 'inquiries', name: 'bo-inquiries', component: () => import('./backoffice/inquiries/InquiriesList.vue') },
             { path: 'rooms', name: 'bo-rooms', component: () => import('./backoffice/rooms/RoomsList.vue') },
             { path: 'rooms/:id', name: 'bo-room', component: () => import('./backoffice/rooms/RoomEditor.vue') },
             { path: 'rooms/:id/dashboard', name: 'bo-room-dashboard', component: () => import('./backoffice/rooms/RoomDashboard.vue') },

@@ -1,5 +1,8 @@
 import { Hono, type Context } from 'hono';
-import { uploadRequestSchema } from '@twelveten/shared';
+import { z } from 'zod';
+import { isDerivable, uploadRequestSchema } from '@twelveten/shared';
+import { deriveImage, diskIO, s3IO, withLocalOriginals } from '../../media/derive.ts';
+import { config } from '../../config.ts';
 import type { AppEnv } from '../../env.ts';
 import type { Publisher } from '../../publish/publisher.ts';
 import type { Storage } from '../../storage/uploads.ts';
@@ -11,10 +14,13 @@ import { peopleRoutes } from './people.ts';
 import { inventoryRoutes } from './inventory.ts';
 import { invoiceRoutes } from './invoices.ts';
 import { roomRoutes } from './rooms.ts';
+import { inquiryRoutes } from './inquiries.ts';
 
 export interface AdminDeps {
     publisher: Publisher;
     storage?: Storage;
+    /** Derive images in the request after an upload (development). Defaults to MEDIA_DERIVE_INLINE. */
+    deriveInline?: boolean;
 }
 
 type Ctx = Context<AppEnv>;
@@ -48,6 +54,7 @@ export function adminRoutes(deps: AdminDeps) {
     app.route('/', inventoryRoutes());
     app.route('/', invoiceRoutes({ storage: deps.storage }));
     app.route('/', roomRoutes());
+    app.route('/', inquiryRoutes());
 
     // ---------- Uploads & publishing ----------
 
@@ -55,6 +62,21 @@ export function adminRoutes(deps: AdminDeps) {
         if (!deps.storage) throw new HttpError(422, 'File storage is not configured');
         const req = await body(c, uploadRequestSchema);
         return c.json(await deps.storage.presignUpload(req), 201);
+    });
+
+    /**
+     * The browser finished uploading `url`. In production the S3-triggered media function makes its
+     * derivatives; in development (no S3 events) they are made here.
+     */
+    app.post('/uploads/complete', async (c) => {
+        const { url } = await body(c, z.object({ url: z.string().startsWith('/media/uploads/') }));
+        const inline = deps.deriveInline ?? config().MEDIA_DERIVE_INLINE;
+        if (!inline || !deps.storage || !isDerivable(url)) return c.json({ derived: false });
+        const local = config().LOCAL_MEDIA_DIR;
+        const bucket = s3IO(deps.storage.client, deps.storage.bucket);
+        const io = local ? withLocalOriginals(bucket, diskIO(local)) : bucket;
+        const result = await deriveImage(io, `media/${url.slice('/media/'.length)}`);
+        return c.json({ derived: result === 'derived' || result === 'skipped' });
     });
 
     app.post('/publish/rebuild', async (c) => c.json(await publisher.rebuildAll()));

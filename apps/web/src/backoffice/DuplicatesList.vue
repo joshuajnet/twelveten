@@ -60,7 +60,7 @@ const sub = (p: PersonBrief) => [p.email, p.phone].filter(Boolean).join(' · ') 
                         <div class="mt-0.5 flex flex-wrap gap-1 text-xs text-slate-500">
                             <span>Added {{ formatDate(p.createdAt.slice(0, 10)) }}</span>
                             <span v-for="k in p.profiles" :key="k" class="rounded bg-sky-50 px-1 text-sky-900">{{ k }}</span>
-                            <span v-if="p.fromViewingRoom" class="rounded bg-violet-50 px-1 text-violet-900">from a viewing room</span>
+                            <span v-if="p.source" class="rounded bg-violet-50 px-1 text-violet-900">{{ p.source === 'viewing_room' ? 'from a viewing room' : 'from an inquiry' }}</span>
                         </div>
                     </div>
                 </div>

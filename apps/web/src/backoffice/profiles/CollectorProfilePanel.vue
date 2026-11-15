@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 import { formatDate, formatPrice, isUnpaid, parsePercent, type Person } from '@twelveten/shared';
 import Field from '@/admin/ui/Field.vue';
@@ -12,6 +12,9 @@ import { money } from '../format';
 import StatusBadge from '../StatusBadge.vue';
 import EngagementDots from '../rooms/EngagementDots.vue';
 import { duration, when } from '../rooms/time';
+import InquiryRow from '../inquiries/InquiryRow.vue';
+import { inquiriesChanged, unseenInquiries } from '../nav';
+import ArtImage from '@/components/ArtImage.vue';
 
 /** Collector profile: their collection grouped by artist, their invoices, and private notes. */
 const props = defineProps<{ person: Person }>();
@@ -75,6 +78,35 @@ async function createInvoice() {
     }
 }
 
+// ---- Inquiries ----
+async function dismissInquiry(id: string) {
+    try {
+        await boApi.dismissInquiry(id);
+        emit('update', await boApi.person(props.person.id));
+        unseenInquiries.value = await boApi.unseenInquiries();
+    } catch (e) {
+        toast(errorMessage(e), 'error');
+    }
+}
+async function deleteInquiry(id: string) {
+    if (!window.confirm('Delete this inquiry? Use this for spam or mistakes.')) return;
+    try {
+        await boApi.deleteInquiry(id);
+        emit('update', await boApi.person(props.person.id));
+        unseenInquiries.value = await boApi.unseenInquiries();
+    } catch (e) {
+        toast(errorMessage(e), 'error');
+    }
+}
+// Dismissed from the alert at the top: show it here too.
+watch(inquiriesChanged, async () => emit('update', await boApi.person(props.person.id)));
+// Opened from an alert: scroll to that inquiry once it's on the page.
+onMounted(async () => {
+    if (!location.hash.startsWith('#inquiry-')) return;
+    await nextTick();
+    document.querySelector(location.hash)?.scrollIntoView({ block: 'center' });
+});
+
 // ---- Remove profile ----
 const confirmRemove = ref(false);
 async function removeProfile() {
@@ -124,7 +156,7 @@ async function removeProfile() {
                         >
                             <figure>
                                 <div class="flex aspect-square items-center justify-center bg-slate-100">
-                                    <img v-if="w.image" :src="w.image.url" :alt="w.image.alt" class="h-full w-full object-contain" loading="lazy" />
+                                    <ArtImage sizes="200px" v-if="w.image" :src="w.image.url" :alt="w.image.alt" class="h-full w-full object-contain" />
                                     <span v-else class="text-xs text-slate-400">No image</span>
                                 </div>
                                 <figcaption class="space-y-0.5 p-2 text-xs leading-snug">
@@ -184,6 +216,15 @@ async function removeProfile() {
             <p v-else class="text-sm text-slate-500">No invoices yet.</p>
         </section>
 
+        <!-- Inquiries -->
+        <section aria-labelledby="inq-h" class="rounded-md border border-slate-200 bg-white p-4" data-testid="collector-inquiries">
+            <h3 id="inq-h" class="mb-1 text-sm font-semibold">Inquiries ({{ profile.inquiries.length }})</h3>
+            <div v-if="profile.inquiries.length" class="divide-y divide-slate-100">
+                <InquiryRow v-for="i in profile.inquiries" :key="i.id" :inquiry="i" @dismiss="dismissInquiry(i.id)" @remove="deleteInquiry(i.id)" />
+            </div>
+            <p v-else class="text-sm text-slate-500">No inquiries yet.</p>
+        </section>
+
         <!-- Viewing rooms -->
         <section aria-labelledby="rooms-h" class="rounded-md border border-slate-200 bg-white p-4" data-testid="collector-rooms">
             <h3 id="rooms-h" class="mb-2 text-sm font-semibold">Viewing rooms ({{ profile.viewingRooms.length }})</h3>
@@ -227,7 +268,7 @@ async function removeProfile() {
                             :title="`${w.artistName}, ${w.title} — interest ${w.interest}/100`"
                         >
                             <div class="flex aspect-square items-center justify-center overflow-hidden rounded bg-slate-100">
-                                <img v-if="w.image" :src="w.image" alt="" class="h-full w-full object-contain" loading="lazy" />
+                                <ArtImage sizes="200px" v-if="w.image" :src="w.image" alt="" class="h-full w-full object-contain" />
                             </div>
                             <div class="mt-1 truncate text-xs italic text-slate-800 group-hover:text-sky-900">{{ w.title || 'Untitled' }}</div>
                             <div class="truncate text-[11px] text-slate-500">{{ w.artistName }}</div>
@@ -260,7 +301,7 @@ async function removeProfile() {
                     <legend class="mb-1 text-xs font-medium text-slate-600">Works</legend>
                     <label v-for="w in onHold" :key="w.id" class="flex items-center gap-2">
                         <input v-model="creating.workIds" type="checkbox" :value="w.id" class="h-4 w-4" />
-                        <img v-if="w.image" :src="w.image.url" alt="" class="h-8 w-8 rounded object-cover" />
+                        <ArtImage sizes="200px" fit="cover" v-if="w.image" :src="w.image.url" alt="" class="h-8 w-8 rounded object-cover" />
                         <span>
                             <span class="italic">{{ w.title || 'Untitled' }}</span>, {{ w.artistName }}
                             <span class="text-slate-500">· {{ formatPrice(w.priceCents, w.currency) || 'no price' }}</span>

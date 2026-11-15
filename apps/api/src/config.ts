@@ -32,6 +32,11 @@ const schema = z.object({
     MEDIA_PUBLIC_PREFIX: z.string().default('/media'),
     /** Local copy of the site media (development): invoice PDFs read images missing from the bucket here. */
     LOCAL_MEDIA_DIR: z.string().optional(),
+    /** Make image derivatives in the API right after an upload (development; production uses the S3-triggered media function). */
+    MEDIA_DERIVE_INLINE: z
+        .enum(['true', 'false'])
+        .default('false')
+        .transform((v) => v === 'true'),
     /** Payment details printed on invoices. Kept out of the database and the repo; each line is left off when unset. */
     INVOICE_ZELLE: z.string().trim().optional(),
     INVOICE_WIRE_ROUTING: z.string().trim().optional(),

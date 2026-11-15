@@ -2,6 +2,7 @@
  * The rich-text schema for exhibition/fair content. Used by the editor (browser),
  * the public renderer, and the seed/sanitizer (Node) so all three agree exactly.
  */
+import { derivedUrl, imageSrcset, isDerivable } from '../media.ts';
 import { Node, mergeAttributes, type Extensions } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import Paragraph from '@tiptap/extension-paragraph';
@@ -99,10 +100,12 @@ export const Figure = Node.create({
                 tag: 'figure',
                 getAttrs: (el: HTMLElement) => {
                     const img = el.querySelector('img');
-                    if (!img?.getAttribute('src')) return false;
+                    // Rendered HTML points at a derivative; the original is in data-original.
+                    const src = img?.getAttribute('data-original') || img?.getAttribute('src');
+                    if (!src) return false;
                     return {
-                        src: img.getAttribute('src'),
-                        alt: (img.getAttribute('alt') ?? '').replace(/\s+/g, ' ').trim(),
+                        src,
+                        alt: (img?.getAttribute('alt') ?? '').replace(/\s+/g, ' ').trim(),
                         caption: (el.querySelector('figcaption')?.textContent ?? '').replace(/\s+/g, ' ').trim(),
                     };
                 },
@@ -111,7 +114,11 @@ export const Figure = Node.create({
     },
     renderHTML({ node }) {
         const { src, alt, caption } = node.attrs as { src: string; alt: string; caption: string };
-        const img = ['img', { src, alt, class: 'max-w-full h-auto mx-auto mb-3', loading: 'lazy' }];
+        // Derivatives when there are any; the site falls back to `data-original` if one is missing.
+        const sized = isDerivable(src)
+            ? { src: derivedUrl(src, 'w960.webp'), srcset: imageSrcset(src), sizes: '(min-width: 640px) 640px, 100vw', 'data-original': src }
+            : { src };
+        const img = ['img', { ...sized, alt, class: 'max-w-full h-auto mx-auto mb-3', loading: 'lazy' }];
         return caption
             ? ['figure', { 'data-figure': '' }, img, ['figcaption', { class: 'mb-6 text-center font-roboto font-light text-xs' }, caption]]
             : ['figure', { 'data-figure': '' }, img];

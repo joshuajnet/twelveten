@@ -10,6 +10,7 @@ import { locationLabel } from "./format";
 import StatusBadge from "./StatusBadge.vue";
 import Pagination from "./Pagination.vue";
 import { usePagedList } from "./useListQuery";
+import ArtImage from '@/components/ArtImage.vue';
 
 /** One page of works for the current filters. */
 const props = defineProps<{
@@ -70,12 +71,11 @@ const { result, loading, error, reload } = usePagedList(
             class="relative hover:bg-sky-50/60 focus-within:bg-sky-50/60"
           >
             <td class="px-3 py-1.5">
-              <img
+              <ArtImage sizes="96px" fit="cover"
                 v-if="w.image"
                 :src="w.image.url"
                 alt=""
                 class="h-10 w-10 rounded object-cover"
-                loading="lazy"
               />
               <span v-else class="block h-10 w-10 rounded bg-slate-100" />
             </td>

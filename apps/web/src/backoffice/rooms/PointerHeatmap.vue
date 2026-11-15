@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import type { PointerPoint } from '@twelveten/shared';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { derivedUrl, isDerivable, type PointerPoint } from '@twelveten/shared';
 
 /**
  * A work's image with where the visitor's pointer rested drawn over it: a density map in one
@@ -9,6 +9,9 @@ import type { PointerPoint } from '@twelveten/shared';
 const props = withDefaults(defineProps<{ src: string; alt?: string; points: PointerPoint[]; show?: boolean }>(), { alt: '', show: true });
 
 const img = ref<HTMLImageElement>();
+/** A display copy (the heatmap only needs ~960px), falling back to the original. */
+const failed = ref(false);
+const shown = computed(() => (!failed.value && isDerivable(props.src) ? derivedUrl(props.src, 'w960.webp') : props.src));
 const canvas = ref<HTMLCanvasElement>();
 let observer: ResizeObserver | null = null;
 
@@ -92,7 +95,7 @@ onBeforeUnmount(() => observer?.disconnect());
 
 <template>
     <div class="relative inline-block max-w-full">
-        <img ref="img" :src="src" :alt="alt" class="block max-h-80 max-w-full" loading="lazy" @load="draw" />
+        <img ref="img" :src="shown" :alt="alt" class="block max-h-80 max-w-full" loading="lazy" @load="draw" @error="failed = true" />
         <canvas v-show="show && points.length" ref="canvas" class="pointer-events-none absolute left-0 top-0" aria-hidden="true" />
     </div>
 </template>

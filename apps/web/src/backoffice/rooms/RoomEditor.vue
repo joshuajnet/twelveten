@@ -18,6 +18,7 @@ import { useUnsavedGuard } from '../guard';
 import WorkPicker from '../WorkPicker.vue';
 import StatusBadge from '../StatusBadge.vue';
 import RoomStatusBadge from './RoomStatusBadge.vue';
+import ArtImage from '@/components/ArtImage.vue';
 
 /** Create or edit a viewing room: details, works (from the inventory), artist details, the link. */
 const route = useRoute();
@@ -37,7 +38,6 @@ const form = reactive({
     closesAt: null as string | null,
     showPrices: false,
     hideUnavailable: false,
-    inquiryEmail: null as string | null,
 });
 const works = ref<RoomWorkSettings[]>([]);
 const artists = ref<RoomArtistSettings[]>([]);
@@ -51,7 +51,7 @@ const toLocal = (iso: string | null) => {
 const fromLocal = (v: string | null) => (v ? new Date(v).toISOString() : null);
 
 const fieldsJson = () =>
-    JSON.stringify({ ...form, title: form.title?.trim() ?? '', inquiryEmail: form.inquiryEmail?.trim() || null, opensAt: fromLocal(form.opensAt), closesAt: fromLocal(form.closesAt) });
+    JSON.stringify({ ...form, title: form.title?.trim() ?? '', opensAt: fromLocal(form.opensAt), closesAt: fromLocal(form.closesAt) });
 const worksJson = () => JSON.stringify(works.value.map((w) => [w.workId, w.showPrice, w.hidden]));
 const artistsJson = () => JSON.stringify(artists.value.map((a) => [a.artistId, a.showBio, a.showCv, a.showPress, [...a.hiddenPressIds].sort()]));
 const base = reactive({ fields: '', works: '', artists: '' });
@@ -70,7 +70,6 @@ function reset(r: ViewingRoom | null) {
     form.closesAt = toLocal(r?.closesAt ?? null);
     form.showPrices = r?.showPrices ?? false;
     form.hideUnavailable = r?.hideUnavailable ?? false;
-    form.inquiryEmail = r?.inquiryEmail ?? null;
     works.value = (r?.works ?? []).map((w) => ({ ...w }));
     artists.value = (r?.artists ?? []).map((a) => ({ ...a, hiddenPressIds: [...a.hiddenPressIds] }));
     base.fields = fieldsJson();
@@ -154,7 +153,6 @@ function fields() {
         closesAt: fromLocal(form.closesAt),
         showPrices: form.showPrices,
         hideUnavailable: form.hideUnavailable,
-        inquiryEmail: form.inquiryEmail?.trim() || null,
     };
 }
 const worksPayload = () => ({ works: works.value.map((w) => ({ workId: w.workId, showPrice: w.showPrice, hidden: w.hidden })) });
@@ -303,7 +301,6 @@ const setPriceMode = (w: RoomWorkSettings, v: string) => (w.showPrice = v === 'i
                     <Field v-model="form.opensAt" label="Opens (optional)" type="datetime-local" />
                     <Field v-model="form.closesAt" label="Closes (optional)" type="datetime-local" />
                 </div>
-                <Field v-model="form.inquiryEmail" label="Inquiries go to" type="email" :placeholder="room?.defaultInquiryEmail || 'Gallery email'" hint="Leave empty for the gallery email in the invoice settings." />
             </div>
             <div>
                 <h2 class="mb-1 text-sm font-semibold">Display</h2>
@@ -332,7 +329,7 @@ const setPriceMode = (w: RoomWorkSettings, v: string) => (w.showPrice = v === 'i
                     <div class="flex min-w-0 flex-1 basis-64 items-center gap-3">
                     <button type="button" data-drag class="cursor-grab px-1 text-slate-400 hover:text-slate-700" aria-label="Drag to reorder" title="Drag to reorder">⠿</button>
                     <span class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded bg-slate-100">
-                        <img v-if="w.work.image" :src="w.work.image.url" alt="" class="h-full w-full object-contain" loading="lazy" />
+                        <ArtImage sizes="64px" v-if="w.work.image" :src="w.work.image.url" alt="" class="h-full w-full object-contain" />
                     </span>
                     <div class="min-w-0 flex-1 text-sm">
                         <RouterLink :to="{ name: 'bo-work', params: { id: w.workId } }" class="font-medium italic text-sky-900 hover:underline">{{ w.work.title || 'Untitled' }}</RouterLink>

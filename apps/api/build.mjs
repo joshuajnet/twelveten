@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import { build } from 'esbuild';
 
 await build({
-    entryPoints: { lambda: 'src/lambda.ts', migrate: 'src/migrate.ts', rebuild: 'src/rebuild.ts' },
+    entryPoints: { lambda: 'src/lambda.ts', migrate: 'src/migrate.ts', rebuild: 'src/rebuild.ts', media: 'src/media/handler.ts' },
     outdir: 'dist',
     outExtension: { '.js': '.mjs' },
     bundle: true,
@@ -13,8 +13,9 @@ await build({
     target: 'node22',
     format: 'esm',
     sourcemap: true,
-    // The Lambda runtime ships the AWS SDK v3; pg-native is optional and unused.
-    external: ['@aws-sdk/*', 'pg-native'],
+    // The Lambda runtime ships the AWS SDK v3; pg-native is optional and unused; sharp (native)
+    // is installed for Linux next to the bundle by the Dockerfile.
+    external: ['@aws-sdk/*', 'pg-native', 'sharp'],
     // Some bundled CommonJS dependencies call require() or use __filename / __dirname (pdfkit, pdfmake); give ESM output all three.
     banner: {
         js: [

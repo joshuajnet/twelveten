@@ -32,7 +32,6 @@ const roomFields = {
     intro: richDocSchema,
     showPrices: z.boolean(),
     hideUnavailable: z.boolean(),
-    inquiryEmail: z.union([z.literal(''), z.email()]).transform((v) => v || null).nullable(),
     status: roomStatus,
     opensAt: isoTimestamp.nullable(),
     closesAt: isoTimestamp.nullable(),
@@ -106,9 +105,6 @@ export interface ViewingRoom {
     intro: RichDoc;
     showPrices: boolean;
     hideUnavailable: boolean;
-    inquiryEmail: string | null;
-    /** Where inquiries go when `inquiryEmail` is empty (the gallery email from the invoice settings). */
-    defaultInquiryEmail: string;
     status: RoomStatus;
     opensAt: string | null;
     closesAt: string | null;
@@ -182,7 +178,6 @@ export interface PublicRoomArtist {
 export interface PublicRoom {
     title: string;
     introHtml: string | null;
-    inquiryEmail: string;
     works: PublicRoomWork[];
     artists: PublicRoomArtist[];
     /** The signed-in viewer (null in admin preview). */
@@ -371,31 +366,6 @@ export function engagementDots(score: number): number {
     return score <= 0 ? 0 : Math.min(5, Math.ceil(score / 20));
 }
 
-// ---------- Inquiry ----------
-
-/** `mailto:` link asking about one work. */
-export function inquiryMailto(
-    work: Pick<PublicRoomWork, 'artistName' | 'title' | 'dateText' | 'medium' | 'dimensions' | 'price'>,
-    opts: { to: string; viewerName?: string | null; roomTitle: string; roomUrl: string },
-): string {
-    const title = work.title || 'Untitled';
-    const subject = `Inquiry: ${work.artistName}, ${title}${work.dateText ? `, ${work.dateText}` : ''}`;
-    const lines = [
-        `I would like more information about this work from "${opts.roomTitle}":`,
-        '',
-        work.artistName,
-        `${title}${work.dateText ? `, ${work.dateText}` : ''}`,
-        work.medium,
-        work.dimensions,
-        work.price,
-        '',
-        opts.roomUrl,
-        '',
-        opts.viewerName ? `— ${opts.viewerName}` : null,
-    ].filter((l): l is string => l !== null && l !== undefined);
-    return `mailto:${opts.to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join('\n'))}`;
-}
-
 // ---------- Admin dashboards ----------
 
 export interface RoomVisitorSummary {
@@ -480,8 +450,8 @@ export interface PersonBrief {
     phone: string | null;
     profiles: ProfileType[];
     createdAt: string;
-    /** Created by a viewing room sign-up. */
-    fromViewingRoom: boolean;
+    /** Created by the public site: a viewing room sign-up or an inquiry. */
+    source: 'viewing_room' | 'inquiry' | null;
 }
 
 export interface PersonDuplicate {

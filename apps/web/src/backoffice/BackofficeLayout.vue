@@ -10,7 +10,8 @@ import { signOut } from '@/admin/api';
 import { btnDanger, btnOutline } from '@/admin/ui/buttons';
 import { session, setHint } from '@/session';
 import { boApi } from './api';
-import { duplicateCount } from './nav';
+import { duplicateCount, unseenInquiries } from './nav';
+import InquiryAlerts from './inquiries/InquiryAlerts.vue';
 
 /** Back office shell: sidebar navigation, account controls, toasts and the conflict prompt. */
 const route = useRoute();
@@ -37,12 +38,16 @@ const nav = computed(() => [
     { label: 'Collectors', to: { name: 'bo-people', query: { profile: 'collector' } }, active: viewedProfile.value === 'collector' },
     { label: 'Inventory', to: { name: 'bo-inventory' }, active: route.name === 'bo-inventory' || route.name === 'bo-work' },
     { label: 'Invoices', to: { name: 'bo-invoices' }, active: String(route.name ?? '').startsWith('bo-invoice') },
+    { label: 'Inquiries', to: { name: 'bo-inquiries' }, active: route.name === 'bo-inquiries', badge: unseenInquiries.value.count || null },
     { label: 'Viewing rooms', to: { name: 'bo-rooms' }, active: String(route.name ?? '').startsWith('bo-room') },
     { label: 'Duplicates', to: { name: 'bo-duplicates' }, active: route.name === 'bo-duplicates', badge: duplicateCount.value || null },
 ]);
 
-// Refresh the duplicates badge on each page change (cheap; one count query).
-const refreshCount = () => boApi.duplicateCount().then((n) => (duplicateCount.value = n)).catch(() => {});
+// Refresh the badges and the inquiry alert on each page change (two small queries).
+const refreshCount = () => {
+    boApi.duplicateCount().then((n) => (duplicateCount.value = n)).catch(() => {});
+    boApi.unseenInquiries().then((u) => (unseenInquiries.value = u)).catch(() => {});
+};
 onMounted(refreshCount);
 watch(() => route.name, refreshCount);
 
@@ -85,7 +90,7 @@ function closeConflict(o: boolean) {
                 >
                     <span class="flex items-center justify-between gap-2">
                         {{ item.label }}
-                        <span v-if="'badge' in item && item.badge" class="rounded-full bg-amber-100 px-1.5 text-xs font-medium tabular-nums text-amber-800" :aria-label="`${item.badge} possible duplicates`">{{ item.badge }}</span>
+                        <span v-if="'badge' in item && item.badge" class="rounded-full bg-amber-100 px-1.5 text-xs font-medium tabular-nums text-amber-800" :aria-label="item.label === 'Inquiries' ? `${item.badge} new` : `${item.badge} possible duplicates`">{{ item.badge }}</span>
                     </span>
                 </RouterLink>
             </nav>
@@ -104,6 +109,7 @@ function closeConflict(o: boolean) {
                 <span class="flex items-baseline gap-2"><span class="font-germania-one text-xl text-sky-900">Twelve Ten</span><span class="text-sm text-slate-500">Admin</span></span>
             </header>
             <main id="bo-main" class="mx-auto w-full max-w-6xl flex-1 px-4 py-6 md:px-8">
+                <InquiryAlerts />
                 <RouterView />
             </main>
         </div>

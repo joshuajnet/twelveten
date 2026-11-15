@@ -1,4 +1,4 @@
-import type { Exhibition, ExhibitionKind, ExhibitionSummary, HomePage, NewsPost, Page, PressItem, PublicRoom, RoomEnter, RoomResponse } from '@twelveten/shared';
+import type { Exhibition, ExhibitionKind, ExhibitionSummary, HomePage, NewsPost, Page, PressItem, PublicRoom, RoomEnter, RoomResponse, InquiryCreate, RoomInquiry, VisitorIdentity } from '@twelveten/shared';
 
 export class ApiError extends Error {
     constructor(
@@ -57,4 +57,9 @@ export const api = {
     enterRoom: (token: string, input: RoomEnter) =>
         request<{ room: PublicRoom }>(`/rooms/${token}/enter`, { method: 'POST', body: JSON.stringify(input) }).then((r) => r.room),
     roomCvUrl: (token: string, artistId: string) => `/api/rooms/${token}/artists/${artistId}/cv.pdf`,
+    /** Who this browser is (set by a room gate or an inquiry), or null. */
+    visitor: () => request<VisitorIdentity | null>('/visitor'),
+    forgetVisitor: () => request<void>('/visitor/forget', { method: 'POST' }),
+    inquire: (input: InquiryCreate) => request<VisitorIdentity>('/inquiries', { method: 'POST', body: JSON.stringify(input) }),
+    roomInquire: (token: string, input: RoomInquiry) => request<VisitorIdentity>(`/rooms/${token}/inquiries`, { method: 'POST', body: JSON.stringify(input) }),
 };

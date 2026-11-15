@@ -6,6 +6,7 @@ import type { AddressRow } from '../db/types.ts';
 import { collectionOf, worksByArtist, worksByBuyer } from '../inventory/queries.ts';
 import { invoicesForPerson } from '../invoices/queries.ts';
 import { roomsForPerson, topWorksForPerson } from '../rooms/queries.ts';
+import { inquiriesForPerson } from '../inquiries/queries.ts';
 
 type Q = Pick<DB, 'selectFrom'>;
 
@@ -126,13 +127,14 @@ export async function getArtistProfile(db: Q, personId: string): Promise<ArtistP
 export async function getCollectorProfile(db: Q, personId: string): Promise<CollectorProfile | null> {
     const row = await db.selectFrom('collector_profiles').selectAll().where('person_id', '=', personId).executeTakeFirst();
     if (!row) return null;
-    const [collection, invoices, viewingRooms, topWorks] = await Promise.all([
+    const [collection, invoices, inquiries, viewingRooms, topWorks] = await Promise.all([
         collectionOf(db, personId),
         invoicesForPerson(db, personId),
+        inquiriesForPerson(db, personId),
         roomsForPerson(db, personId),
         topWorksForPerson(db, personId),
     ]);
-    return { personId: row.person_id, notes: row.notes, collection, invoices, viewingRooms, topWorks, updatedAt: row.updated_at };
+    return { personId: row.person_id, notes: row.notes, collection, invoices, inquiries, viewingRooms, topWorks, updatedAt: row.updated_at };
 }
 
 export async function getPerson(db: Q, id: string): Promise<Person | null> {

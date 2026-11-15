@@ -2,6 +2,7 @@
 import { computed, defineAsyncComponent } from 'vue';
 import { exhibitionPath, formatDateRange } from '@twelveten/shared';
 import Footer from '@/components/Footer.vue';
+import ArtImage from '@/components/ArtImage.vue';
 import { api } from '@/api/client';
 import { useResource } from '@/composables/useResource';
 import { useMeta } from '@/composables/useMeta';
@@ -38,16 +39,24 @@ useMeta(() => (home.value ? { kind: 'home', home: home.value } : null));
             <div class="fixed top-0 left-0 w-full h-full flex grow bg-cover bg-center">
                 <div class="absolute top-[-4px] right-[-4px] left-[-4px] bottom-[-4px] bg-sky-900">
                     <template v-if="home">
-                        <img
+                        <ArtImage
                             :src="home.bgImage"
                             alt=""
+                            eager
+                            sharpest
+                            fit="cover"
+                            sizes="100vw"
                             :class="{ 'blur-bg': menuActive }"
                             :style="{ objectPosition: home.bgFocalPoint }"
                             class="md:block hidden home-bg object-cover w-full h-full"
                         />
-                        <img
+                        <ArtImage
                             :src="home.bgImageMobile ?? home.bgImage"
                             alt=""
+                            eager
+                            sharpest
+                            fit="cover"
+                            sizes="100vw"
                             :class="{ 'blur-bg': menuActive }"
                             :style="{ objectPosition: home.bgFocalPoint }"
                             class="md:hidden home-bg object-cover w-full h-full"

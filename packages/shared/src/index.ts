@@ -9,3 +9,5 @@ export * from './people.ts';
 export * from './inventory.ts';
 export * from './invoices.ts';
 export * from './rooms.ts';
+export * from './media.ts';
+export * from './inquiries.ts';

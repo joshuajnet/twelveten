@@ -1,29 +1,26 @@
-import { createHash, randomBytes } from 'node:crypto';
 import { Hono, type Context } from 'hono';
 import { getCookie, setCookie } from 'hono/cookie';
 import { sql, type Transaction } from 'kysely';
-import { normalizeEmail, packPointer, ROOM_TOKEN_RE, roomEnterSchema, trackBatchSchema, VISIT_GAP_MS, type PublicRoom } from '@twelveten/shared';
+import { formatPrice, normalizeEmail, packPointer, ROOM_TOKEN_RE, roomEnterSchema, roomInquirySchema, trackBatchSchema, VISIT_GAP_MS, type PublicRoom } from '@twelveten/shared';
 import type { AppEnv } from '../env.ts';
 import type { DB } from '../db/index.ts';
 import type { Database, ViewingRoomRow } from '../db/types.ts';
-import { viewerIp } from '../auth/auth.ts';
+import { limitByIp, newCookieValue, originGuard, rememberVisitor, sha256, VISITOR_COOKIE_MAX_AGE } from '../lib/visitors.ts';
+import { identifyPerson } from '../people/identify.ts';
 import { liveRoomByToken, publicRoom, visibleArtistIds, visibleWorkIds } from '../rooms/queries.ts';
 import { refreshEngagement } from '../rooms/engagement.ts';
 import { getArtistProfile } from '../people/queries.ts';
 import { renderCvPdf } from '../people/cvPdf.ts';
 import { HttpError, validationError } from './admin/errors.ts';
-import { recordRevision } from './admin/revisions.ts';
-import { ensureCollectorProfile, isUuid, pdfResponse } from './admin/util.ts';
+import { isUuid, pdfResponse } from './admin/util.ts';
 
 export const ROOM_COOKIE = 'twelveten_vr';
-const COOKIE_MAX_AGE = 365 * 24 * 3600;
 const ENTER_LIMIT = { max: 10, windowMs: 60_000 };
 const MAX_TRACK_BYTES = 256 * 1024;
 
 type Ctx = Context<AppEnv>;
 type Trx = Transaction<Database>;
 
-const hash = (v: string) => createHash('sha256').update(v).digest('hex');
 const cookiePath = (token: string) => `/api/rooms/${token}`;
 
 /**
@@ -32,8 +29,7 @@ const cookiePath = (token: string) => `/api/rooms/${token}`;
  */
 export function roomPublicRoutes(opts: { siteUrl: string; trustedOrigins?: string[] }) {
     const app = new Hono<AppEnv>();
-    // The same origins Better Auth trusts.
-    const origins = new Set([opts.siteUrl, ...(opts.trustedOrigins ?? [])].map((o) => new URL(o).origin));
+    const checkOrigin = originGuard(opts.siteUrl, opts.trustedOrigins);
     const secure = opts.siteUrl.startsWith('https://');
 
     app.use('/rooms/*', async (c, next) => {
@@ -41,11 +37,7 @@ export function roomPublicRoutes(opts: { siteUrl: string; trustedOrigins?: strin
         c.header('X-Robots-Tag', 'noindex, nofollow');
         const token = c.req.path.split('/')[3] ?? '';
         if (!ROOM_TOKEN_RE.test(token)) throw new HttpError(404, 'Not found');
-        // Writes only from the site itself (browsers always send Origin on POST).
-        if (c.req.method === 'POST') {
-            const origin = c.req.header('origin');
-            if (origin && !origins.has(origin)) throw new HttpError(403, 'Forbidden');
-        }
+        checkOrigin(c);
         await next();
     });
 
@@ -57,7 +49,7 @@ export function roomPublicRoutes(opts: { siteUrl: string; trustedOrigins?: strin
             .selectFrom('viewing_room_cookies as k')
             .innerJoin('viewing_room_visitors as v', 'v.id', 'k.visitor_id')
             .selectAll('v')
-            .where('k.hash', '=', hash(raw))
+            .where('k.hash', '=', sha256(raw))
             .where('v.room_id', '=', room.id)
             .executeTakeFirst();
         return row ?? null;
@@ -118,7 +110,7 @@ export function roomPublicRoutes(opts: { siteUrl: string; trustedOrigins?: strin
     app.post('/rooms/:token/enter', async (c) => {
         const { room, token } = await roomFor(c);
         const db = c.var.db;
-        await rateLimit(db, `room-enter:${clientIp(c)}`);
+        await limitByIp(c, 'room-enter', ENTER_LIMIT.max, ENTER_LIMIT.windowMs);
         let raw: unknown;
         try {
             raw = await c.req.json();
@@ -130,48 +122,79 @@ export function roomPublicRoutes(opts: { siteUrl: string; trustedOrigins?: strin
         const { name } = parsed.data;
         const email = normalizeEmail(parsed.data.email);
 
-        const cookie = randomBytes(32).toString('base64url');
+        const cookie = newCookieValue();
         const { visitor, visitId } = await db.transaction().execute(async (trx) => {
-            // The same email (main or alias) is the same person; otherwise a new person.
-            let personId: string | undefined;
-            let match: 'email' | 'alias' | 'new' = 'email';
-            const byEmail = await trx
-                .selectFrom('persons')
-                .select('id')
-                .where(sql<string>`lower(btrim(email))`, '=', email)
-                .orderBy('created_at')
-                .limit(1)
-                .executeTakeFirst();
-            personId = byEmail?.id;
-            if (!personId) {
-                const byAlias = await trx.selectFrom('person_emails').select('person_id').where('email', '=', email).executeTakeFirst();
-                personId = byAlias?.person_id;
-                match = 'alias';
-            }
-            if (!personId) {
-                const created = await trx
-                    .insertInto('persons')
-                    .values({ name, email, notes: `Created from viewing room “${room.title}”` })
-                    .returningAll()
-                    .executeTakeFirstOrThrow();
-                await recordRevision(trx, { entity: 'person', entityId: created.id, action: 'create', snapshot: created, userId: null });
-                personId = created.id;
-                match = 'new';
-            }
-            await ensureCollectorProfile(trx, personId);
+            const { personId, match } = await identifyPerson(trx, { name, email, createdFrom: `viewing room “${room.title}”` });
+            // Known across the public site from now on (Inquire skips name and email).
+            await rememberVisitor(c, trx, personId, secure);
             const visitor = await trx
                 .insertInto('viewing_room_visitors')
                 .values({ room_id: room.id, person_id: personId, entered_name: name, entered_email: email, match })
                 .onConflict((oc) => oc.columns(['room_id', 'person_id']).doUpdateSet({ entered_name: name, entered_email: email }))
                 .returningAll()
                 .executeTakeFirstOrThrow();
-            await trx.insertInto('viewing_room_cookies').values({ hash: hash(cookie), visitor_id: visitor.id }).execute();
+            await trx.insertInto('viewing_room_cookies').values({ hash: sha256(cookie), visitor_id: visitor.id }).execute();
             const visitId = await currentVisit(trx, visitor.id, c.req.header('user-agent'));
             return { visitor, visitId };
         });
 
-        setCookie(c, ROOM_COOKIE, cookie, { path: cookiePath(token), httpOnly: true, secure, sameSite: 'Lax', maxAge: COOKIE_MAX_AGE });
+        setCookie(c, ROOM_COOKIE, cookie, { path: cookiePath(token), httpOnly: true, secure, sameSite: 'Lax', maxAge: VISITOR_COOKIE_MAX_AGE });
         return c.json({ room: await publicRoom(db, room, { name: visitor.entered_name }, visitId) satisfies PublicRoom });
+    });
+
+    /** Inquire about a work from inside the room (the room knows who the visitor is). */
+    app.post('/rooms/:token/inquiries', async (c) => {
+        const { room, token } = await roomFor(c);
+        const db = c.var.db;
+        const visitor = await visitorFor(c, room);
+        if (!visitor) throw new HttpError(401, 'Enter the room first');
+        await limitByIp(c, 'inquiry', 5, 10 * 60_000, 'Too many inquiries; please try again in a few minutes');
+        let raw: unknown;
+        try {
+            raw = await c.req.json();
+        } catch {
+            throw new HttpError(400, 'Request body must be JSON');
+        }
+        const parsed = roomInquirySchema.safeParse(raw);
+        if (!parsed.success) throw validationError(parsed.error);
+        const { workId, note } = parsed.data;
+        if (!(await visibleWorkIds(db, room.id)).has(workId)) throw new HttpError(404, 'Not found');
+        const w = await db
+            .selectFrom('viewing_room_works as rw')
+            .innerJoin('works as w', 'w.id', 'rw.work_id')
+            .innerJoin('persons as a', 'a.id', 'w.artist_id')
+            .select(['w.id', 'w.title', 'w.date_text', 'w.medium', 'w.dimensions', 'w.status', 'w.price_cents', 'w.currency', 'rw.show_price', 'a.name as artist'])
+            .select((eb) => eb.selectFrom('work_images as i').select('i.url').whereRef('i.work_id', '=', 'w.id').orderBy('i.position').limit(1).as('image'))
+            .where('rw.room_id', '=', room.id)
+            .where('rw.work_id', '=', workId)
+            .executeTakeFirstOrThrow();
+        if (w.status !== 'available') throw new HttpError(400, 'This work isn’t available');
+        const price = (w.show_price ?? room.show_prices) && w.price_cents !== null ? formatPrice(w.price_cents, w.currency) : null;
+        await db.transaction().execute(async (trx) => {
+            const visitId = await currentVisit(trx, visitor.id, c.req.header('user-agent'));
+            await trx
+                .insertInto('inquiries')
+                .values({
+                    person_id: visitor.person_id,
+                    source: 'room',
+                    room_id: room.id,
+                    work_id: w.id,
+                    item: JSON.stringify({ title: w.title || 'Untitled', artist: w.artist, date: w.date_text, medium: w.medium, dimensions: w.dimensions, image: w.image ?? null, price, context: room.title }),
+                    page_url: `/rooms/${token}`,
+                    note,
+                    entered_name: null,
+                    entered_email: null,
+                    match: 'known',
+                })
+                .execute();
+            await trx.insertInto('viewing_room_events').values({ visit_id: visitId, type: 'inquire', work_id: w.id, data: JSON.stringify(note ? { note: note.slice(0, 200) } : {}) }).execute();
+            await sql`
+INSERT INTO viewing_room_work_stats AS t (visitor_id, work_id, inquiries, visits_seen, last_visit_id, last_seen_at)
+VALUES (${visitor.id}, ${w.id}, 1, 1, ${visitId}, now())
+ON CONFLICT (visitor_id, work_id) DO UPDATE SET inquiries = t.inquiries + 1, last_seen_at = now()`.execute(trx);
+            await refreshEngagement(trx, visitor.id);
+        });
+        return c.json({ name: visitor.entered_name }, 201);
     });
 
     app.post('/rooms/:token/track', async (c) => {
@@ -292,21 +315,4 @@ ON CONFLICT (visitor_id, artist_id) DO UPDATE SET cv_opens = t.cv_opens + 1`.exe
     });
 
     return app;
-}
-
-/** The visitor's address: CloudFront's viewer address, else the local proxy's X-Forwarded-For. */
-function clientIp(c: Ctx): string {
-    return viewerIp(c.req.header('cloudfront-viewer-address') ?? null) ?? c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
-}
-
-/** Fixed-window limit shared across API instances (Better Auth's rateLimit table, our own key prefix). */
-async function rateLimit(db: DB, key: string): Promise<void> {
-    const now = Date.now();
-    const r = await sql<{ count: number }>`
-INSERT INTO "rateLimit" (key, count, "lastRequest") VALUES (${key}, 1, ${now})
-ON CONFLICT (key) DO UPDATE SET
-  count = CASE WHEN "rateLimit"."lastRequest" < ${now - ENTER_LIMIT.windowMs} THEN 1 ELSE "rateLimit".count + 1 END,
-  "lastRequest" = CASE WHEN "rateLimit"."lastRequest" < ${now - ENTER_LIMIT.windowMs} THEN ${now} ELSE "rateLimit"."lastRequest" END
-RETURNING count`.execute(db);
-    if (Number(r.rows[0]?.count ?? 0) > ENTER_LIMIT.max) throw new HttpError(429, 'Too many attempts; try again in a minute');
 }

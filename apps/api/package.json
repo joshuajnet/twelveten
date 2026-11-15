@@ -10,6 +10,7 @@
         "typecheck": "tsc --noEmit",
         "admin:create": "tsx --env-file-if-exists=../../.env.local src/db/cli.ts admin:create",
         "media:sync": "tsx --env-file-if-exists=../../.env.local src/media/cli.ts",
+        "media:derive": "tsx --env-file-if-exists=../../.env.local src/media/deriveCli.ts",
         "build": "node build.mjs",
         "secrets:init": "tsx src/deploy/secrets.ts",
         "deploy": "osls deploy",
@@ -27,6 +28,7 @@
         "pdfmake": "^0.3.13",
         "pg": "^8.23.1",
         "sanitize-html": "^2.18.1",
+        "sharp": "^0.34.5",
         "uuid": "^14.0.3",
         "zod": "^4.6.7"
     },

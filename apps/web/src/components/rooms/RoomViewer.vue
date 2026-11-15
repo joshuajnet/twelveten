@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { inquiryMailto, type PublicRoom, type PublicRoomWork } from '@twelveten/shared';
+import type { InquiryItem, PublicRoom, PublicRoomWork } from '@twelveten/shared';
 import ZoomViewer from '@/components/ZoomViewer.vue';
+import ArtImage from '@/components/ArtImage.vue';
+import InquiryDialog, { type InquiryTarget } from '@/components/InquiryDialog.vue';
 import { useRoomTracker } from '@/composables/useRoomTracker';
 import RoomArtists from './RoomArtists.vue';
 
@@ -102,13 +104,15 @@ function onZoomPointer(p: { x: number; y: number; zoom: number }) {
     if (id) tracker.pointer(id, p.x, p.y, p.zoom);
 }
 
-// ---- Inquire ----
-const roomUrl = `${location.origin}/rooms/${props.token}`;
-const mailto = (w: PublicRoomWork) =>
-    inquiryMailto(w, { to: props.room.inquiryEmail, viewerName: props.room.viewer?.name, roomTitle: props.room.title, roomUrl });
-function inquired(w: PublicRoomWork) {
-    tracker.count(w.id, 'inquiries');
-    tracker.event('inquire', { workId: w.id });
+// ---- Inquire (a form; the API records it and counts it toward engagement) ----
+const inquiry = ref<{ open: boolean; item: InquiryItem | null; target: InquiryTarget | null }>({ open: false, item: null, target: null });
+function inquire(w: PublicRoomWork) {
+    inquiry.value = {
+        open: true,
+        item: { title: w.title || 'Untitled', artist: w.artistName, date: w.dateText, medium: w.medium, dimensions: w.dimensions, image: w.images[0]?.url ?? null, price: w.price },
+        target: { kind: 'room', token: props.token, workId: w.id, viewerName: props.room.viewer?.name ?? null },
+    };
+    zoomOpen.value = false;
 }
 
 // ---- Artists ----
@@ -203,9 +207,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
                     <button v-if="works.length > 1" type="button" class="room-half right-0 justify-end" aria-label="Next work" @click="show(index + 1)">
                         <i class="las la-angle-right text-2xl" aria-hidden="true"></i>
                     </button>
-                    <img
+                    <ArtImage
                         v-if="current.images[imageIndex]"
                         :key="current.images[imageIndex]!.url"
+                        eager
+                        sharpest
+                        sizes="(min-width: 1024px) 70vw, 100vw"
                         :src="current.images[imageIndex]!.url"
                         :alt="current.images[imageIndex]!.alt || caption(current)"
                         class="room-image relative z-20 mx-auto max-w-[calc(100%-4rem)] cursor-zoom-in"
@@ -224,7 +231,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
                         :aria-current="n === imageIndex"
                         @click="(imageIndex = n), tracker.count(current.id, 'clicks')"
                     >
-                        <img :src="img.url" alt="" class="h-full w-full object-cover" loading="lazy" />
+                        <ArtImage :src="img.url" alt="" fit="cover" sizes="56px" class="h-full w-full object-cover" />
                     </button>
                 </div>
                 <div class="relative z-20 mx-auto mt-4 max-w-md text-center text-sm" aria-live="polite">
@@ -239,9 +246,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
                         <button v-if="current.images.length" type="button" class="room-action" @click="openZoom(current, imageIndex)">
                             <i class="las la-search-plus mr-1" aria-hidden="true"></i>Zoom
                         </button>
-                        <a v-if="current.available && room.inquiryEmail" :href="mailto(current)" class="room-action" data-testid="room-inquire" @click="inquired(current)">
+                        <button v-if="current.available" type="button" class="room-action" data-testid="room-inquire" @click="inquire(current)">
                             <i class="las la-envelope mr-1" aria-hidden="true"></i>Inquire
-                        </a>
+                        </button>
                         <button v-if="artistIds.has(current.artistId)" type="button" class="room-action" @click="aboutArtist(current)">About the artist</button>
                     </div>
                     <div v-if="works.length > 1" class="mt-3 font-roboto text-xs font-light tabular-nums text-slate-400">{{ index + 1 }} / {{ works.length }}</div>
@@ -254,7 +261,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
             <ul class="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
                 <li v-for="(w, i) in works" :key="w.id" v-track-work="w.id" class="flex flex-col" data-testid="room-tile">
                     <button type="button" class="group flex h-[28vh] items-center justify-center bg-slate-50 p-2" :aria-label="`Open ${caption(w)}`" @click="openInSlideshow(i)">
-                        <img v-if="w.images[0]" :src="w.images[0].url" :alt="w.images[0].alt || caption(w)" class="max-h-full max-w-full object-contain transition-opacity group-hover:opacity-80" loading="lazy" />
+                        <ArtImage v-if="w.images[0]" :src="w.images[0].url" :alt="w.images[0].alt || caption(w)" sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw" class="max-h-full max-w-full object-contain transition-opacity group-hover:opacity-80" />
                         <span v-else class="font-roboto text-xs font-light text-slate-400">No image</span>
                     </button>
                     <div class="mt-2 text-sm leading-snug">
@@ -266,9 +273,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
                             <button v-if="w.images.length" type="button" class="text-slate-500 hover:text-sky-900" @click="openZoom(w)">
                                 <i class="las la-search-plus" aria-hidden="true"></i> Zoom
                             </button>
-                            <a v-if="w.available && room.inquiryEmail" :href="mailto(w)" class="text-slate-500 no-underline hover:text-sky-900" @click="inquired(w)">
+                            <button v-if="w.available" type="button" class="text-slate-500 hover:text-sky-900" @click="inquire(w)">
                                 <i class="las la-envelope" aria-hidden="true"></i> Inquire
-                            </a>
+                            </button>
                         </div>
                     </div>
                 </li>
@@ -283,6 +290,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
         </div>
         <RoomArtists v-if="tab === 'artists'" :artists="shownArtists" :token="token" :tracker="tracker" :focus="focusArtist" @show-works="showWorksBy" />
 
+        <InquiryDialog v-model:open="inquiry.open" :item="inquiry.item" :target="inquiry.target" :preview="preview" />
         <ZoomViewer
             v-model:open="zoomOpen"
             v-model:index="zoomIndex"
@@ -299,14 +307,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
                 </template>
             </template>
             <template #actions>
-                <a
-                    v-if="zoomWork?.available && room.inquiryEmail"
-                    :href="mailto(zoomWork)"
-                    class="mr-2 border px-3 py-1 font-roboto text-xs font-light text-slate-600 no-underline hover:text-sky-600"
-                    @click="inquired(zoomWork)"
-                >
+                <button v-if="zoomWork?.available" type="button" class="mr-2 border px-3 py-1 font-roboto text-xs font-light text-slate-600 hover:text-sky-600" @click="inquire(zoomWork)">
                     <i class="las la-envelope mr-1" aria-hidden="true"></i>Inquire
-                </a>
+                </button>
             </template>
         </ZoomViewer>
     </div>

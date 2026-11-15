@@ -4,6 +4,7 @@ import { exhibitionStatus, formatDateRange, joinArtists, todayIso, type Exhibiti
 import { api } from '@/api/client';
 import { useResource } from '@/composables/useResource';
 import { useMeta } from '@/composables/useMeta';
+import ArtImage from '@/components/ArtImage.vue';
 
 const { data } = useResource(
     () => 'exhibition' as const,
@@ -39,12 +40,13 @@ useMeta(() => ({ kind: 'static', path: '/exhibitions', image: data.value?.[0] ? 
                     :to="{ name: 'exhibition', params: { slug: e.slug } }"
                     class="no-underline text-2xl block mb-6"
                 >
-                    <img
+                    <ArtImage
                         v-if="image(e)"
-                        v-lazy="{ src: image(e) }"
-                        class="lazy-image max-w-full w-auto h-auto mx-auto"
-                        style="max-height: calc(100vh - 200px)"
+                        :src="image(e)!"
                         :alt="alt(e)"
+                        sizes="(min-width: 768px) 25vw, 50vw"
+                        class="max-w-full w-auto h-auto mx-auto"
+                        style="max-height: calc(100vh - 200px)"
                     />
                 </router-link>
             </div>
@@ -58,12 +60,13 @@ useMeta(() => ({ kind: 'static', path: '/exhibitions', image: data.value?.[0] ? 
                     :to="{ name: 'exhibition', params: { slug: e.slug } }"
                     class="no-underline text-2xl"
                 >
-                    <img
+                    <ArtImage
                         v-if="image(e)"
-                        v-lazy="{ src: image(e) }"
-                        class="lazy-image max-w-full w-auto h-auto mx-auto"
-                        style="max-height: calc(100vh - 200px)"
+                        :src="image(e)!"
                         :alt="alt(e)"
+                        sizes="(min-width: 768px) 25vw, 50vw"
+                        class="max-w-full w-auto h-auto mx-auto"
+                        style="max-height: calc(100vh - 200px)"
                     />
                     <span v-else class="text-lg">{{ e.title }}</span>
                 </router-link>
@@ -73,13 +76,4 @@ useMeta(() => ({ kind: 'static', path: '/exhibitions', image: data.value?.[0] ? 
 </template>
 
 <style scoped>
-.lazy-image {
-    transition: opacity 0.5s ease-in-out;
-}
-img[lazy='loading'] {
-    opacity: 0;
-}
-img[lazy='loaded'] {
-    opacity: 1;
-}
 </style>

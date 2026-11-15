@@ -13,6 +13,7 @@ import InterestBar from './InterestBar.vue';
 import RoomStatusBadge from './RoomStatusBadge.vue';
 import StatTile from './StatTile.vue';
 import { duration, when } from './time';
+import ArtImage from '@/components/ArtImage.vue';
 
 /** One room at a glance: who came, how engaged they were, and which works drew the most interest. */
 const route = useRoute();
@@ -113,7 +114,7 @@ const maxInterest = computed(() => Math.max(1, ...(data.value?.works.map((w) => 
                             <td class="py-1.5 pr-3">
                                 <RouterLink :to="{ name: 'bo-work', params: { id: w.workId } }" class="flex items-center gap-2 hover:underline">
                                     <span class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded bg-slate-100">
-                                        <img v-if="w.image" :src="w.image" alt="" class="h-full w-full object-contain" loading="lazy" />
+                                        <ArtImage sizes="48px" v-if="w.image" :src="w.image" alt="" class="h-full w-full object-contain" />
                                     </span>
                                     <span class="min-w-0">
                                         <span class="block truncate italic text-sky-900">{{ w.title || 'Untitled' }}</span>
