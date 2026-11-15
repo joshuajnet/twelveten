@@ -25,7 +25,8 @@ ENV NODE_OPTIONS=--enable-source-maps \
     DATABASE_SSL_CA_FILE=/opt/rds-ca.pem \
     DATABASE_POOL_MAX=1 \
     SEED_DATA_DIR=/var/task/seed-data
-COPY --from=build /opt/rds-ca.pem /opt/rds-ca.pem
+# ADD <url> leaves the file readable only by root; Lambda runs as another user.
+COPY --from=build --chmod=644 /opt/rds-ca.pem /opt/rds-ca.pem
 COPY --from=build /repo/apps/api/dist/ ${LAMBDA_TASK_ROOT}/
 COPY --from=build /repo/apps/api/seed-data/ ${LAMBDA_TASK_ROOT}/seed-data/
 COPY --from=build /opt/native/node_modules/ ${LAMBDA_TASK_ROOT}/node_modules/
