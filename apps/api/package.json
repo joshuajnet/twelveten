@@ -1,0 +1,48 @@
+{
+    "name": "@twelveten/api",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "scripts": {
+        "dev": "tsx watch --env-file-if-exists=../../.env.local src/local.ts",
+        "db:migrate": "tsx --env-file-if-exists=../../.env.local src/db/cli.ts migrate",
+        "db:seed": "tsx --env-file-if-exists=../../.env.local src/db/cli.ts seed",
+        "typecheck": "tsc --noEmit",
+        "admin:create": "tsx --env-file-if-exists=../../.env.local src/db/cli.ts admin:create",
+        "media:sync": "tsx --env-file-if-exists=../../.env.local src/media/cli.ts",
+        "media:derive": "tsx --env-file-if-exists=../../.env.local src/media/deriveCli.ts",
+        "build": "node build.mjs",
+        "secrets:init": "tsx src/deploy/secrets.ts",
+        "deploy": "osls deploy",
+        "deploy:site": "tsx src/deploy/site.ts",
+        "data:push": "tsx src/deploy/data.ts",
+        "migrate:remote": "osls invoke -f migrate"
+    },
+    "dependencies": {
+        "@aws-sdk/client-s3": "^3.1159.0",
+        "@aws-sdk/s3-request-presigner": "^3.1159.0",
+        "@hono/node-server": "^2.1.8",
+        "@twelveten/shared": "*",
+        "better-auth": "^1.7.14",
+        "hono": "^4.13.14",
+        "kysely": "^0.29.7",
+        "pdfmake": "^0.3.13",
+        "pg": "^8.23.1",
+        "sanitize-html": "^2.18.1",
+        "sharp": "^0.34.5",
+        "uuid": "^14.0.3",
+        "zod": "^4.6.7"
+    },
+    "devDependencies": {
+        "@aws-sdk/client-cloudformation": "^3.1159.0",
+        "@aws-sdk/client-lambda": "^3.1159.0",
+        "@aws-sdk/client-ssm": "^3.1159.0",
+        "@types/node": "^22.20.5",
+        "@types/pdfmake": "^0.3.3",
+        "@types/pg": "^8.23.1",
+        "@types/sanitize-html": "^2.16.2",
+        "esbuild": "^0.28.2",
+        "osls": "^4.5.0",
+        "tsx": "^4.23.15"
+    }
+}

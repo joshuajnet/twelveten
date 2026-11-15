@@ -1,0 +1,4 @@
+dist
+config.*.yml
+!config.example.yml
+.serverless

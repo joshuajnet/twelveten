@@ -1,0 +1,40 @@
+{
+    "name": "@twelveten/web",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "preview": "vite preview",
+        "typecheck": "vue-tsc --noEmit"
+    },
+    "dependencies": {
+        "@internationalized/date": "^3.12.4",
+        "@tiptap/core": "^3.32.1",
+        "@tiptap/extension-bubble-menu": "^3.32.1",
+        "@tiptap/extension-list": "^3.32.1",
+        "@tiptap/extensions": "^3.32.1",
+        "@tiptap/pm": "^3.32.1",
+        "@tiptap/vue-3": "^3.32.1",
+        "@twelveten/shared": "*",
+        "@unhead/vue": "^2.1.17",
+        "reka-ui": "^2.11.0",
+        "sortablejs": "^1.15.7",
+        "vue": "^3.5.0",
+        "vue-router": "^4.5.0"
+    },
+    "devDependencies": {
+        "@tailwindcss/postcss": "^4.3.5",
+        "@tailwindcss/vite": "^4.3.5",
+        "@types/sortablejs": "^1.15.9",
+        "@vitejs/plugin-vue": "^6.0.0",
+        "@vue/test-utils": "^2.5.1",
+        "happy-dom": "^21.0.4",
+        "postcss": "^8.4.24",
+        "tailwindcss": "^4.3.5",
+        "typescript": "^5.9.3",
+        "vite": "^8.0.0",
+        "vue-tsc": "^3.3.13"
+    }
+}

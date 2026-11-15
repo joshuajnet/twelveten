@@ -1,0 +1,53 @@
+@import 'tailwindcss';
+/* Classes emitted by the shared rich-text renderer. */
+@source '../../../packages/shared/src';
+
+@theme {
+  --font-gloock: 'Gloock', display;
+  --font-roboto: 'Roboto', display;
+  --font-creepster: Creepster, display;
+  --font-gentium-book: 'Gentium Book Plus', body;
+  --font-germania-one: 'Germania One', display;
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  /* Pointer cursor on everything clickable (Tailwind 4 resets buttons to the default cursor). */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  [role='menuitem']:not([data-disabled]),
+  [role='option']:not([data-disabled]),
+  [role='switch']:not(:disabled),
+  input:is([type='submit'], [type='button'], [type='reset'], [type='checkbox'], [type='radio']):not(:disabled),
+  select:not(:disabled),
+  summary,
+  label[for],
+  ::file-selector-button {
+    cursor: pointer;
+  }
+  :disabled {
+    cursor: not-allowed;
+  }
+
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+/* Rich text (exhibition bodies): list items wrap their text in <p>; keep the list's own spacing. */
+@layer components {
+  .rich-content li > p {
+    margin-bottom: 0;
+  }
+}

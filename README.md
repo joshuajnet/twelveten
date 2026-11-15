@@ -1,7 +1,19 @@
-# Vue 3 + Vite
+# Twelve Ten Gallery
 
-This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+## Quick start
+Requires Node 22+ and Docker.
 
-## Recommended IDE Setup
+```sh
+npm install
+npm run dev
+```
 
-- [VS Code](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
+The first run starts Postgres and LocalStack, loads the site's content, creates a local admin and prints the site and admin login addresses. Put the site's media (`images/`, `docs/`) in `.media/` to see images locally.
+
+- `npm test`: unit and API tests (Vitest; needs the Docker services)
+- `npm run test:e2e`: build + Playwright visual and editing tests (needs `npm run dev` running)
+- `npm run typecheck`
+
+Deploying to AWS: see the "Deployment" section of [ARCHITECTURE.md](ARCHITECTURE.md).
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for how the system is put together.

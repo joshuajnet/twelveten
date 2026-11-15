@@ -1,0 +1,25 @@
+{
+    "name": "@twelveten/shared",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "exports": {
+        ".": "./src/index.ts",
+        "./rich/server": "./src/rich/server.ts",
+        "./rich": "./src/rich/index.ts",
+        "./*": "./src/*.ts"
+    },
+    "scripts": {
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@tiptap/core": "^3.32.1",
+        "@tiptap/extension-bold": "^3.32.1",
+        "@tiptap/extension-list": "^3.32.1",
+        "@tiptap/extension-paragraph": "^3.32.1",
+        "@tiptap/html": "^3.32.1",
+        "@tiptap/pm": "^3.32.1",
+        "@tiptap/starter-kit": "^3.32.1",
+        "zod": "^4.6.7"
+    }
+}

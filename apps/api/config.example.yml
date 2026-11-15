@@ -1,0 +1,6 @@
+# Copy to config.<stage>.yml (e.g. config.dev.yml, config.prod.yml).
+# The public origin of the site (used for canonical URLs, sign-in and upload CORS).
+siteUrl: https://www.twelvetengallery.com
+# Optional custom domain on CloudFront; the certificate must be in us-east-1.
+domain: www.twelvetengallery.com
+certificateArn: arn:aws:acm:us-east-1:123456789012:certificate/00000000-0000-0000-0000-000000000000

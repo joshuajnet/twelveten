@@ -1,0 +1,445 @@
+# Twelve Ten — AWS deployment (OSS Serverless / osls).
+#
+#   npx osls deploy --stage dev            # infrastructure + Lambda image
+#   npx osls invoke -f migrate --stage dev # apply database migrations
+#   npm run deploy:site -- --stage dev     # upload the built site, then re-render all pages
+#
+# One-time setup per stage:
+#   - `npm run secrets:init -w apps/api -- --stage dev` creates the SSM SecureStrings below
+#   - `config.<stage>.yml` next to this file (see config.example.yml): `siteUrl` (the site's public
+#     origin), and optionally `domain` + `certificateArn` (an ACM certificate in us-east-1).
+#     Without a domain, deploy once, then set siteUrl to the DistributionDomain output and deploy again.
+
+service: twelveten
+frameworkVersion: '4'
+
+params:
+  default:
+    dbInstanceClass: db.t4g.micro
+    dbDeletionProtection: false
+    # The Free plan allows at most 1 day of automated backups; raise this on a Paid plan.
+    dbBackupRetentionDays: 1
+    reservedConcurrency: 10
+  prod:
+    dbDeletionProtection: true
+
+custom:
+  stageConfig: ${file(./config.${sls:stage}.yml)}
+  domain: ${self:custom.stageConfig.domain, ''}
+  certificateArn: ${self:custom.stageConfig.certificateArn, ''}
+  siteUrl: ${self:custom.stageConfig.siteUrl, 'https://example.invalid'}
+  ssm: /twelveten/${sls:stage}
+
+provider:
+  name: aws
+  region: ${opt:region, 'us-east-2'}
+  stage: ${opt:stage, 'dev'}
+  runtime: nodejs22.x
+  architecture: x86_64
+  logRetentionInDays: 30
+  ecr:
+    images:
+      api:
+        path: ../..
+        file: apps/api/Dockerfile
+        # Lambda rejects images with attestation manifests (buildx adds them by default).
+        buildOptions: ['--provenance=false', '--sbom=false', '--platform=linux/amd64']
+  vpc:
+    securityGroupIds:
+      - !Ref LambdaSecurityGroup
+    subnetIds:
+      - !Ref PrivateSubnetA
+      - !Ref PrivateSubnetB
+  environment:
+    NODE_ENV: production
+    STAGE: ${sls:stage}
+    SITE_URL: ${self:custom.siteUrl}
+    DATABASE_URL: !Join
+      - ''
+      - - 'postgres://twelveten:'
+        - ${ssm:${self:custom.ssm}/db-password}
+        - '@'
+        - !GetAtt Database.Endpoint.Address
+        - ':5432/twelveten'
+    BETTER_AUTH_SECRET: ${ssm:${self:custom.ssm}/better-auth-secret}
+    ORIGIN_VERIFY_SECRET: ${ssm:${self:custom.ssm}/origin-verify-secret}
+    MEDIA_BUCKET: !Ref MediaBucket
+    SITE_BUCKET: !Ref SiteBucket
+    # Invoice payment details (optional SSM parameters; empty when not set).
+    INVOICE_ZELLE: ${ssm:${self:custom.ssm}/invoice-zelle, ''}
+    INVOICE_WIRE_ROUTING: ${ssm:${self:custom.ssm}/invoice-wire-routing, ''}
+    INVOICE_WIRE_ACCOUNT: ${ssm:${self:custom.ssm}/invoice-wire-account, ''}
+    INVOICE_CHECKS_PAYABLE_TO: ${ssm:${self:custom.ssm}/invoice-checks-payable-to, ''}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action: [s3:PutObject, s3:GetObject, s3:DeleteObject, s3:ListBucket]
+          Resource:
+            - !GetAtt SiteBucket.Arn
+            - !Join ['', [!GetAtt SiteBucket.Arn, '/*']]
+        - Effect: Allow
+          Action: [s3:PutObject]
+          Resource: !Join ['', [!GetAtt MediaBucket.Arn, '/media/uploads/*']]
+        # Invoice PDFs embed work images; the media function reads originals.
+        - Effect: Allow
+          Action: [s3:GetObject]
+          Resource: !Join ['', [!GetAtt MediaBucket.Arn, '/media/*']]
+        # Image derivatives (media function).
+        - Effect: Allow
+          Action: [s3:PutObject]
+          Resource: !Join ['', [!GetAtt MediaBucket.Arn, '/media/derived/*']]
+        - Effect: Allow
+          Action: [s3:ListBucket]
+          Resource: !GetAtt MediaBucket.Arn
+        # One-time data import (npm run data:push): read, then delete, the uploaded dump.
+        - Effect: Allow
+          Action: [s3:GetObject, s3:GetObjectVersion, s3:DeleteObject, s3:DeleteObjectVersion]
+          Resource: !Join ['', [!GetAtt MediaBucket.Arn, '/import/*']]
+
+functions:
+  api:
+    image:
+      name: api
+      command: ['lambda.handler']
+    memorySize: 1024
+    timeout: 29
+    reservedConcurrency: ${param:reservedConcurrency}
+    url: true
+  migrate:
+    image:
+      name: api
+      command: ['migrate.handler']
+    timeout: 300
+    reservedConcurrency: 1
+  rebuild:
+    image:
+      name: api
+      command: ['rebuild.handler']
+    timeout: 300
+    reservedConcurrency: 1
+    events:
+      # Daily, just after midnight in Chicago: Current / Upcoming / Past change as dates pass.
+      - schedule: cron(15 6 * * ? *)
+  media:
+    # Image derivatives for each upload (S3 → EventBridge, so the bucket doesn't reference the
+    # function), and backfills: `osls invoke -f media -d '{"backfill":true,"prefix":"images/"}'`.
+    image:
+      name: api
+      command: ['media.mediaHandler']
+    memorySize: 2048
+    timeout: 300
+    # A bulk upload queues (EventBridge retries throttled events) instead of fanning out.
+    reservedConcurrency: 2
+    events:
+      - eventBridge:
+          pattern:
+            source: [aws.s3]
+            detail-type: [Object Created]
+            detail:
+              bucket:
+                name: [!Ref MediaBucket]
+              object:
+                key: [{ prefix: media/uploads/ }]
+
+resources:
+  Conditions:
+    HasDomain: !Not [!Equals ['${self:custom.domain}', '']]
+
+  Resources:
+    # ---------- Network (no NAT: S3 via a gateway endpoint; secrets are resolved at deploy time) ----------
+    Vpc:
+      Type: AWS::EC2::VPC
+      Properties:
+        CidrBlock: 10.40.0.0/16
+        EnableDnsSupport: true
+        EnableDnsHostnames: true
+        Tags:
+          - Key: Name
+            Value: twelveten-${sls:stage}
+    PrivateSubnetA:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref Vpc
+        CidrBlock: 10.40.1.0/24
+        AvailabilityZone: !Select [0, !GetAZs '']
+    PrivateSubnetB:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref Vpc
+        CidrBlock: 10.40.2.0/24
+        AvailabilityZone: !Select [1, !GetAZs '']
+    PrivateRouteTable:
+      Type: AWS::EC2::RouteTable
+      Properties:
+        VpcId: !Ref Vpc
+    PrivateSubnetARoutes:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties: { SubnetId: !Ref PrivateSubnetA, RouteTableId: !Ref PrivateRouteTable }
+    PrivateSubnetBRoutes:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties: { SubnetId: !Ref PrivateSubnetB, RouteTableId: !Ref PrivateRouteTable }
+    S3GatewayEndpoint:
+      Type: AWS::EC2::VPCEndpoint
+      Properties:
+        VpcId: !Ref Vpc
+        ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+        VpcEndpointType: Gateway
+        RouteTableIds: [!Ref PrivateRouteTable]
+    LambdaSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: Twelve Ten Lambda functions
+        VpcId: !Ref Vpc
+    DatabaseSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: Twelve Ten Postgres (Lambda only)
+        VpcId: !Ref Vpc
+        SecurityGroupIngress:
+          - IpProtocol: tcp
+            FromPort: 5432
+            ToPort: 5432
+            SourceSecurityGroupId: !Ref LambdaSecurityGroup
+
+    # ---------- Database ----------
+    DatabaseSubnetGroup:
+      Type: AWS::RDS::DBSubnetGroup
+      Properties:
+        DBSubnetGroupDescription: Twelve Ten private subnets
+        SubnetIds: [!Ref PrivateSubnetA, !Ref PrivateSubnetB]
+    Database:
+      Type: AWS::RDS::DBInstance
+      DeletionPolicy: Snapshot
+      UpdateReplacePolicy: Snapshot
+      Properties:
+        Engine: postgres
+        EngineVersion: '17'
+        DBInstanceClass: ${param:dbInstanceClass}
+        AllocatedStorage: '20'
+        MaxAllocatedStorage: 100
+        StorageType: gp3
+        StorageEncrypted: true
+        DBName: twelveten
+        MasterUsername: twelveten
+        MasterUserPassword: '{{resolve:ssm-secure:${self:custom.ssm}/db-password}}'
+        DBSubnetGroupName: !Ref DatabaseSubnetGroup
+        VPCSecurityGroups: [!Ref DatabaseSecurityGroup]
+        PubliclyAccessible: false
+        MultiAZ: false
+        BackupRetentionPeriod: ${param:dbBackupRetentionDays}
+        DeletionProtection: ${param:dbDeletionProtection}
+        AutoMinorVersionUpgrade: true
+        CopyTagsToSnapshot: true
+
+    # ---------- Storage ----------
+    SiteBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+        BucketEncryption:
+          ServerSideEncryptionConfiguration: [{ ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 } }]
+    MediaBucket:
+      Type: AWS::S3::Bucket
+      DeletionPolicy: Retain
+      Properties:
+        VersioningConfiguration: { Status: Enabled }
+        # Object-created events go to EventBridge (the media function makes image derivatives).
+        NotificationConfiguration:
+          EventBridgeConfiguration:
+            EventBridgeEnabled: true
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+        BucketEncryption:
+          ServerSideEncryptionConfiguration: [{ ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 } }]
+        LifecycleConfiguration:
+          Rules:
+            - Id: abort-incomplete-uploads
+              Status: Enabled
+              AbortIncompleteMultipartUpload: { DaysAfterInitiation: 2 }
+            - Id: expire-old-versions
+              Status: Enabled
+              NoncurrentVersionExpiration: { NoncurrentDays: 90 }
+        CorsConfiguration:
+          CorsRules:
+            - AllowedOrigins: ['${self:custom.siteUrl}']
+              AllowedMethods: [PUT]
+              AllowedHeaders: ['*']
+              MaxAge: 3000
+
+    # ---------- CDN ----------
+    OriginAccessControl:
+      Type: AWS::CloudFront::OriginAccessControl
+      Properties:
+        OriginAccessControlConfig:
+          Name: twelveten-${sls:stage}-s3
+          OriginAccessControlOriginType: s3
+          SigningBehavior: always
+          SigningProtocol: sigv4
+    SiteBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref SiteBucket
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal: { Service: cloudfront.amazonaws.com }
+              Action: [s3:GetObject, s3:ListBucket]
+              Resource: [!GetAtt SiteBucket.Arn, !Join ['', [!GetAtt SiteBucket.Arn, '/*']]]
+              Condition:
+                StringEquals:
+                  AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${Distribution}
+    MediaBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref MediaBucket
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal: { Service: cloudfront.amazonaws.com }
+              Action: s3:GetObject
+              Resource: !Join ['', [!GetAtt MediaBucket.Arn, '/media/*']]
+              Condition:
+                StringEquals:
+                  AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${Distribution}
+    ViewerRequestFunction:
+      Type: AWS::CloudFront::Function
+      Properties:
+        Name: twelveten-${sls:stage}-viewer-request
+        AutoPublish: true
+        FunctionConfig: { Comment: Redirects and prerendered page paths, Runtime: cloudfront-js-2.0 }
+        FunctionCode: ${file(./cloudfront/function-code.cjs):code}
+    ApiCachePolicy:
+      Type: AWS::CloudFront::CachePolicy
+      Properties:
+        CachePolicyConfig:
+          Name: twelveten-${sls:stage}-api
+          DefaultTTL: 0
+          MinTTL: 0
+          MaxTTL: 300
+          ParametersInCacheKeyAndForwardedToOrigin:
+            EnableAcceptEncodingGzip: true
+            EnableAcceptEncodingBrotli: true
+            QueryStringsConfig: { QueryStringBehavior: all }
+            HeadersConfig: { HeaderBehavior: none }
+            # Signed-in admins (drafts, never cached) must not share cache entries with visitors.
+            CookiesConfig:
+              CookieBehavior: whitelist
+              Cookies: [twelveten.session_token, __Secure-twelveten.session_token]
+    ApiOriginRequestPolicy:
+      Type: AWS::CloudFront::OriginRequestPolicy
+      Properties:
+        OriginRequestPolicyConfig:
+          Name: twelveten-${sls:stage}-api
+          QueryStringsConfig: { QueryStringBehavior: all }
+          CookiesConfig: { CookieBehavior: all }
+          HeadersConfig:
+            HeaderBehavior: whitelist
+            Headers: [Origin, Content-Type, Accept, User-Agent, Referer, CloudFront-Viewer-Address]
+    # Baseline security headers for pages, assets and the API.
+    SiteHeadersPolicy:
+      Type: AWS::CloudFront::ResponseHeadersPolicy
+      Properties:
+        ResponseHeadersPolicyConfig:
+          Name: twelveten-${sls:stage}-site
+          SecurityHeadersConfig:
+            ContentTypeOptions: { Override: true }
+            FrameOptions: { FrameOption: SAMEORIGIN, Override: true }
+            ReferrerPolicy: { ReferrerPolicy: strict-origin-when-cross-origin, Override: true }
+            StrictTransportSecurity: { AccessControlMaxAgeSec: 31536000, IncludeSubdomains: false, Override: true }
+    # Uploaded media is served from the site's origin: an uploaded SVG must not be able to run script
+    # with the admin's session. (No `sandbox`: Chrome won't show sandboxed PDFs.)
+    MediaHeadersPolicy:
+      Type: AWS::CloudFront::ResponseHeadersPolicy
+      Properties:
+        ResponseHeadersPolicyConfig:
+          Name: twelveten-${sls:stage}-media
+          SecurityHeadersConfig:
+            ContentTypeOptions: { Override: true }
+            ReferrerPolicy: { ReferrerPolicy: strict-origin-when-cross-origin, Override: true }
+            StrictTransportSecurity: { AccessControlMaxAgeSec: 31536000, IncludeSubdomains: false, Override: true }
+            ContentSecurityPolicy:
+              Override: true
+              ContentSecurityPolicy: "default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'self'"
+    Distribution:
+      Type: AWS::CloudFront::Distribution
+      Properties:
+        DistributionConfig:
+          Enabled: true
+          HttpVersion: http2and3
+          PriceClass: PriceClass_100
+          DefaultRootObject: index.html
+          Aliases: !If [HasDomain, ['${self:custom.domain}'], !Ref AWS::NoValue]
+          ViewerCertificate: !If
+            - HasDomain
+            - { AcmCertificateArn: '${self:custom.certificateArn}', SslSupportMethod: sni-only, MinimumProtocolVersion: TLSv1.2_2021 }
+            - { CloudFrontDefaultCertificate: true }
+          Origins:
+            - Id: site
+              DomainName: !GetAtt SiteBucket.RegionalDomainName
+              OriginAccessControlId: !GetAtt OriginAccessControl.Id
+              S3OriginConfig: { OriginAccessIdentity: '' }
+            - Id: media
+              DomainName: !GetAtt MediaBucket.RegionalDomainName
+              OriginAccessControlId: !GetAtt OriginAccessControl.Id
+              S3OriginConfig: { OriginAccessIdentity: '' }
+            - Id: api
+              DomainName: !Select [2, !Split ['/', !GetAtt ApiLambdaFunctionUrl.FunctionUrl]]
+              CustomOriginConfig: { OriginProtocolPolicy: https-only, OriginSSLProtocols: [TLSv1.2] }
+              OriginCustomHeaders:
+                - HeaderName: X-Origin-Verify
+                  HeaderValue: ${ssm:${self:custom.ssm}/origin-verify-secret}
+          DefaultCacheBehavior:
+            TargetOriginId: site
+            ViewerProtocolPolicy: redirect-to-https
+            Compress: true
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # Managed-CachingOptimized (honours Cache-Control)
+            ResponseHeadersPolicyId: !Ref SiteHeadersPolicy
+            FunctionAssociations:
+              - EventType: viewer-request
+                FunctionARN: !GetAtt ViewerRequestFunction.FunctionMetadata.FunctionARN
+          CacheBehaviors:
+            - PathPattern: /api/*
+              TargetOriginId: api
+              ViewerProtocolPolicy: redirect-to-https
+              AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+              CachedMethods: [GET, HEAD]
+              Compress: true
+              CachePolicyId: !Ref ApiCachePolicy
+              OriginRequestPolicyId: !Ref ApiOriginRequestPolicy
+              ResponseHeadersPolicyId: !Ref SiteHeadersPolicy
+            - PathPattern: /media/*
+              TargetOriginId: media
+              ViewerProtocolPolicy: redirect-to-https
+              Compress: true
+              CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+              ResponseHeadersPolicyId: !Ref MediaHeadersPolicy
+            - PathPattern: /assets/*
+              TargetOriginId: site
+              ViewerProtocolPolicy: redirect-to-https
+              Compress: true
+              CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+              ResponseHeadersPolicyId: !Ref SiteHeadersPolicy
+          CustomErrorResponses:
+            # Unknown paths have no prerendered page: S3 answers 403/404 → the site's 404 page.
+            - { ErrorCode: 403, ResponseCode: 404, ResponsePagePath: /404.html, ErrorCachingMinTTL: 60 }
+            - { ErrorCode: 404, ResponseCode: 404, ResponsePagePath: /404.html, ErrorCachingMinTTL: 60 }
+
+  Outputs:
+    SiteBucketName:
+      Value: !Ref SiteBucket
+    MediaBucketName:
+      Value: !Ref MediaBucket
+    DistributionId:
+      Value: !Ref Distribution
+    DistributionDomain:
+      Value: !GetAtt Distribution.DomainName
+    DatabaseEndpoint:
+      Value: !GetAtt Database.Endpoint.Address

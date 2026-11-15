@@ -22,3 +22,21 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Playwright
+test-results
+playwright-report
+
+.env.local
+e2e/.auth
+
+# Site media (images, PDFs) — lives in S3; local copy for development
+.media/
+
+# Generated PDFs (invoices, CVs) carry private buyer, price and bank details: never commit any PDF.
+# Public PDFs live in S3 (.media/docs); the one bundled press release is allowed explicitly.
+*.pdf
+!apps/web/src/assets/speedrunners-press-release.pdf
+# Source invoices / office documents with buyer details
+*.docx
+*.doc
