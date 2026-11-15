@@ -1,7 +1,7 @@
 # Architecture
 
 ## Overview
-Twelve Ten Gallery website: a Vue 3 single-page app built with Vite and styled with Tailwind CSS 4, plus a TypeScript API (Hono) backed by Postgres via Kysely. All content (exhibitions, fairs, slideshows, news, press, home splash) lives in the database and is read by the site through `/api`. An admin-only back office at `/admin` manages people, artist and collector profiles, the works inventory (private prices and sales) and invoices.
+Twelve Ten Gallery website: a Vue 3 single-page app built with Vite and styled with Tailwind CSS 4, plus a TypeScript API (Hono) backed by Postgres via Kysely. All content (exhibitions, fairs, slideshows, news, press, home splash) lives in the database and is read by the site through `/api`. An admin-only back office at `/admin` manages people, artist and collector profiles, the works inventory (private prices and sales), invoices and private online viewing rooms (gated links to a selection of works, with per-visitor engagement tracking).
 
 ## Repo layout
 npm workspaces:
@@ -10,7 +10,7 @@ npm workspaces:
 |---|---|
 | `apps/web` | Vue 3 SPA (`@twelveten/web`): pages, components, API client, in-place editor (`src/admin`), back office (`src/backoffice`), Vite plugins (`vite/`) |
 | `.media/` (git-ignored) | Local copy of the site's media (`images/`, `docs/`), served at `/media/*` in development and uploaded to the media bucket with `media:sync` |
-| `apps/api` | `@twelveten/api`: Hono app (`src/app.ts`), Lambda entry (`src/lambda.ts`), local Node server (`src/local.ts`), database access and migrations (`src/db/`), people and inventory queries (`src/people/`, `src/inventory/`) |
+| `apps/api` | `@twelveten/api`: Hono app (`src/app.ts`), Lambda entry (`src/lambda.ts`), local Node server (`src/local.ts`), database access and migrations (`src/db/`), people, duplicates and merge (`src/people/`), inventory queries (`src/inventory/`), viewing rooms (`src/rooms/`) |
 | `packages/shared` | `@twelveten/shared` TypeScript source used by other workspaces: content, people, address and inventory schemas (zod), date formatting, route table, meta-tag builder |
 | `docker-compose.yml` | Local services: Postgres 17 (databases `twelveten` and `twelveten_test`) and LocalStack 4.14.0 (S3, SSM) |
 | `docker/` | Container init: Postgres test-database creation, LocalStack bootstrap (`docker/localstack/init/10-bootstrap.sh`) |
@@ -65,7 +65,8 @@ Consumed as TypeScript source (`exports` point at `src/*.ts`); no build step.
 | Module | Provides |
 |---|---|
 | `content.ts` | zod schemas + types for API payloads: `Exhibition` (admin reads add `linkedArtists`), `ExhibitionSummary`, `ExhibitionEvent`, `Artwork` (admin reads add `link`: work and artist), `PressItem`, `NewsPost`, `HomePage`, rich-text documents (Tiptap JSON), `Page<T>` (`{ items, nextCursor }`), `PAGE_SIZE` = 10, `MAX_PAGE_SIZE` = 50 |
-| `people.ts` | `PROFILE_TYPES` (profile registry: `artist`, `collector`), `PEOPLE_PAGE_SIZE`, `NumberedPage<T>`, `Person`, `PersonSummary`, `ArtistProfile`, `CollectorProfile` (collection grouped by artist as `CollectionArtist[]`, invoices), person / artist-profile / collector-profile / linked-exhibition input schemas, `defaultSortName` |
+| `people.ts` | `PROFILE_TYPES` (profile registry: `artist`, `collector`), `PEOPLE_PAGE_SIZE`, `NumberedPage<T>`, `Person` (with alias `emails`), `PersonSummary`, `ArtistProfile`, `CollectorProfile` (collection grouped by artist as `CollectionArtist[]`, invoices, `viewingRooms`, `topWorks`), person / artist-profile / collector-profile / linked-exhibition / alias-email / merge / dismiss input schemas, `MERGE_FIELDS`, `defaultSortName`, `normalizeEmail`, `normalizeName` |
+| `rooms.ts` | Viewing rooms: `ROOM_STATUSES`, `ROOM_TOKEN_RE`, `VISIT_GAP_MS` (30 min), `UNAVAILABLE_LABELS`; admin types (`ViewingRoom`, `RoomSummary`, `RoomWorkSettings`, `RoomArtistSettings`) and create / patch / works / artists schemas; the public payload (`PublicRoom`, `PublicRoomWork`, `PublicRoomArtist`, `RoomResponse`) and gate schema; `trackBatchSchema` (bounded tracking batch), `packPointer` / `unpackPointer` (5-byte pointer samples) and base64 helpers; `engagementScore` (0–100 per visitor), `workInterest` (0–100 per work), `engagementLabel`, `engagementDots`; `inquiryMailto`; dashboard types (`RoomDashboard`, `VisitorDashboard`, `RoomVisitorSummary`, `WorkInterest`, `ArtistInterest`, `RoomEvent`, `PersonDuplicate`) |
 | `addresses.ts` | `addressEntity` (owners an address can attach to: `person`), `Address`, `AddressLink`, attach / patch schemas, `formatAddress` |
 | `invoices.ts` | `INVOICE_STATUSES` (`open`, `partial`, `paid`, `cancelled`), `isUnpaid`, `Invoice`, `InvoiceSummary`, `InvoiceItem`, `InvoicePayment`, `InvoiceSettings` (+ env `InvoicePaymentDetails`), create / patch / item / payment / settings schemas, `invoiceTotals` (discount, tax on the discounted subtotal, shipping; halves round to even), `statusFromPayments`, `parsePercent`, `formatPercent`, `INVOICES_PAGE_SIZE` |
 | `inventory.ts` | `WORK_STATUSES`, `WORK_LOCATIONS`, `WORK_CHANGE_FIELDS`, `Work`, `WorkSummary` (with `buyerId`), `WorkImage`, `WorkChange`, work / image / slide-link input schemas, `WORKS_PAGE_SIZE`, `formatPrice`, `parsePrice` |
@@ -95,6 +96,10 @@ Stored dates are ISO `YYYY-MM-DD` strings for whole days and ISO timestamps for 
   | GET | `/api/news?cursor=&limit=` | public | `Page<NewsPost>`, newest first |
   | GET | `/api/news/:slug` | public | `NewsPost` |
   | GET | `/api/press?cursor=&limit=&exhibition=` | public | `Page<PressItem>`, newest first, optionally for one exhibition slug |
+  | GET | `/api/rooms/:token` | public | `{ gate: { title } }` without a visitor cookie, else `{ room: PublicRoom }` (starts a new visit after 30 minutes away); 404 unless the room is live and inside its open/close window. `?preview=1` (admins): any room, no gate, no tracking |
+  | POST | `/api/rooms/:token/enter` | public | `{ name, email }` → matches a person by email, then alias, else creates one; adds a collector profile; sets the visitor cookie; returns the room. 10 attempts per minute per address (429) |
+  | POST | `/api/rooms/:token/track` | visitor | A tracking batch (JSON or `text/plain` from `sendBeacon`, ≤ 256 KB) → 204 |
+  | GET | `/api/rooms/:token/artists/:artistId/cv.pdf` | visitor | The artist's CV as a PDF when the room shows it (recorded as a download) |
   | GET | `/api/admin/exhibitions/:id` | admin | `Exhibition` including drafts and hidden slides |
   | POST | `/api/admin/exhibitions` | admin | Create a draft exhibition or fair (unique slug from the title) |
   | PATCH | `/api/admin/exhibitions/:id` | admin | Update fields; `content` is sanitised through the rich-text schema |
@@ -107,12 +112,17 @@ Stored dates are ISO `YYYY-MM-DD` strings for whole days and ISO timestamps for 
   | POST, PATCH, DELETE | `/api/admin/press[/:id]` | admin | Press items |
   | PATCH | `/api/admin/home` | admin | Home splash |
   | GET | `/api/admin/revisions?entity=&id=` | admin | Last 50 revisions of one item |
-  | GET | `/api/admin/deleted` | admin | Recently deleted exhibitions, fairs, news posts, press, people and works that can be restored |
+  | GET | `/api/admin/deleted` | admin | Recently deleted exhibitions, fairs, news posts, press, people, works and viewing rooms that can be restored |
   | POST | `/api/admin/revisions/:id/restore` | admin | Restore that revision (a deleted exhibition comes back with its slides, press with its artist links, a person with their addresses and collector profile) |
   | POST | `/api/admin/uploads` | admin | Presigned S3 `PUT` for an image, mp4 or PDF (≤ 200 MB) → `{ uploadUrl, url, key, headers }` |
   | POST | `/api/admin/publish/rebuild` | admin | Re-render every page |
+  | GET | `/api/admin/persons/duplicates?page=` | admin | `NumberedPage<PersonDuplicate>`: candidate pairs, best first (`/duplicates/count` → `{ count }`) |
+  | POST | `/api/admin/persons/duplicates/dismiss` | admin | `{ aId, bId }`: "not the same person"; the pair is no longer suggested |
+  | GET | `/api/admin/persons/:id/duplicates` | admin | `{ items: PersonDuplicate[] }` for one person (top 10) |
+  | POST | `/api/admin/persons/:id/merge` | admin | `{ intoId, fields, updatedAt, intoUpdatedAt }`: merge this person into another (version check on both), returns the kept `Person`; 409 when this person is an artist |
+  | PUT | `/api/admin/persons/:id/emails` | admin | Replace the alias emails; 409 when another person uses one |
   | GET | `/api/admin/persons?q=&profile=&sort=&page=&limit=` | admin | `NumberedPage<PersonSummary>` (`{ items, page, pageSize, total }`, default 25, max 100); `profile` = a profile type or `none`; `sort` = `name` (sort name, default) or `updated` |
-  | POST, GET, PATCH, DELETE | `/api/admin/persons[/:id]` | admin | People (`profiles: ['artist']` on create adds the profile); GET returns `Person` with addresses, artist profile and purchases; DELETE is 409 while an artist profile exists |
+  | POST, GET, PATCH, DELETE | `/api/admin/persons[/:id]` | admin | People (`profiles: ['artist']` on create adds the profile); GET returns `Person` with addresses, artist profile and purchases; DELETE is 409 while an artist profile, invoices or viewing room visits exist |
   | PUT, DELETE | `/api/admin/persons/:id/artist-profile` | admin | Create or update (bio/CV sanitised; `updatedAt` required to update) / remove (409 while the artist has works) |
   | PUT | `/api/admin/persons/:id/artist-profile/exhibitions` | admin | Replace the linked exhibitions |
   | POST | `/api/admin/persons/:id/artist-profile/press` | admin | Link press to the artist: `{ pressId }` or a new item `{ press }` (created unpublished with no exhibition; an existing URL is linked instead of duplicated) |
@@ -133,9 +143,31 @@ Stored dates are ISO `YYYY-MM-DD` strings for whole days and ISO timestamps for 
   | POST, GET, PATCH, DELETE | `/api/admin/works[/:id]` | admin | Works (POST may include images); PATCH records `work_changes` for price, status, location, consignment and sale changes (with `changeNote`) |
   | GET | `/api/admin/works/:id/history` | admin | `WorkChange[]`, newest first |
   | POST, PATCH, DELETE, PUT | `/api/admin/works/:id/images[/:imageId \| /order]` | admin | Add / alt text / remove / reorder work images |
+  | GET | `/api/admin/rooms?q=&status=&page=` | admin | `NumberedPage<RoomSummary>`, newest first |
+  | POST, GET, PATCH, DELETE | `/api/admin/rooms[/:id]` | admin | Viewing rooms (POST may include `works`); intro sanitised; version check; DELETE is 409 once the room has visitors |
+  | PUT | `/api/admin/rooms/:id/works` | admin | Replace the ordered works (`showPrice` override, `hidden`); the room's artist list follows |
+  | PUT | `/api/admin/rooms/:id/artists` | admin | Artist order, bio / CV / press switches and hidden press (must list every artist in the room) |
+  | POST | `/api/admin/rooms/:id/token` | admin | New link; the old link and every remembered browser stop working |
+  | GET | `/api/admin/rooms/:id/dashboard` | admin | `RoomDashboard`: totals, visitors by engagement, works by combined interest |
+  | GET | `/api/admin/rooms/:id/visitors/:visitorId[/pointer?work=]` | admin | `VisitorDashboard` (visits, per-work stats ranked by interest, artists read, event timeline, possible duplicate people) / packed pointer samples per work (base64) |
   | POST | `/api/admin/artworks/:id/link` | admin | Link a slide to a person: adds the artist profile if missing, creates a work from the slide (or uses `workId`), adds the artist to the exhibition; `PATCH /api/admin/artworks/:id` with `workId: null` unlinks |
 
 - Admin writes (`src/routes/admin/`: `index.ts` mounts the routers and the admin check; exhibitions, events and slides in `exhibitions.ts`; news, press and home in `site.ts`; revisions, recently deleted and restore in `history.ts`; people and addresses in `people.ts`; works and slide links in `inventory.ts`; collectors' invoices in `invoices.ts`; shared helpers in `util.ts`, list paging in `src/lib/paging.ts`): bodies are validated with the zod schemas in `@twelveten/shared` (`admin.ts`). Every update sends the `updatedAt` it last saw; a mismatch (compared at millisecond precision) returns 409 with the current copy. Each create/update/delete writes a `content_revisions` snapshot and then asks the `Publisher` to re-render the affected pages (the item's page, its list page, and `/` when the home splash links to it). People, profiles, addresses, works and slide links change nothing public and are not re-rendered; their data (prices, sales, contact details, notes) only appears in `/api/admin/*` responses. Postgres constraint errors map to 400/409; malformed ids are 404. Collector profiles, addresses and invoices have no revisions (invoice effects on works are in `work_changes`).
+- Viewing rooms (`src/routes/rooms.ts`, `src/routes/admin/rooms.ts`, `src/rooms/`):
+  - Links are 32 random bytes in base64url. Public room responses send `Cache-Control: private, no-store` and `X-Robots-Tag: noindex`; POSTs with an `Origin` other than `SITE_URL` are refused.
+  - The gate trusts what is typed: the email (trimmed, lower-cased) is matched against `persons.email`, then `person_emails`; otherwise a person is created (note "Created from viewing room …"). Either way the person gets a collector profile and one visitor row per room (`match`: `email`, `alias` or `new`; the latest name and email typed are kept).
+  - The cookie `twelveten_vr` (random, only its sha256 is stored in `viewing_room_cookies`) is `HttpOnly`, `SameSite=Lax`, `Secure` on https, one year, with `Path=/api/rooms/<token>`, so each room has its own.
+  - A visit is a run of activity with gaps under 30 minutes.
+  - Tracking batches add to per-work stats (view, hover and zoom time, focus, zooms, max zoom, clicks, inquiries, number of visits that saw it) and per-artist stats (reading time, opens, CV opens, press clicks), append events and pointer samples, and add active time. Durations are clamped to the time since the visit's last activity plus 15 s. Works and artists viewers can't see are ignored.
+  - After each change the visitor's `engagement` is recomputed with `engagementScore`; changing which works are visible recomputes the whole room.
+  - Viewers see works not `hidden` (and, with `hide_unavailable`, only available ones). Available works carry a price when the work's `show_price` (or else the room's `show_prices`) is on; others carry "Sold", "On hold" or "Not available" and no price.
+  - Artists come from the visible works, in the room's artist order: bio and CV rendered to HTML and press (the artist panel's list minus hidden items), each only when switched on and not empty.
+  - Inquiries go to the room's `inquiry_email`, else the invoice settings' email.
+  - Public payloads carry no inventory numbers, private notes, buyers, hidden prices or private person fields.
+- People de-duplication (`src/people/duplicates.ts`, `src/people/merge.ts`):
+  - Candidate pairs: the same email or alias (100), the same email name on another domain (35; names under 5 characters and generic ones like `info` excluded), the same name (60) or a similar one (pg_trgm similarity ≥ 0.6, up to 50), the same phone digits (50, at least 7). Scores add up to at most 100; dismissed pairs are left out; pairs with a viewing room sign-up rank first among equal scores.
+  - Merging copies the chosen fields (by default the kept person's, or the other's when empty; the sort name follows the chosen name), joins notes, keeps every email either person used as aliases, moves addresses (dropping identical ones; the kept person's primary stays), works held for or bought by them, invoices, the collector profile (notes joined) and viewing room visitors (two visitors of one room are combined: cookies, visits, stats and pointer samples), then deletes the merged person.
+  - The merged person's last state is a `merge` revision, which can't be restored.
 - Pagination (`src/content/cursor.ts`): keyset cursors. `nextCursor` is an opaque base64url of the last item's sort value and id; the next page is `WHERE (date, id) < cursor ORDER BY date DESC, id DESC`. `limit` defaults to 10 and is capped at 50; a malformed cursor returns 400.
 - Collectors: a person whose work is on hold for them or sold to them (`buyer_id` with status `on_hold` or `sold`, set on a work or by an invoice) gets a collector profile automatically; their collection is exactly those works, grouped by artist.
 - Invoice status: totals are recomputed on every change. Once an invoice has payments, they set `open` / `partial` / `paid`; without payments the status is whatever was set by hand. When an invoice becomes `paid` its works are recorded as sold to the buyer (sold on the last payment date, sale price = item price less its share of the discount, location `collector` if unset) with a `work_changes` note. `cancelled` (the buyer declined to pay) is only set or cleared by hand and payments don't change it; cancelling releases its works that are on hold for or sold to the buyer (back to `available`, buyer and sale cleared) unless another of their unpaid invoices lists them, so they leave the collection; reopening holds them for the buyer again if still available. When an invoice stops being `paid` (a payment removed, or the status changed by hand) its works sold to the buyer go back `on_hold` for them, sale date and price cleared. Deleting an unpaid invoice releases its works like cancelling. Paid invoices can't be cancelled or deleted and their items can't change; works can't be added to a cancelled invoice. Dates default to today in the gallery's timezone.
@@ -160,11 +192,11 @@ Stored dates are ISO `YYYY-MM-DD` strings for whole days and ISO timestamps for 
 - Postgres 17, accessed with Kysely over `pg` (`src/db/index.ts`). `DATE` columns are returned as `YYYY-MM-DD` strings, `TIMESTAMPTZ` as ISO strings and `BIGINT` as numbers. Table types live in `src/db/types.ts`.
 - Migrations are listed statically in `src/db/migrate.ts` and run by Kysely's `Migrator` (advisory-locked). Every statement is idempotent (`IF NOT EXISTS`, guarded `DO` blocks), so a migration can be re-run safely. Enumerated values are `text` + `CHECK`.
 - Ids are `uuid` (`gen_random_uuid()` default). `updated_at` is maintained by a `set_updated_at` trigger.
-- Tables (`0001_initial`, `0002_people_inventory`):
+- Tables (`0001_initial` … `0006_viewing_rooms`; `pg_trgm` is enabled for name matching):
 
   | Table | Holds |
   |---|---|
-  | `user`, `session`, `account`, `verification`, `rateLimit` | Login (Better Auth layout, camelCase columns; `user.role` is `user` or `admin`) |
+  | `user`, `session`, `account`, `verification`, `rateLimit` | Login (Better Auth layout, camelCase columns; `user.role` is `user` or `admin`); `rateLimit` also holds the viewing room gate limit (`room-enter:<ip>` keys) |
   | `exhibitions` | Exhibitions and fairs (`kind`). Header: `artists` (one per line), `title`, `subtitle`, `title_first`, run dates `starts_on`/`ends_on` (`date`), `timezone`, `hours_text`, `venue_text` (multi-line), `location_text` (short, for list cards), `press_release_url`, `header_links` (`[{label,url}]`), `show_inquire`. Media: `hero_image`/`hero_alt`, `thumbnail`, `slideshow_visible` (off by default), `works_available`. Body: `content` (rich-text JSON document). SEO overrides, `published` |
   | `exhibition_events` | Dated events shown under an exhibition's dates (label, `starts_at`, `ends_at`, `position`), e.g. the opening |
   | `artworks` | Slideshow slides per exhibition: `image` or `video` (mp4), caption fields, `alt`, `hidden`, `available`, optional `work_id` (inventory link, cleared when the work is deleted); `(exhibition_id, position)` unique, deferrable |
@@ -185,8 +217,20 @@ Stored dates are ISO `YYYY-MM-DD` strings for whole days and ISO timestamps for 
   | `invoice_items` | Line items: `work_id` (→ works, set null if deleted), `position`, snapshot of artist name, title, date, medium, dimensions, `image_url`, `price_cents` |
   | `invoice_payments` | Payments: `amount_cents`, `paid_on`, `method`, `note`, user |
   | `invoice_settings` | Single row: gallery name, address, email, phone, default terms, default tax rate (bps), invoice number prefix. Payment details are not stored here (env) |
-  | `content_revisions` | Snapshots of content changes (entity, entity id, action, `snapshot` JSON, user); also people, artist profiles (with linked exhibition ids) and works (with images) |
+  | `content_revisions` | Snapshots of content changes (entity, entity id, action `create` / `update` / `delete` / `restore` / `merge`, `snapshot` JSON, user); also people, artist profiles (with linked exhibition ids), works (with images) and viewing rooms (with works and artist settings) |
   | `seed_state` | Markers for one-time seed runs |
+  | `person_emails` | Alias emails (`email` lower-cased, primary key) per person (`source`: `manual`, `merge`, `viewing_room`); deleted with the person |
+  | `person_duplicate_dismissals` | Pairs marked "not the same person" (`a_id < b_id`) |
+  | `viewing_rooms` | `token` (unique link), `title`, `intro` (rich JSON), `show_prices`, `hide_unavailable`, `inquiry_email`, `status` (`draft`, `live`, `closed`), optional `opens_at` / `closes_at`, `created_by` |
+  | `viewing_room_works` | Works per room: `position` (deferrable unique), `show_price` (null = the room's setting), `hidden`; a work in a room can't be deleted |
+  | `viewing_room_artists` | Per room and artist: `position`, `show_bio`, `show_cv`, `show_press`, `hidden_press_ids`; kept in step with the room's works |
+  | `viewing_room_visitors` | One per room and person: `entered_name`, `entered_email`, `match`, first/last seen, `visit_count`, `active_ms`, `engagement` (0–100). The person can't be deleted while one exists |
+  | `viewing_room_cookies` | sha256 of each remembered browser's cookie → visitor |
+  | `viewing_room_visits` | Visits: start, last activity, `active_ms`, user agent |
+  | `viewing_room_work_stats` | Per visitor and work: `view_ms`, `hover_ms`, `zoom_ms`, `focus_count`, `zoom_count`, `max_zoom`, `clicks`, `inquiries`, `visits_seen`, `last_visit_id`, `last_seen_at` |
+  | `viewing_room_artist_stats` | Per visitor and artist: `read_ms`, `opens`, `cv_opens`, `press_clicks` |
+  | `viewing_room_events` | Timeline per visit: `enter`, `view_mode`, `focus`, `zoom`, `click`, `inquire`, `artist_open`, `cv_open`, `cv_pdf`, `press_click`, with optional work, artist and small `data` |
+  | `viewing_room_pointer` | Pointer samples per visitor, visit and work: `points` bytea (5 bytes each: uint16 x, uint16 y across the image, uint8 zoom × 10) |
 
 ## Prerendering and meta tags
 - `apps/web/index.html` holds an `<!--app-head-->` placeholder. `apps/web/vite/metaPlugin.js` fills it: in dev from `/api/meta?path=` for the requested URL; in a build it writes `dist/_template.html` (placeholder kept), `dist/index.html` (site defaults) and `dist/404.html` (not-found title, `noindex`).

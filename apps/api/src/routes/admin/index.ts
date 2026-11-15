@@ -10,6 +10,7 @@ import { historyRoutes } from './history.ts';
 import { peopleRoutes } from './people.ts';
 import { inventoryRoutes } from './inventory.ts';
 import { invoiceRoutes } from './invoices.ts';
+import { roomRoutes } from './rooms.ts';
 
 export interface AdminDeps {
     publisher: Publisher;
@@ -42,10 +43,11 @@ export function adminRoutes(deps: AdminDeps) {
     app.route('/', exhibitionRoutes(routes));
     app.route('/', siteRoutes(routes));
     app.route('/', historyRoutes(routes));
-    // People, profiles, addresses, inventory and invoices: nothing public changes.
+    // People, profiles, addresses, inventory, invoices and viewing rooms: no prerendered page changes.
     app.route('/', peopleRoutes());
     app.route('/', inventoryRoutes());
     app.route('/', invoiceRoutes({ storage: deps.storage }));
+    app.route('/', roomRoutes());
 
     // ---------- Uploads & publishing ----------
 

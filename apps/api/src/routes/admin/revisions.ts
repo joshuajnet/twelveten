@@ -4,7 +4,7 @@ import type { Database, RevisionEntity } from '../../db/types.ts';
 
 export async function recordRevision(
     trx: Transaction<Database>,
-    rev: { entity: RevisionEntity; entityId: string | null; action: 'create' | 'update' | 'delete' | 'restore'; snapshot: unknown; userId: string | null },
+    rev: { entity: RevisionEntity; entityId: string | null; action: 'create' | 'update' | 'delete' | 'restore' | 'merge'; snapshot: unknown; userId: string | null },
 ) {
     await trx
         .insertInto('content_revisions')

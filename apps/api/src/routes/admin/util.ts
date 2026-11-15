@@ -103,7 +103,7 @@ export async function reorder(trx: Transaction<Database>, table: 'artworks' | 'w
 }
 
 /** Bump `updated_at` (the version clients send back) after changing a row's children. */
-export async function touch(trx: Exec, table: 'works' | 'invoices' | 'artist_profiles' | 'exhibitions', id: string): Promise<void> {
+export async function touch(trx: Exec, table: 'works' | 'invoices' | 'artist_profiles' | 'exhibitions' | 'viewing_rooms', id: string): Promise<void> {
     const key = table === 'artist_profiles' ? 'person_id' : 'id';
     await sql`UPDATE ${sql.table(table)} SET updated_at = now() WHERE ${sql.ref(key)} = ${id}`.execute(trx);
 }

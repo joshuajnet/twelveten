@@ -328,15 +328,138 @@ export type RevisionEntity =
     | 'home_page'
     | 'person'
     | 'artist_profile'
-    | 'work';
+    | 'work'
+    | 'viewing_room';
 
 export interface ContentRevisionTable {
     id: Generated<string>;
     entity: RevisionEntity;
     entity_id: string | null;
-    action: 'create' | 'update' | 'delete' | 'restore';
+    action: 'create' | 'update' | 'delete' | 'restore' | 'merge';
     snapshot: Json<Record<string, unknown>>;
     user_id: string | null;
+    created_at: CreatedAt;
+}
+
+export interface PersonEmailTable {
+    email: string;
+    person_id: string;
+    source: Generated<'manual' | 'merge' | 'viewing_room'>;
+    created_at: CreatedAt;
+}
+
+export interface PersonDuplicateDismissalTable {
+    a_id: string;
+    b_id: string;
+    created_at: CreatedAt;
+}
+
+export interface ViewingRoomTable {
+    id: Generated<string>;
+    token: string;
+    title: string;
+    intro: JsonWithDefault<RichDoc>;
+    show_prices: Generated<boolean>;
+    hide_unavailable: Generated<boolean>;
+    inquiry_email: string | null;
+    status: Generated<'draft' | 'live' | 'closed'>;
+    opens_at: string | null;
+    closes_at: string | null;
+    created_by: string | null;
+    created_at: CreatedAt;
+    updated_at: Timestamp;
+}
+
+export interface ViewingRoomWorkTable {
+    room_id: string;
+    work_id: string;
+    position: number;
+    show_price: boolean | null;
+    hidden: Generated<boolean>;
+}
+
+export interface ViewingRoomArtistTable {
+    room_id: string;
+    artist_id: string;
+    position: number;
+    show_bio: Generated<boolean>;
+    show_cv: Generated<boolean>;
+    show_press: Generated<boolean>;
+    hidden_press_ids: ColumnType<string[], string[] | undefined, string[]>;
+}
+
+export interface ViewingRoomVisitorTable {
+    id: Generated<string>;
+    room_id: string;
+    person_id: string;
+    entered_name: string;
+    entered_email: string;
+    match: 'email' | 'alias' | 'new';
+    first_seen_at: Timestamp;
+    last_seen_at: Timestamp;
+    visit_count: Generated<number>;
+    active_ms: Generated<number>;
+    engagement: Generated<number>;
+}
+
+export interface ViewingRoomCookieTable {
+    hash: string;
+    visitor_id: string;
+    created_at: CreatedAt;
+}
+
+export interface ViewingRoomVisitTable {
+    id: Generated<string>;
+    visitor_id: string;
+    started_at: Timestamp;
+    last_activity_at: Timestamp;
+    active_ms: Generated<number>;
+    user_agent: string | null;
+}
+
+export interface ViewingRoomWorkStatTable {
+    visitor_id: string;
+    work_id: string;
+    view_ms: Generated<number>;
+    hover_ms: Generated<number>;
+    zoom_ms: Generated<number>;
+    focus_count: Generated<number>;
+    zoom_count: Generated<number>;
+    max_zoom: Generated<number>;
+    clicks: Generated<number>;
+    inquiries: Generated<number>;
+    visits_seen: Generated<number>;
+    last_visit_id: string | null;
+    last_seen_at: Timestamp;
+}
+
+export interface ViewingRoomArtistStatTable {
+    visitor_id: string;
+    artist_id: string;
+    read_ms: Generated<number>;
+    opens: Generated<number>;
+    cv_opens: Generated<number>;
+    press_clicks: Generated<number>;
+}
+
+export type RoomEventType = 'enter' | 'view_mode' | 'focus' | 'zoom' | 'click' | 'inquire' | 'artist_open' | 'cv_open' | 'cv_pdf' | 'press_click';
+
+export interface ViewingRoomEventTable {
+    id: Generated<number>;
+    visit_id: string;
+    work_id: string | null;
+    artist_id: string | null;
+    type: RoomEventType;
+    at: Timestamp;
+    data: Json<Record<string, unknown>> | null;
+}
+
+export interface ViewingRoomPointerTable {
+    id: Generated<number>;
+    visitor_id: string;
+    visit_id: string;
+    work_id: string;
+    points: Buffer;
     created_at: CreatedAt;
 }
 
@@ -369,6 +492,18 @@ export interface Database {
     invoice_payments: InvoicePaymentTable;
     content_revisions: ContentRevisionTable;
     seed_state: SeedStateTable;
+    person_emails: PersonEmailTable;
+    person_duplicate_dismissals: PersonDuplicateDismissalTable;
+    viewing_rooms: ViewingRoomTable;
+    viewing_room_works: ViewingRoomWorkTable;
+    viewing_room_artists: ViewingRoomArtistTable;
+    viewing_room_visitors: ViewingRoomVisitorTable;
+    viewing_room_cookies: ViewingRoomCookieTable;
+    viewing_room_visits: ViewingRoomVisitTable;
+    viewing_room_work_stats: ViewingRoomWorkStatTable;
+    viewing_room_artist_stats: ViewingRoomArtistStatTable;
+    viewing_room_events: ViewingRoomEventTable;
+    viewing_room_pointer: ViewingRoomPointerTable;
 }
 
 export type ExhibitionRow = Selectable<ExhibitionTable>;
@@ -390,3 +525,6 @@ export type InvoiceRow = Selectable<InvoiceTable>;
 export type InvoiceItemRow = Selectable<InvoiceItemTable>;
 export type InvoicePaymentRow = Selectable<InvoicePaymentTable>;
 export type InvoiceSettingsRow = Selectable<InvoiceSettingsTable>;
+export type ViewingRoomRow = Selectable<ViewingRoomTable>;
+export type ViewingRoomVisitorRow = Selectable<ViewingRoomVisitorTable>;
+export type ViewingRoomWorkStatRow = Selectable<ViewingRoomWorkStatTable>;

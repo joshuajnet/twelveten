@@ -25,7 +25,7 @@ watch(open, async (o) => {
     }
 });
 
-const ACTION = { create: 'Created', update: 'Saved', delete: 'Deleted', restore: 'Restored' } as const;
+const ACTION = { create: 'Created', update: 'Saved', delete: 'Deleted', restore: 'Restored', merge: 'Merged' } as const;
 
 async function restore(r: RevisionSummary) {
     try {
@@ -50,7 +50,7 @@ async function restore(r: RevisionSummary) {
                     <span class="text-slate-500"> · {{ fmt(r.createdAt) }}<template v-if="r.userName"> · {{ r.userName }}</template></span>
                     <span v-if="i === 0" class="ml-1 rounded bg-slate-100 px-1 text-xs">current</span>
                 </span>
-                <button v-if="i > 0 || r.action === 'delete'" type="button" :class="btnOutline" @click="restore(r)">Restore</button>
+                <button v-if="(i > 0 || r.action === 'delete') && r.action !== 'merge'" type="button" :class="btnOutline" @click="restore(r)">Restore</button>
             </li>
         </ol>
     </Dialog>

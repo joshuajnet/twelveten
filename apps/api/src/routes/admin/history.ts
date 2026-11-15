@@ -4,6 +4,7 @@ import { exhibitionPath, newsPath, revisionEntity, type RevisionSummary } from '
 import type { AppEnv } from '../../env.ts';
 import type { Database } from '../../db/types.ts';
 import { HttpError } from './errors.ts';
+import { syncRoomArtists } from './rooms.ts';
 import { recordRevision } from './revisions.ts';
 import { recordWorkChanges } from './inventory.ts';
 import { exhibitionPages } from './exhibitions.ts';
@@ -17,6 +18,7 @@ const DELETED_DETAIL = {
     press_item: (s: { outlet?: string }) => `Press · ${s.outlet ?? ''}`,
     person: () => 'Person',
     work: () => 'Work',
+    viewing_room: () => 'Viewing room',
 };
 
 /**
@@ -77,7 +79,7 @@ export function historyRoutes({ publish }: { publish: Publish }) {
             .leftJoin('user as u', 'u.id', 'r.user_id')
             .select(['r.id', 'r.entity', 'r.entity_id', 'r.snapshot', 'r.created_at', 'u.name as user_name'])
             .where('r.action', '=', 'delete')
-            .where('r.entity', 'in', ['exhibition', 'news_post', 'press_item', 'person', 'work'])
+            .where('r.entity', 'in', ['exhibition', 'news_post', 'press_item', 'person', 'work', 'viewing_room'])
             .where(({ not, exists, selectFrom }) =>
                 not(
                     exists(
@@ -112,6 +114,7 @@ export function historyRoutes({ publish }: { publish: Publish }) {
         const db = c.var.db;
         const rev = await db.selectFrom('content_revisions').selectAll().where('id', '=', idParam(c)).executeTakeFirst();
         if (!rev) throw new HttpError(404, 'Not found');
+        if (rev.action === 'merge') throw new HttpError(400, 'A merge can’t be undone from history');
         const snap = rev.snapshot as Record<string, unknown>;
         const pages: string[] = [];
 
@@ -254,6 +257,30 @@ export function historyRoutes({ publish }: { publish: Publish }) {
                         await trx.insertInto('work_images').values({ work_id: after.id, url: String(img.url), alt: String(img.alt ?? ''), position }).execute();
                     }
                     await recordWorkChanges(trx, before ?? null, after, 'Restored from history', c.var.userId);
+                    break;
+                }
+                case 'viewing_room': {
+                    const row = strip(snap, ['works', 'artists']);
+                    // A restored room keeps its current link if it still exists.
+                    const current = await trx.selectFrom('viewing_rooms').select('token').where('id', '=', String(snap.id)).executeTakeFirst();
+                    if (current) row.token = current.token;
+                    await trx.insertInto('viewing_rooms').values(row as never).onConflict((oc) => oc.column('id').doUpdateSet(row as never)).execute();
+                    const roomId = String(snap.id);
+                    const works = (snap.works as { work_id: string; show_price: boolean | null; hidden: boolean }[] | undefined) ?? [];
+                    const live = works.length ? new Set((await trx.selectFrom('works').select('id').where('id', 'in', works.map((w) => w.work_id)).execute()).map((r) => r.id)) : new Set();
+                    await trx.deleteFrom('viewing_room_works').where('room_id', '=', roomId).execute();
+                    for (const [position, w] of works.filter((w) => live.has(w.work_id)).entries()) {
+                        await trx.insertInto('viewing_room_works').values({ room_id: roomId, work_id: w.work_id, position, show_price: w.show_price, hidden: w.hidden }).execute();
+                    }
+                    await syncRoomArtists(trx, roomId);
+                    for (const a of (snap.artists as { artist_id: string; position: number; show_bio: boolean; show_cv: boolean; show_press: boolean; hidden_press_ids: string[] }[] | undefined) ?? []) {
+                        await trx
+                            .updateTable('viewing_room_artists')
+                            .set({ position: a.position, show_bio: a.show_bio, show_cv: a.show_cv, show_press: a.show_press, hidden_press_ids: a.hidden_press_ids })
+                            .where('room_id', '=', roomId)
+                            .where('artist_id', '=', a.artist_id)
+                            .execute();
+                    }
                     break;
                 }
                 default:

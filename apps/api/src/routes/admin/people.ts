@@ -9,7 +9,11 @@ import {
     artistPressAddSchema,
     artistProfilePutSchema,
     collectorProfilePutSchema,
+    duplicateDismissSchema,
+    normalizeEmail,
     personCreateSchema,
+    personEmailsPutSchema,
+    personMergeSchema,
     personPatchSchema,
     profileFilter,
     PEOPLE_PAGE_SIZE,
@@ -21,6 +25,8 @@ import type { DB } from '../../db/index.ts';
 import type { Database } from '../../db/types.ts';
 import { addressesFor, getPerson, listPersons, toAddress, type PersonSort } from '../../people/queries.ts';
 import { renderCvPdf } from '../../people/cvPdf.ts';
+import { countDuplicates, duplicatesOf, listDuplicates } from '../../people/duplicates.ts';
+import { mergePersons } from '../../people/merge.ts';
 import { createPress } from './site.ts';
 import { body, HttpError } from './errors.ts';
 import { ensureBaseline, recordRevision } from './revisions.ts';
@@ -96,6 +102,87 @@ export function peopleRoutes() {
         return c.json(await listPersons(c.var.db, { profile: parsedProfile?.data, q, sort: sort as PersonSort }, page, pageSize));
     });
 
+    // ---------- Duplicates and merge ----------
+
+    app.get('/persons/duplicates', async (c) => {
+        const { page, pageSize } = pageParams(c, PEOPLE_PAGE_SIZE);
+        return c.json(await listDuplicates(c.var.db, page, pageSize));
+    });
+
+    app.get('/persons/duplicates/count', async (c) => c.json({ count: await countDuplicates(c.var.db) }));
+
+    app.post('/persons/duplicates/dismiss', async (c) => {
+        const { aId, bId } = await body(c, duplicateDismissSchema);
+        const [a_id, b_id] = aId < bId ? [aId, bId] : [bId, aId];
+        await c.var.db
+            .insertInto('person_duplicate_dismissals')
+            .values({ a_id, b_id })
+            .onConflict((oc) => oc.columns(['a_id', 'b_id']).doNothing())
+            .execute();
+        return c.body(null, 204);
+    });
+
+    app.get('/persons/:id/duplicates', async (c) => {
+        const id = idParam(c);
+        await personOr404(c.var.db, id);
+        return c.json({ items: await duplicatesOf(c.var.db, id) });
+    });
+
+    /** Merge this person into `intoId` (this one is deleted). */
+    app.post('/persons/:id/merge', async (c) => {
+        const id = idParam(c);
+        const input = await body(c, personMergeSchema);
+        const db = c.var.db;
+        await db.transaction().execute(async (trx) => {
+            const versions = await trx
+                .selectFrom('persons')
+                .select(['id', sql<string>`date_trunc('milliseconds', updated_at)`.as('v')])
+                .where('id', 'in', [id, input.intoId])
+                .execute();
+            if (versions.length !== 2) throw new HttpError(404, 'Not found');
+            const same = (pid: string, at: string) => Date.parse(versions.find((v) => v.id === pid)!.v) === Date.parse(at);
+            if (!same(id, input.updatedAt) || !same(input.intoId, input.intoUpdatedAt)) {
+                throw new HttpError(409, 'One of these people was changed since you opened them; reload and try again');
+            }
+            await mergePersons(trx, { sourceId: id, targetId: input.intoId, fields: input.fields, userId: c.var.userId });
+        });
+        return c.json(await getPerson(db, input.intoId));
+    });
+
+    /** Replace the other emails a person is known by. */
+    app.put('/persons/:id/emails', async (c) => {
+        const id = idParam(c);
+        const { emails } = await body(c, personEmailsPutSchema);
+        const db = c.var.db;
+        const person = await personOr404(db, id);
+        const primary = person.email ? normalizeEmail(person.email) : null;
+        const wanted = emails.filter((e) => e !== primary);
+        const taken = wanted.length
+            ? await db
+                  .selectFrom('persons')
+                  .select(['id', 'name', 'email'])
+                  .where('id', '!=', id)
+                  .where(sql<string>`lower(btrim(email))`, 'in', wanted)
+                  .union(
+                      db
+                          .selectFrom('person_emails as pe')
+                          .innerJoin('persons as p', 'p.id', 'pe.person_id')
+                          .select(['p.id', 'p.name', 'pe.email'])
+                          .where('pe.person_id', '!=', id)
+                          .where('pe.email', 'in', wanted),
+                  )
+                  .execute()
+            : [];
+        if (taken.length) throw new HttpError(409, `${taken[0]!.email} belongs to ${taken[0]!.name}; merge the two people instead`);
+        await db.transaction().execute(async (trx) => {
+            await trx.deleteFrom('person_emails').where('person_id', '=', id).where('email', 'not in', wanted.length ? wanted : ['']).execute();
+            for (const email of wanted) {
+                await trx.insertInto('person_emails').values({ email, person_id: id }).onConflict((oc) => oc.column('email').doNothing()).execute();
+            }
+        });
+        return c.json(await getPerson(db, id));
+    });
+
     app.post('/persons', async (c) => {
         const input = await body(c, personCreateSchema);
         const db = c.var.db;
@@ -143,6 +230,9 @@ export function peopleRoutes() {
         }
         if (await db.selectFrom('invoices').select('id').where('person_id', '=', id).executeTakeFirst()) {
             throw new HttpError(409, 'This person has invoices and can’t be deleted');
+        }
+        if (await db.selectFrom('viewing_room_visitors').select('id').where('person_id', '=', id).executeTakeFirst()) {
+            throw new HttpError(409, 'This person has visited viewing rooms; merge them into another person instead of deleting');
         }
         await db.transaction().execute(async (trx) => {
             const existing = await trx.selectFrom('persons').selectAll().where('id', '=', id).executeTakeFirstOrThrow();

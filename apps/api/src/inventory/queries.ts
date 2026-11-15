@@ -10,7 +10,7 @@ type Q = Pick<DB, 'selectFrom'>;
 const toImage = (r: Pick<WorkImageRow, 'id' | 'url' | 'alt' | 'position'>): WorkImage => ({ id: r.id, url: r.url, alt: r.alt, position: r.position });
 
 /** Works joined with their artist's name and first image. */
-function summaryQuery(db: Q) {
+export function summaryQuery(db: Q) {
     return db
         .selectFrom('works as w')
         .innerJoin('persons as p', 'p.id', 'w.artist_id')
@@ -41,7 +41,7 @@ function summaryQuery(db: Q) {
         ]);
 }
 
-interface SummaryRow {
+export interface SummaryRow {
     id: string;
     artist_id: string;
     artist_name: string;
@@ -62,7 +62,7 @@ interface SummaryRow {
     image_position: number | null;
 }
 
-function toSummary(r: SummaryRow): WorkSummary {
+export function toSummary(r: SummaryRow): WorkSummary {
     return {
         id: r.id,
         artistId: r.artist_id,

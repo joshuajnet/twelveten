@@ -176,13 +176,13 @@ export interface UploadTicket {
     headers: Record<string, string>;
 }
 
-export const revisionEntity = z.enum(['exhibition', 'artwork', 'news_post', 'press_item', 'home_page', 'person', 'artist_profile', 'work']);
+export const revisionEntity = z.enum(['exhibition', 'artwork', 'news_post', 'press_item', 'home_page', 'person', 'artist_profile', 'work', 'viewing_room']);
 export type RevisionEntityName = z.infer<typeof revisionEntity>;
 export interface RevisionSummary {
     id: string;
     entity: RevisionEntityName;
     entityId: string | null;
-    action: 'create' | 'update' | 'delete' | 'restore';
+    action: 'create' | 'update' | 'delete' | 'restore' | 'merge';
     userName: string | null;
     createdAt: string;
 }

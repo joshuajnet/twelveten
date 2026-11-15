@@ -5,6 +5,7 @@ import type { AddressLink } from './addresses.ts';
 import { pressCreateSchema } from './admin.ts';
 import type { WorkSummary } from './inventory.ts';
 import type { InvoiceSummary } from './invoices.ts';
+import type { RoomVisitorSummary, WorkInterest } from './rooms.ts';
 
 const { isoDate, isoTimestamp, uuid, slug } = schemas;
 const text = z.string().trim();
@@ -114,6 +115,10 @@ export interface CollectorProfile {
     /** On-hold and sold works where this person is the buyer, grouped by artist (A–Z). */
     collection: CollectionArtist[];
     invoices: InvoiceSummary[];
+    /** Viewing rooms this person entered, most recent first. */
+    viewingRooms: RoomVisitorSummary[];
+    /** The works they looked at most across viewing rooms (top 6 by interest). */
+    topWorks: WorkInterest[];
     updatedAt: string;
 }
 
@@ -128,6 +133,8 @@ export interface Person {
     website: string | null;
     portrait: string | null;
     notes: string | null;
+    /** Other emails this person is known by (merged duplicates, viewing room sign-ups). */
+    emails: string[];
     profiles: ProfileType[];
     addresses: AddressLink[];
     artistProfile: ArtistProfile | null;
@@ -202,3 +209,47 @@ export function defaultSortName(name: string): string {
     const last = parts.pop()!;
     return `${last}, ${parts.join(' ')}`;
 }
+
+/** Lower-cased, trimmed email (how people are matched). */
+export function normalizeEmail(email: string): string {
+    return email.trim().toLowerCase();
+}
+
+/** Lower-cased, accents stripped, punctuation removed, whitespace collapsed (for duplicate matching). */
+export function normalizeName(name: string): string {
+    return name
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+/** Replace a person's alias emails. */
+export const personEmailsPutSchema = z.object({
+    emails: z
+        .array(z.email().transform(normalizeEmail))
+        .max(50)
+        .refine((es) => new Set(es).size === es.length, 'Each email can appear once'),
+});
+export type PersonEmailsPut = z.input<typeof personEmailsPutSchema>;
+
+/** Fields whose value can be taken from either person when merging. */
+export const MERGE_FIELDS = ['name', 'sortName', 'birthDate', 'birthPlace', 'email', 'phone', 'website', 'portrait'] as const;
+export type MergeField = (typeof MERGE_FIELDS)[number];
+
+/**
+ * Merge this person (the source, deleted afterwards) into `intoId`. `fields` picks, per field, whose
+ * value the kept person ends up with (default: the kept person's, or the source's when theirs is empty).
+ * Notes are joined.
+ */
+export const personMergeSchema = z.object({
+    intoId: uuid,
+    fields: z.partialRecord(z.enum(MERGE_FIELDS), z.enum(['source', 'target'])).default({}),
+    updatedAt: isoTimestamp,
+    intoUpdatedAt: isoTimestamp,
+});
+export type PersonMerge = z.input<typeof personMergeSchema>;
+
+export const duplicateDismissSchema = z.object({ aId: uuid, bId: uuid }).refine((v) => v.aId !== v.bId, 'Pick two different people');

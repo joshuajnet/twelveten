@@ -4,6 +4,7 @@ import { sql } from 'kysely';
 import type { DB } from './db/index.ts';
 import type { AppEnv } from './env.ts';
 import { publicRoutes } from './routes/public.ts';
+import { roomPublicRoutes } from './routes/rooms.ts';
 import { InvalidCursorError } from './content/cursor.ts';
 import { resolveUserFrom, withClientIp, type Auth } from './auth/auth.ts';
 import { adminRoutes, handleError } from './routes/admin/index.ts';
@@ -93,6 +94,7 @@ export function createApp(deps: AppDeps) {
     });
 
     app.route('/', publicRoutes());
+    app.route('/', roomPublicRoutes({ siteUrl: deps.siteUrl ?? config().SITE_URL }));
     app.route('/admin', adminRoutes({ publisher: deps.publisher ?? noopPublisher, storage: deps.storage }));
 
     app.notFound((c) => c.json({ error: 'Not found' }, 404));

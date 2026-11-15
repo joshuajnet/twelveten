@@ -8,3 +8,4 @@ export * from './addresses.ts';
 export * from './people.ts';
 export * from './inventory.ts';
 export * from './invoices.ts';
+export * from './rooms.ts';
