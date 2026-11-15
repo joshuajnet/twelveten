@@ -68,7 +68,8 @@ test('edit an exhibition in place, save, and see it published', async ({ page, b
     await visitor.close();
 
     // Restore the previous version from History.
-    await page.getByRole('button', { name: 'History' }).click();
+    await page.getByRole('button', { name: 'More options' }).click();
+    await page.getByRole('menuitem', { name: 'History…' }).click();
     await page.getByRole('button', { name: 'Restore' }).first().click();
     await expect(page.getByText(/Restored the version/)).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Title' })).toHaveText('Signal');

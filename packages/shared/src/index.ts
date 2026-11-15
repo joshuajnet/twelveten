@@ -4,3 +4,7 @@ export * from './meta.ts';
 export * from './routes.ts';
 export * from './text.ts';
 export * from './admin.ts';
+export * from './addresses.ts';
+export * from './people.ts';
+export * from './inventory.ts';
+export * from './invoices.ts';

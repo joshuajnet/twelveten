@@ -60,6 +60,11 @@ provider:
     ORIGIN_VERIFY_SECRET: ${ssm:${self:custom.ssm}/origin-verify-secret}
     MEDIA_BUCKET: !Ref MediaBucket
     SITE_BUCKET: !Ref SiteBucket
+    # Invoice payment details (optional SSM parameters; empty when not set).
+    INVOICE_ZELLE: ${ssm:${self:custom.ssm}/invoice-zelle, ''}
+    INVOICE_WIRE_ROUTING: ${ssm:${self:custom.ssm}/invoice-wire-routing, ''}
+    INVOICE_WIRE_ACCOUNT: ${ssm:${self:custom.ssm}/invoice-wire-account, ''}
+    INVOICE_CHECKS_PAYABLE_TO: ${ssm:${self:custom.ssm}/invoice-checks-payable-to, ''}
   iam:
     role:
       statements:
@@ -71,6 +76,10 @@ provider:
         - Effect: Allow
           Action: [s3:PutObject]
           Resource: !Join ['', [!GetAtt MediaBucket.Arn, '/media/uploads/*']]
+        # Invoice PDFs embed work images.
+        - Effect: Allow
+          Action: [s3:GetObject]
+          Resource: !Join ['', [!GetAtt MediaBucket.Arn, '/media/*']]
 
 functions:
   api:

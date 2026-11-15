@@ -193,7 +193,7 @@ async function main() {
     if (sitePort !== PREFERRED_SITE_PORT) step(c.yellow(`Port ${PREFERRED_SITE_PORT} is busy; using ${sitePort}`));
     const siteUrl = `http://localhost:${sitePort}`;
     // The API must accept sign-ins from whichever port the site ended up on.
-    const apiEnv = { ...env, SITE_URL: siteUrl, TRUSTED_ORIGINS: [env.TRUSTED_ORIGINS, siteUrl].filter(Boolean).join(',') };
+    const apiEnv = { ...env, LOCAL_MEDIA_DIR: resolve(root, '.media'), SITE_URL: siteUrl, TRUSTED_ORIGINS: [env.TRUSTED_ORIGINS, siteUrl].filter(Boolean).join(',') };
 
     step('Starting API and site…');
     startProcess('api', c.magenta, ['run', 'dev', '-w', 'apps/api'], apiEnv);

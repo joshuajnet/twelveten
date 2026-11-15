@@ -10,7 +10,9 @@ setup('sign in as admin', async ({ page }) => {
     await page.getByLabel('Email').fill(EMAIL);
     await page.getByLabel('Password').fill(PASSWORD);
     await page.getByRole('button', { name: 'Sign in' }).click();
-    await page.waitForURL('/');
+    // Signing in lands in the back office; the public site shows the editing button.
+    await page.waitForURL('/admin/people');
+    await page.goto('/');
     await expect(page.getByRole('button', { name: 'Edit site' })).toBeVisible();
     await page.context().storageState({ path: ADMIN_STATE });
 });

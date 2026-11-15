@@ -15,7 +15,6 @@ import {
     pressCreateSchema,
     pressPatchSchema,
     revisionEntity,
-    slugify,
     uploadRequestSchema,
     type RevisionSummary,
 } from '@twelveten/shared';
@@ -27,8 +26,14 @@ import type { Storage } from '../../storage/uploads.ts';
 import { sanitizeNewsHtml } from '../../lib/sanitize.ts';
 import { getExhibition, getHome, getNews } from '../../content/queries.ts';
 import { toArtwork, toNews, toPress } from '../../content/serialize.ts';
+import type { Artwork } from '@twelveten/shared';
 import { body, fromDbError, HttpError } from './errors.ts';
 import { ensureBaseline, recordRevision } from './revisions.ts';
+import { columns, conflictOr404, sameVersion, uniqueSlug } from './util.ts';
+import { peopleRoutes } from './people.ts';
+import { inventoryRoutes, recordWorkChanges } from './inventory.ts';
+import { invoiceRoutes } from './invoices.ts';
+import { artworkLinks } from '../../inventory/queries.ts';
 
 export interface AdminDeps {
     publisher: Publisher;
@@ -36,39 +41,6 @@ export interface AdminDeps {
 }
 
 type Ctx = Context<AppEnv>;
-
-/** Build a column → value map from a patch, skipping keys that weren't sent. */
-function columns<P extends Record<string, unknown>>(patch: P, map: Partial<Record<keyof P, string>>): Record<string, unknown> {
-    const out: Record<string, unknown> = {};
-    for (const [key, column] of Object.entries(map)) {
-        if (column && key in patch && patch[key] !== undefined) out[column] = patch[key];
-    }
-    return out;
-}
-
-/** A slug based on `base` that isn't used yet in `table`. */
-async function uniqueSlug(db: DB, table: 'exhibitions' | 'news_posts', base: string, exceptId?: string): Promise<string> {
-    const root = slugify(base);
-    for (let n = 1; n < 1000; n++) {
-        const candidate = n === 1 ? root : `${root}-${n}`;
-        let q = db.selectFrom(table).select('id').where('slug', '=', candidate);
-        if (exceptId) q = q.where('id', '!=', exceptId);
-        if (!(await q.executeTakeFirst())) return candidate;
-    }
-    throw new HttpError(409, 'Could not find a free slug');
-}
-
-/**
- * Optimistic-lock check. Postgres keeps microseconds but clients only see milliseconds,
- * so compare at millisecond precision.
- */
-const sameVersion = (version: string) => sql<boolean>`date_trunc('milliseconds', updated_at) = ${version}::timestamptz`;
-
-/** Throw 409 (with the current server copy) or 404 when an optimistic update matched nothing. */
-async function conflictOr404(exists: boolean, current: () => Promise<unknown>): Promise<never> {
-    if (!exists) throw new HttpError(404, 'Not found');
-    throw new HttpError(409, 'This was changed by someone else since you opened it', { current: await current() });
-}
 
 const EXHIBITION_COLUMNS = {
     slug: 'slug',
@@ -110,6 +82,7 @@ const ARTWORK_COLUMNS = {
     credit: 'credit',
     hidden: 'hidden',
     available: 'available',
+    workId: 'work_id',
 } as const;
 
 const NEWS_COLUMNS = {
@@ -160,7 +133,29 @@ async function exhibitionPages(db: DB, e: { id: string; slug: string; kind: 'exh
 
 async function loadExhibitionById(db: DB, id: string) {
     const row = await db.selectFrom('exhibitions').select(['slug', 'kind']).where('id', '=', id).executeTakeFirst();
-    return row ? getExhibition(db, row.slug, row.kind, { drafts: true }) : null;
+    return row ? withLinks(db, await getExhibition(db, row.slug, row.kind, { drafts: true })) : null;
+}
+
+/** Admin copies of an exhibition carry each slide's inventory link (work and artist). */
+async function withLinks<E extends { id: string; artworks: Artwork[] } | null>(db: DB, e: E): Promise<E> {
+    if (!e) return e;
+    const [links, linkedArtists] = await Promise.all([
+        artworkLinks(db, e.artworks.map((a) => a.id)),
+        db
+            .selectFrom('exhibition_artists as ea')
+            .innerJoin('persons as p', 'p.id', 'ea.artist_id')
+            .select(['p.id as personId', 'p.name'])
+            .where('ea.exhibition_id', '=', e.id)
+            .orderBy('ea.position')
+            .execute(),
+    ]);
+    return { ...e, artworks: e.artworks.map((a) => ({ ...a, link: links.get(a.id) ?? null })), linkedArtists };
+}
+
+/** A slide with its inventory link, for admin responses. */
+async function artworkWithLink(db: DB, row: Parameters<typeof toArtwork>[0]): Promise<Artwork> {
+    const links = await artworkLinks(db, [row.id]);
+    return { ...toArtwork(row), link: links.get(row.id) ?? null };
 }
 
 export function adminRoutes(deps: AdminDeps) {
@@ -217,7 +212,7 @@ export function adminRoutes(deps: AdminDeps) {
             await recordRevision(trx, { entity: 'exhibition', entityId: created.id, action: 'create', snapshot: created, userId: c.var.userId });
             return created;
         });
-        return c.json(await getExhibition(db, row.slug, row.kind, { drafts: true }), 201);
+        return c.json(await withLinks(db, await getExhibition(db, row.slug, row.kind, { drafts: true })), 201);
     });
 
     app.patch('/exhibitions/:id', async (c) => {
@@ -327,7 +322,7 @@ export function adminRoutes(deps: AdminDeps) {
             return created;
         });
         await publish(await exhibitionPages(db, e));
-        return c.json(toArtwork(row), 201);
+        return c.json(await artworkWithLink(db, row), 201);
     });
 
     app.patch('/artworks/:id', async (c) => {
@@ -336,6 +331,9 @@ export function adminRoutes(deps: AdminDeps) {
         const db = c.var.db;
         const values = columns(patch, ARTWORK_COLUMNS);
         if (Object.keys(values).length === 0) throw new HttpError(400, 'Nothing to update');
+        if (patch.workId && !(await db.selectFrom('works').select('id').where('id', '=', patch.workId).executeTakeFirst())) {
+            throw new HttpError(400, 'Work not found');
+        }
         const row = await db.transaction().execute(async (trx) => {
             await ensureBaseline(trx, 'artwork', id, () => trx.selectFrom('artworks').selectAll().where('id', '=', id).executeTakeFirst());
             const updated = await trx
@@ -353,8 +351,9 @@ export function adminRoutes(deps: AdminDeps) {
             return conflictOr404(Boolean(current), async () => current && toArtwork(current));
         }
         const e = await db.selectFrom('exhibitions').select(['id', 'slug', 'kind']).where('id', '=', row.exhibition_id).executeTakeFirstOrThrow();
-        await publish(await exhibitionPages(db, e));
-        return c.json(toArtwork(row));
+        // Linking a slide to inventory changes nothing public.
+        if (Object.keys(values).some((k) => k !== 'work_id')) await publish(await exhibitionPages(db, e));
+        return c.json(await artworkWithLink(db, row));
     });
 
     app.delete('/artworks/:id', async (c) => {
@@ -398,6 +397,12 @@ export function adminRoutes(deps: AdminDeps) {
         await publish(await exhibitionPages(db, e));
         return c.json((await loadExhibitionById(db, id))?.artworks ?? []);
     });
+
+    // ---------- People, profiles, addresses and inventory (nothing public changes) ----------
+
+    app.route('/', peopleRoutes());
+    app.route('/', inventoryRoutes());
+    app.route('/', invoiceRoutes({ storage: deps.storage }));
 
     // ---------- News ----------
 
@@ -629,6 +634,11 @@ export function adminRoutes(deps: AdminDeps) {
                 for (const [k, v] of Object.entries(copy)) if (v !== null && typeof v === 'object') copy[k] = JSON.stringify(v);
                 return copy;
             };
+            // A slide's linked work may have been deleted since the snapshot.
+            const withLiveWork = async (row: Record<string, unknown>) => {
+                if (row.work_id && !(await trx.selectFrom('works').select('id').where('id', '=', String(row.work_id)).executeTakeFirst())) row.work_id = null;
+                return row;
+            };
             switch (rev.entity) {
                 case 'exhibition': {
                     const row = strip(snap, ['events', 'artworks']);
@@ -654,14 +664,14 @@ export function adminRoutes(deps: AdminDeps) {
                     // A deleted exhibition comes back with its slides.
                     if (rev.action === 'delete') {
                         for (const a of (snap.artworks as Record<string, unknown>[] | undefined) ?? []) {
-                            await trx.insertInto('artworks').values(strip(a) as never).onConflict((oc) => oc.column('id').doNothing()).execute();
+                            await trx.insertInto('artworks').values((await withLiveWork(strip(a))) as never).onConflict((oc) => oc.column('id').doNothing()).execute();
                         }
                     }
                     pages.push(...(await exhibitionPages(db, { id: String(snap.id), slug: String(snap.slug), kind: snap.kind as 'exhibition' | 'fair' })));
                     break;
                 }
                 case 'artwork': {
-                    const row = strip(snap);
+                    const row = await withLiveWork(strip(snap));
                     if (rev.action === 'delete') {
                         // Put it back at the end to avoid position clashes.
                         const max = await trx
@@ -696,6 +706,45 @@ export function adminRoutes(deps: AdminDeps) {
                     const row = strip(snap);
                     await trx.updateTable('home_page').set(row as never).where('id', '=', 1).execute();
                     pages.push('/');
+                    break;
+                }
+                case 'person': {
+                    const row = strip(snap);
+                    await trx.insertInto('persons').values(row as never).onConflict((oc) => oc.column('id').doUpdateSet(row as never)).execute();
+                    break;
+                }
+                case 'artist_profile': {
+                    const row = strip(snap, ['exhibition_ids']);
+                    if (!(await trx.selectFrom('persons').select('id').where('id', '=', String(snap.person_id)).executeTakeFirst())) {
+                        throw new HttpError(409, 'Restore the person first');
+                    }
+                    await trx.insertInto('artist_profiles').values(row as never).onConflict((oc) => oc.column('person_id').doUpdateSet(row as never)).execute();
+                    const ids = ((snap.exhibition_ids as string[] | undefined) ?? []).filter(Boolean);
+                    const existing = ids.length ? (await trx.selectFrom('exhibitions').select('id').where('id', 'in', ids).execute()).map((r) => r.id) : [];
+                    await trx.deleteFrom('exhibition_artists').where('artist_id', '=', String(snap.person_id)).execute();
+                    for (const exhibitionId of ids.filter((x) => existing.includes(x))) {
+                        await trx.insertInto('exhibition_artists').values({ exhibition_id: exhibitionId, artist_id: String(snap.person_id) }).execute();
+                    }
+                    break;
+                }
+                case 'work': {
+                    const row = strip(snap, ['images']);
+                    if (!(await trx.selectFrom('artist_profiles').select('person_id').where('person_id', '=', String(snap.artist_id)).executeTakeFirst())) {
+                        throw new HttpError(409, 'Restore the artist profile first');
+                    }
+                    if (row.buyer_id && !(await trx.selectFrom('persons').select('id').where('id', '=', String(row.buyer_id)).executeTakeFirst())) row.buyer_id = null;
+                    const before = await trx.selectFrom('works').selectAll().where('id', '=', String(snap.id)).executeTakeFirst();
+                    const after = await trx
+                        .insertInto('works')
+                        .values(row as never)
+                        .onConflict((oc) => oc.column('id').doUpdateSet(row as never))
+                        .returningAll()
+                        .executeTakeFirstOrThrow();
+                    await trx.deleteFrom('work_images').where('work_id', '=', after.id).execute();
+                    for (const [position, img] of ((snap.images as Record<string, unknown>[] | undefined) ?? []).entries()) {
+                        await trx.insertInto('work_images').values({ work_id: after.id, url: String(img.url), alt: String(img.alt ?? ''), position }).execute();
+                    }
+                    await recordWorkChanges(trx, before ?? null, after, 'Restored from history', c.var.userId);
                     break;
                 }
                 default:

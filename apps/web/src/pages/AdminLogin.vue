@@ -15,8 +15,8 @@ const busy = ref(false);
 useMeta({ kind: 'static', path: '/admin/login', title: 'Sign in' });
 
 const next = () => {
-    const to = String(route.query.next ?? '/');
-    return to.startsWith('/') && !to.startsWith('//') ? to : '/';
+    const to = String(route.query.next ?? '/admin');
+    return to.startsWith('/') && !to.startsWith('//') ? to : '/admin';
 };
 
 onMounted(async () => {

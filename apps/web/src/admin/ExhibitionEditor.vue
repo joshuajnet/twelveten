@@ -125,6 +125,7 @@ const heroAlt = computed(() => {
             v-model:visible="draft.slideshowVisible"
             v-model:works-available="draft.worksAvailable"
             :exhibition-id="draft.id"
+            :linked-artists="draft.linkedArtists"
             @update:slides="(s) => original && (original.artworks = s)"
         />
         <div class="container mx-auto grid gap-6 px-3" :class="draft.heroImage ? 'md:grid-cols-2' : 'max-w-(--breakpoint-sm) md:grid-cols-1'">

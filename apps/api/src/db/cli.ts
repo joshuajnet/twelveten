@@ -20,6 +20,10 @@ async function main(command: string | undefined): Promise<void> {
                     ? 'Seed already applied (use --force to overwrite).'
                     : `Seeded ${r.exhibitions} exhibitions/fairs, ${r.artworks} slides, ${r.events} events, ${r.press} press items, ${r.news} news posts.`,
             );
+            if (!r.artists.skipped) {
+                console.log(`Artists: ${r.artists.artists} new artist profiles, ${r.artists.links} exhibition links, ${r.artists.works} works from slides.`);
+            }
+            if (!r.bios.skipped) console.log(`Artist bios: ${r.bios.bios} filled from exhibition pages.`);
             return;
         }
         case 'admin:create': {

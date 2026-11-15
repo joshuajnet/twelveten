@@ -17,6 +17,10 @@ describe('CloudFront viewer-request function', () => {
         ['/assets/index-abc.js', '/assets/index-abc.js'],
         ['/sitemap.xml', '/sitemap.xml'],
         ['/admin/login', '/index.html'],
+        ['/admin', '/index.html'],
+        ['/admin/people', '/index.html'],
+        ['/admin/people/0190a1b2-0000-7000-8000-000000000000/artist', '/index.html'],
+        ['/admin/works/new', '/index.html'],
     ])('%s → %s', (uri, expected) => expect(run(uri).uri).toBe(expected));
 
     it('redirects legacy URLs permanently, matching the shared route table', () => {
@@ -25,6 +29,5 @@ describe('CloudFront viewer-request function', () => {
             expect(res.statusCode).toBe(301);
             expect(res.headers?.location?.value).toBe(to);
         }
-        expect(run('/admin').headers?.location?.value).toBe('/admin/login');
     });
 });

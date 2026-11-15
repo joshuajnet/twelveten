@@ -12,7 +12,9 @@ onMounted(() => void loadSession());
 </script>
 
 <template>
-    <div id="app" class="relative flex grow flex-col w-full font-gentium-book text-slate-900">
+    <!-- The back office has its own layout (no site header, footer or editing bar). -->
+    <router-view v-if="$route.meta.backoffice" />
+    <div v-else id="app" class="relative flex grow flex-col w-full font-gentium-book text-slate-900">
         <Header @menu="menuActive = $event" />
 
         <main class="flex grow flex-col">

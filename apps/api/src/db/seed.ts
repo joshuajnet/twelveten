@@ -8,6 +8,7 @@ import { pressItems } from '../../seed-data/press.ts';
 import { loadNews } from '../../seed-data/news.ts';
 import { home } from '../../seed-data/home.ts';
 import { sanitizeNewsHtml } from '../lib/sanitize.ts';
+import { seedArtistBios, seedArtists, type ArtistSeedResult } from './seedArtists.ts';
 
 const SEED_KEY = 'initial';
 
@@ -47,6 +48,10 @@ export interface SeedResult {
     events: number;
     press: number;
     news: number;
+    /** People/artist profiles created from exhibitions' artist lists (a separate one-time pass). */
+    artists: ArtistSeedResult;
+    /** Artist bios filled from exhibition pages (a separate one-time pass). */
+    bios: { skipped: boolean; bios: number };
 }
 
 function readSeedFile(name: string): string | null {
@@ -83,11 +88,15 @@ function slideAlt(s: LegacySlide): string {
  * unless `force` is set. Runs in one transaction.
  */
 export async function seed(db: DB, { force = false }: SeedOptions = {}): Promise<SeedResult> {
-    const result: SeedResult = { skipped: false, exhibitions: 0, artworks: 0, events: 0, press: 0, news: 0 };
+    const result: SeedResult = { skipped: false, exhibitions: 0, artworks: 0, events: 0, press: 0, news: 0, artists: { skipped: true, artists: 0, links: 0, works: 0 }, bios: { skipped: true, bios: 0 } };
 
     if (!force) {
         const done = await db.selectFrom('seed_state').select('key').where('key', '=', SEED_KEY).executeTakeFirst();
-        if (done) return { ...result, skipped: true };
+        // Databases seeded before the artists pass existed still get it.
+        if (done) {
+            const artists = await seedArtists(db);
+            return { ...result, skipped: true, artists, bios: await seedArtistBios(db) };
+        }
     }
 
     await db.transaction().execute(async (trx) => {
@@ -229,5 +238,8 @@ export async function seed(db: DB, { force = false }: SeedOptions = {}): Promise
         await trx.insertInto('seed_state').values({ key: SEED_KEY }).onConflict((oc) => oc.column('key').doNothing()).execute();
     });
 
+    // A forced reseed replaces slides, so their work links are rebuilt too.
+    result.artists = await seedArtists(db, { force });
+    result.bios = await seedArtistBios(db, { force });
     return result;
 }

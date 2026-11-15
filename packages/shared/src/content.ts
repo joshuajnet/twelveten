@@ -53,8 +53,20 @@ export const artworkSchema = z.object({
     hidden: z.boolean(),
     available: z.boolean(),
     updatedAt: isoTimestamp,
+    /** Admin reads only: the inventory work and artist this slide is linked to. */
+    link: z
+        .object({
+            workId: uuid,
+            workTitle: z.string(),
+            inventoryNumber: z.string().nullable(),
+            personId: uuid,
+            artistName: z.string(),
+        })
+        .nullable()
+        .optional(),
 });
 export type Artwork = z.infer<typeof artworkSchema>;
+export type ArtworkLink = NonNullable<Artwork['link']>;
 
 export const pressItemSchema = z.object({
     id: uuid,
@@ -115,6 +127,8 @@ export const exhibitionSchema = exhibitionSummarySchema.extend({
     events: z.array(exhibitionEventSchema),
     artworks: z.array(artworkSchema),
     press: z.array(pressItemSchema),
+    /** Admin reads only: artist profiles linked to this exhibition, in order. */
+    linkedArtists: z.array(z.object({ personId: uuid, name: z.string() })).optional(),
 });
 export type Exhibition = z.infer<typeof exhibitionSchema>;
 

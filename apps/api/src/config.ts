@@ -30,6 +30,13 @@ const schema = z.object({
     SITE_BUCKET: z.string().default('twelveten-local-site'),
     /** Path the media bucket is served under on the site. */
     MEDIA_PUBLIC_PREFIX: z.string().default('/media'),
+    /** Local copy of the site media (development): invoice PDFs read images missing from the bucket here. */
+    LOCAL_MEDIA_DIR: z.string().optional(),
+    /** Payment details printed on invoices. Kept out of the database and the repo; each line is left off when unset. */
+    INVOICE_ZELLE: z.string().trim().optional(),
+    INVOICE_WIRE_ROUTING: z.string().trim().optional(),
+    INVOICE_WIRE_ACCOUNT: z.string().trim().optional(),
+    INVOICE_CHECKS_PAYABLE_TO: z.string().trim().optional(),
 });
 
 export type Config = z.infer<typeof schema>;

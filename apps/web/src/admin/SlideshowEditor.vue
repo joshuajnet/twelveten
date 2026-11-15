@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import Sortable from 'sortablejs';
 import type { Artwork, ArtworkPatch } from '@twelveten/shared';
 import { adminApi, errorMessage, isConflict } from './api';
@@ -9,13 +9,14 @@ import Dialog from './ui/Dialog.vue';
 import Field from './ui/Field.vue';
 import Switch from './ui/Switch.vue';
 import MediaButton from './MediaButton.vue';
+import LinkSlideDialog from './LinkSlideDialog.vue';
 import { btnDanger, btnOutline, btnPrimary } from './ui/buttons';
 
 /**
  * Arrange view of the slideshow while editing: drag to reorder, add/replace/delete slides,
  * edit captions, hide slides, mark works available. Slide changes save immediately.
  */
-const props = defineProps<{ exhibitionId: string }>();
+const props = defineProps<{ exhibitionId: string; linkedArtists?: { personId: string; name: string }[] }>();
 const slides = defineModel<Artwork[]>('slides', { required: true });
 const visible = defineModel<boolean>('visible', { required: true });
 const worksAvailable = defineModel<boolean>('worksAvailable', { required: true });
@@ -99,6 +100,22 @@ async function remove(slide: Artwork) {
     confirmDelete.value = null;
 }
 
+// Inventory links (slide → work → artist). Links open the back office in a new tab so page edits survive.
+const linking = ref<Artwork | null>(null);
+const unlinkedCount = computed(() => slides.value.filter((s) => !s.link).length);
+const preferIds = computed(() => [...new Set([...(props.linkedArtists ?? []).map((a) => a.personId), ...slides.value.flatMap((s) => (s.link ? [s.link.personId] : []))])]);
+const artistHref = (s: Artwork) => `/admin/people/${s.link!.personId}/artist`;
+const workHref = (s: Artwork) => `/admin/works/${s.link!.workId}`;
+function onLinked(updated: Artwork) {
+    slides.value = slides.value.map((s) => (s.id === updated.id ? updated : s));
+    if (editing.value?.id === updated.id) editing.value = updated;
+}
+async function unlink(slide: Artwork) {
+    const updated = await patch(slide, { workId: null });
+    if (updated && editing.value?.id === slide.id) editing.value = updated;
+    if (updated) toast('Unlinked (the work stays in the inventory)', 'success', 2000);
+}
+
 // Caption editor
 const editing = ref<Artwork | null>(null);
 const FIELDS = ['author', 'title', 'dateText', 'dimensions', 'media', 'credit', 'alt'] as const;
@@ -128,6 +145,9 @@ async function replaceMedia(slide: Artwork, url: string, file: File) {
                 <div class="w-56"><Switch v-model="visible" label="Show slideshow" /></div>
                 <div class="w-56"><Switch v-model="worksAvailable" label="Works available" hint="Shows Inquire on available works" /></div>
                 <span class="text-xs text-slate-500">{{ slides.length }} slides · drag ⠿ to reorder · changes save immediately</span>
+                <span v-if="unlinkedCount" class="rounded bg-amber-50 px-1.5 py-0.5 text-xs text-amber-900 ring-1 ring-inset ring-amber-600/20" data-testid="unlinked-count">
+                    Unlinked images: {{ unlinkedCount }}
+                </span>
                 <button type="button" :class="btnPrimary" class="ml-auto" @click="addSlides">+ Add images or videos</button>
             </div>
             <div v-if="uploads.length" class="mb-3 space-y-1 text-xs">
@@ -152,6 +172,15 @@ async function replaceMedia(slide: Artwork, url: string, file: File) {
                     <div class="p-1.5 text-[11px] leading-tight">
                         <div class="truncate font-medium">{{ s.title || s.alt || 'Untitled' }}</div>
                         <div class="truncate text-slate-500">{{ s.author }}</div>
+                        <div v-if="s.link" class="mt-1 flex flex-wrap gap-1" data-testid="slide-link">
+                            <a :href="artistHref(s)" target="_blank" rel="noopener" class="max-w-full truncate rounded bg-sky-50 px-1 text-sky-900 ring-1 ring-inset ring-sky-700/20 hover:bg-sky-100" :title="`Open ${s.link.artistName}’s profile`">
+                                {{ s.link.artistName }} ↗
+                            </a>
+                            <a :href="workHref(s)" target="_blank" rel="noopener" class="max-w-full truncate rounded bg-slate-100 px-1 text-slate-700 ring-1 ring-inset ring-slate-500/20 hover:bg-slate-200" title="Open the work in the inventory">
+                                {{ s.link.inventoryNumber || 'Work' }} ↗
+                            </a>
+                        </div>
+                        <button v-else type="button" class="mt-1 rounded bg-amber-50 px-1 text-amber-900 ring-1 ring-inset ring-amber-600/20 hover:bg-amber-100" @click="linking = s">Link artist</button>
                         <div class="mt-1 flex flex-wrap gap-x-2">
                             <button type="button" class="text-sky-800 hover:underline" @click="edit(s)">Caption</button>
                             <button type="button" class="text-sky-800 hover:underline" @click="patch(s, { hidden: !s.hidden })">{{ s.hidden ? 'Show' : 'Hide' }}</button>
@@ -181,6 +210,19 @@ async function replaceMedia(slide: Artwork, url: string, file: File) {
                     <Field v-model="form.dimensions" label="Dimensions" />
                     <Field v-model="form.credit" label="Credit" />
                     <Field v-model="form.alt" label="Description for screen readers (alt text)" multiline />
+                    <div class="mt-2 border-t border-slate-100 pt-2 text-sm">
+                        <span class="block text-xs font-medium text-slate-600">Linked artist</span>
+                        <template v-if="editing.link">
+                            <a :href="artistHref(editing)" target="_blank" rel="noopener" class="text-sky-900 hover:underline">{{ editing.link.artistName }} ↗</a>
+                            ·
+                            <a :href="workHref(editing)" target="_blank" rel="noopener" class="text-sky-900 hover:underline">{{ editing.link.workTitle || 'Untitled' }} ↗</a>
+                            <span class="ml-2 inline-flex gap-2 text-xs">
+                                <button type="button" class="text-sky-800 hover:underline" @click="linking = editing">Change link</button>
+                                <button type="button" class="text-red-700 hover:underline" @click="unlink(editing!)">Unlink</button>
+                            </span>
+                        </template>
+                        <button v-else type="button" class="text-sky-800 hover:underline" @click="linking = editing">Look up the artist in People…</button>
+                    </div>
                 </div>
             </div>
             <template #footer>
@@ -188,6 +230,8 @@ async function replaceMedia(slide: Artwork, url: string, file: File) {
                 <button type="button" :class="btnPrimary" @click="saveCaption">Save caption</button>
             </template>
         </Dialog>
+
+        <LinkSlideDialog :open="Boolean(linking)" :slide="linking" :prefer-ids="preferIds" @update:open="(o) => !o && (linking = null)" @linked="onLinked" />
 
         <Dialog :open="Boolean(confirmDelete)" title="Delete this slide?" description="It can be restored from History." @update:open="(o) => !o && (confirmDelete = null)">
             <template #footer>

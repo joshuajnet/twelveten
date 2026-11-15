@@ -81,6 +81,7 @@ export interface ArtworkTable {
     credit: string | null;
     hidden: Generated<boolean>;
     available: Generated<boolean>;
+    work_id: string | null;
     created_at: CreatedAt;
     updated_at: Timestamp;
 }
@@ -131,7 +132,196 @@ export interface HomePageTable {
     updated_at: Timestamp;
 }
 
-export type RevisionEntity = 'exhibition' | 'exhibition_event' | 'artwork' | 'news_post' | 'press_item' | 'home_page';
+export interface PersonTable {
+    id: Generated<string>;
+    name: string;
+    sort_name: string | null;
+    birth_date: IsoDate | null;
+    birth_place: string | null;
+    email: string | null;
+    phone: string | null;
+    website: string | null;
+    portrait: string | null;
+    notes: string | null;
+    created_at: CreatedAt;
+    updated_at: Timestamp;
+}
+
+export interface ArtistProfileTable {
+    person_id: string;
+    slug: string;
+    /** Letters before each work's inventory number (MSW → MSW0006); set by a trigger when omitted. */
+    inventory_prefix: Generated<string>;
+    bio: JsonWithDefault<RichDoc>;
+    cv: JsonWithDefault<RichDoc>;
+    created_at: CreatedAt;
+    updated_at: Timestamp;
+}
+
+export interface AddressTable {
+    id: Generated<string>;
+    line1: Generated<string>;
+    line2: string | null;
+    city: string | null;
+    region: string | null;
+    postal_code: string | null;
+    country: Generated<string>;
+    notes: string | null;
+    created_at: CreatedAt;
+    updated_at: Timestamp;
+}
+
+export type AddressEntityName = 'person';
+
+export interface AddressLinkTable {
+    id: Generated<string>;
+    address_id: string;
+    entity: AddressEntityName;
+    entity_id: string;
+    label: string | null;
+    is_primary: Generated<boolean>;
+    position: Generated<number>;
+    created_at: CreatedAt;
+    updated_at: Timestamp;
+}
+
+export interface ExhibitionArtistTable {
+    exhibition_id: string;
+    artist_id: string;
+    position: Generated<number>;
+}
+
+export type WorkStatusName = 'available' | 'on_hold' | 'sold' | 'nfs' | 'returned';
+export type WorkLocationName = 'gallery' | 'storage' | 'artist' | 'collector' | 'on_loan' | 'other';
+
+export interface WorkTable {
+    id: Generated<string>;
+    artist_id: string;
+    inventory_number: string | null;
+    title: Generated<string>;
+    date_text: string | null;
+    medium: string | null;
+    dimensions: string | null;
+    edition: string | null;
+    credit: string | null;
+    price_cents: number | null;
+    currency: Generated<string>;
+    status: Generated<WorkStatusName>;
+    location: WorkLocationName | null;
+    location_note: string | null;
+    consigned_on: IsoDate | null;
+    consignment_ends_on: IsoDate | null;
+    sold_on: IsoDate | null;
+    sale_price_cents: number | null;
+    buyer_id: string | null;
+    sale_notes: string | null;
+    notes: string | null;
+    created_at: CreatedAt;
+    updated_at: Timestamp;
+}
+
+export interface WorkImageTable {
+    id: Generated<string>;
+    work_id: string;
+    url: string;
+    alt: Generated<string>;
+    position: number;
+    created_at: CreatedAt;
+    updated_at: Timestamp;
+}
+
+export type WorkChangeField = 'price' | 'status' | 'location' | 'consignment' | 'sale';
+
+export interface WorkChangeTable {
+    id: Generated<string>;
+    work_id: string;
+    field: WorkChangeField;
+    old_value: Json<unknown> | null;
+    new_value: Json<unknown> | null;
+    note: string | null;
+    user_id: string | null;
+    created_at: CreatedAt;
+}
+
+export interface CollectorProfileTable {
+    person_id: string;
+    notes: string | null;
+    created_at: CreatedAt;
+    updated_at: Timestamp;
+}
+
+export interface InvoiceSettingsTable {
+    id: Generated<boolean>;
+    gallery_name: Generated<string>;
+    address: Generated<string>;
+    email: Generated<string>;
+    phone: Generated<string>;
+    default_terms: Generated<string>;
+    default_tax_rate_bps: Generated<number>;
+    number_prefix: Generated<string>;
+    updated_at: Timestamp;
+}
+
+export type InvoiceStatusName = 'open' | 'partial' | 'paid' | 'cancelled';
+
+export interface InvoiceTable {
+    id: Generated<string>;
+    number: string;
+    person_id: string;
+    issued_on: Generated<IsoDate>;
+    status: Generated<InvoiceStatusName>;
+    currency: Generated<string>;
+    bill_to: Generated<string>;
+    discount_bps: Generated<number>;
+    tax_rate_bps: Generated<number>;
+    shipping_cents: Generated<number>;
+    subtotal_cents: Generated<number>;
+    discount_cents: Generated<number>;
+    tax_cents: Generated<number>;
+    total_cents: Generated<number>;
+    terms: Generated<string>;
+    notes: string | null;
+    created_at: CreatedAt;
+    updated_at: Timestamp;
+}
+
+export interface InvoiceItemTable {
+    id: Generated<string>;
+    invoice_id: string;
+    work_id: string | null;
+    position: number;
+    artist_name: Generated<string>;
+    title: Generated<string>;
+    date_text: string | null;
+    medium: string | null;
+    dimensions: string | null;
+    image_url: string | null;
+    price_cents: Generated<number>;
+    created_at: CreatedAt;
+    updated_at: Timestamp;
+}
+
+export interface InvoicePaymentTable {
+    id: Generated<string>;
+    invoice_id: string;
+    amount_cents: number;
+    paid_on: IsoDate;
+    method: string | null;
+    note: string | null;
+    user_id: string | null;
+    created_at: CreatedAt;
+}
+
+export type RevisionEntity =
+    | 'exhibition'
+    | 'exhibition_event'
+    | 'artwork'
+    | 'news_post'
+    | 'press_item'
+    | 'home_page'
+    | 'person'
+    | 'artist_profile'
+    | 'work';
 
 export interface ContentRevisionTable {
     id: Generated<string>;
@@ -156,6 +346,19 @@ export interface Database {
     news_posts: NewsPostTable;
     press_items: PressItemTable;
     home_page: HomePageTable;
+    persons: PersonTable;
+    artist_profiles: ArtistProfileTable;
+    addresses: AddressTable;
+    address_links: AddressLinkTable;
+    exhibition_artists: ExhibitionArtistTable;
+    works: WorkTable;
+    work_images: WorkImageTable;
+    work_changes: WorkChangeTable;
+    collector_profiles: CollectorProfileTable;
+    invoice_settings: InvoiceSettingsTable;
+    invoices: InvoiceTable;
+    invoice_items: InvoiceItemTable;
+    invoice_payments: InvoicePaymentTable;
     content_revisions: ContentRevisionTable;
     seed_state: SeedStateTable;
 }
@@ -168,3 +371,14 @@ export type ExhibitionEventRow = Selectable<ExhibitionEventTable>;
 export type NewsPostRow = Selectable<NewsPostTable>;
 export type PressItemRow = Selectable<PressItemTable>;
 export type HomePageRow = Selectable<HomePageTable>;
+export type PersonRow = Selectable<PersonTable>;
+export type ArtistProfileRow = Selectable<ArtistProfileTable>;
+export type AddressRow = Selectable<AddressTable>;
+export type AddressLinkRow = Selectable<AddressLinkTable>;
+export type WorkRow = Selectable<WorkTable>;
+export type WorkImageRow = Selectable<WorkImageTable>;
+export type WorkChangeRow = Selectable<WorkChangeTable>;
+export type InvoiceRow = Selectable<InvoiceTable>;
+export type InvoiceItemRow = Selectable<InvoiceItemTable>;
+export type InvoicePaymentRow = Selectable<InvoicePaymentTable>;
+export type InvoiceSettingsRow = Selectable<InvoiceSettingsTable>;

@@ -8,6 +8,8 @@ import { config } from '../config.ts';
 // TIMESTAMPTZ as ISO strings so API payloads are stable.
 pg.types.setTypeParser(pg.types.builtins.DATE, (v) => v);
 pg.types.setTypeParser(pg.types.builtins.TIMESTAMPTZ, (v) => new Date(v).toISOString());
+// BIGINT (prices in cents, counts) as numbers; every value we store is far below 2^53.
+pg.types.setTypeParser(pg.types.builtins.INT8, (v) => Number(v));
 pg.types.setTypeParser(pg.types.builtins.TIMESTAMP, (v) => new Date(`${v}Z`).toISOString());
 
 export type DB = Kysely<Database>;

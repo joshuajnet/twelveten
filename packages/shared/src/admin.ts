@@ -88,7 +88,10 @@ export const artworkCreateSchema = z
     .partial()
     .refine((a) => a.image || a.video, 'An image or video is required');
 export type ArtworkCreate = z.input<typeof artworkCreateSchema>;
-export const artworkPatchSchema = z.object(artworkFields).partial().extend(version);
+export const artworkPatchSchema = z
+    .object(artworkFields)
+    .partial()
+    .extend({ ...version, workId: uuid.nullable().optional() });
 export type ArtworkPatch = z.infer<typeof artworkPatchSchema>;
 export const artworkOrderSchema = z.object({ ids: z.array(uuid).min(1) });
 
@@ -172,7 +175,7 @@ export interface UploadTicket {
     headers: Record<string, string>;
 }
 
-export const revisionEntity = z.enum(['exhibition', 'artwork', 'news_post', 'press_item', 'home_page']);
+export const revisionEntity = z.enum(['exhibition', 'artwork', 'news_post', 'press_item', 'home_page', 'person', 'artist_profile', 'work']);
 export type RevisionEntityName = z.infer<typeof revisionEntity>;
 export interface RevisionSummary {
     id: string;

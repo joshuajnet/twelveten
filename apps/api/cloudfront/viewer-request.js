@@ -1,11 +1,11 @@
 // CloudFront Function (viewer request) for the default (site bucket) behaviour.
 // - legacy URLs redirect permanently
 // - extensionless paths map to their prerendered page: /exhibitions/foo -> /exhibitions/foo/index.html
+// - /admin and /admin/* (sign-in and back office) serve the SPA shell
 // Keep REDIRECTS in sync with packages/shared/src/routes.ts.
 var REDIRECTS = {
     '/the-veil': '/exhibitions/the-veil',
     '/exhibitions/the-vei': '/exhibitions/the-veil',
-    '/admin': '/admin/login',
 };
 
 function handler(event) {
@@ -21,8 +21,8 @@ function handler(event) {
         };
     }
 
-    // The admin login page is the SPA shell (not prerendered).
-    if (clean === '/admin/login') {
+    // The admin pages (login and back office) are the SPA shell, never prerendered.
+    if (clean === '/admin' || clean.indexOf('/admin/') === 0) {
         request.uri = '/index.html';
         return request;
     }
