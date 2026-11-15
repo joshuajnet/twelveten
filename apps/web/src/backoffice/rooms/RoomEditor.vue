@@ -138,6 +138,7 @@ function moveArtist(i: number, step: number) {
     [next[i], next[j]] = [next[j]!, next[i]!];
     artists.value = next;
 }
+const shownPress = (a: RoomArtistSettings) => a.press.filter((p) => !a.hiddenPressIds.includes(p.id)).length;
 function togglePress(a: RoomArtistSettings, pressId: string, shown: boolean) {
     a.hiddenPressIds = shown ? a.hiddenPressIds.filter((x) => x !== pressId) : [...a.hiddenPressIds, pressId];
 }
@@ -328,6 +329,7 @@ const setPriceMode = (w: RoomWorkSettings, v: string) => (w.showPrice = v === 'i
                     class="flex flex-wrap items-center gap-3 py-2"
                     :class="{ 'bg-amber-50/60': w.work.status !== 'available' && !w.hidden, 'opacity-60': w.hidden }"
                 >
+                    <div class="flex min-w-0 flex-1 basis-64 items-center gap-3">
                     <button type="button" data-drag class="cursor-grab px-1 text-slate-400 hover:text-slate-700" aria-label="Drag to reorder" title="Drag to reorder">⠿</button>
                     <span class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded bg-slate-100">
                         <img v-if="w.work.image" :src="w.work.image.url" alt="" class="h-full w-full object-contain" loading="lazy" />
@@ -338,6 +340,8 @@ const setPriceMode = (w: RoomWorkSettings, v: string) => (w.showPrice = v === 'i
                         <div class="text-slate-600">{{ w.work.artistName }}</div>
                         <div class="text-xs text-slate-500">{{ viewerNote(w) }}</div>
                     </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 pl-8 sm:pl-0">
                     <StatusBadge :status="w.work.status" />
                     <label class="text-xs">
                         <span class="sr-only">Price for {{ w.work.title }}</span>
@@ -350,6 +354,7 @@ const setPriceMode = (w: RoomWorkSettings, v: string) => (w.showPrice = v === 'i
                         Hide from viewers
                     </label>
                     <button type="button" class="text-xs text-red-700 hover:underline" :aria-label="`Remove ${w.work.title}`" @click="removeWork(w.workId)">Remove</button>
+                    </div>
                 </li>
             </ol>
             <p v-else class="rounded border border-dashed border-slate-300 py-8 text-center text-sm text-slate-500">No works yet. Add works from the inventory.</p>
@@ -359,40 +364,46 @@ const setPriceMode = (w: RoomWorkSettings, v: string) => (w.showPrice = v === 'i
         <section v-if="!isNew" aria-labelledby="artists-h" class="rounded-md border border-slate-200 bg-white p-4">
             <h2 id="artists-h" class="mb-1 text-sm font-semibold">Artists ({{ artists.length }})</h2>
             <p class="mb-3 text-xs text-slate-500">
-                Viewers can read about the artists whose works are in the room. Bio, CV and press come from each artist’s profile.
+                Choose what viewers can read about each artist. Bio, CV and press come from the artist’s profile.
                 <span v-if="worksDirty" class="text-amber-700">Save to update this list for added or removed works.</span>
             </p>
-            <ul class="space-y-3">
-                <li v-for="(a, i) in artists" :key="a.artistId" class="rounded border border-slate-200 p-3" data-testid="room-artist-settings">
-                    <div class="mb-2 flex flex-wrap items-center gap-2">
-                        <RouterLink :to="{ name: 'bo-person', params: { id: a.artistId, profile: 'artist' } }" class="font-medium text-sky-900 hover:underline">{{ a.name }}</RouterLink>
-                        <span class="flex-1" />
-                        <button type="button" :class="btnGhost" :disabled="i === 0" :aria-label="`Move ${a.name} up`" @click="moveArtist(i, -1)">↑</button>
-                        <button type="button" :class="btnGhost" :disabled="i === artists.length - 1" :aria-label="`Move ${a.name} down`" @click="moveArtist(i, 1)">↓</button>
+            <ul class="divide-y divide-slate-200 rounded border border-slate-200">
+                <li v-for="(a, i) in artists" :key="a.artistId" class="p-3" data-testid="room-artist-settings">
+                    <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+                        <RouterLink :to="{ name: 'bo-person', params: { id: a.artistId, profile: 'artist' } }" class="min-w-0 flex-1 truncate font-medium text-sky-900 hover:underline">{{ a.name }}</RouterLink>
+                        <fieldset class="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm">
+                            <legend class="sr-only">Show viewers {{ a.name }}’s</legend>
+                            <span class="mr-1 text-xs text-slate-500" aria-hidden="true">Show viewers:</span>
+                            <label class="artist-opt" :class="{ 'artist-opt-off': !a.hasBio }" :title="a.hasBio ? '' : 'This artist has no bio yet'">
+                                <input type="checkbox" class="h-3.5 w-3.5" :checked="Boolean(a.hasBio) && a.showBio" :disabled="!a.hasBio" @change="a.showBio = ($event.target as HTMLInputElement).checked" />
+                                Bio<span v-if="!a.hasBio" class="text-[11px]"> (none yet)</span>
+                            </label>
+                            <label class="artist-opt" :class="{ 'artist-opt-off': !a.hasCv }" :title="a.hasCv ? 'With a PDF download' : 'This artist has no CV yet'">
+                                <input type="checkbox" class="h-3.5 w-3.5" :checked="Boolean(a.hasCv) && a.showCv" :disabled="!a.hasCv" @change="a.showCv = ($event.target as HTMLInputElement).checked" />
+                                CV<span v-if="!a.hasCv" class="text-[11px]"> (none yet)</span>
+                            </label>
+                            <label class="artist-opt" :class="{ 'artist-opt-off': !a.press.length }" :title="a.press.length ? '' : 'No press yet'">
+                                <input type="checkbox" class="h-3.5 w-3.5" :checked="Boolean(a.press.length) && a.showPress" :disabled="!a.press.length" @change="a.showPress = ($event.target as HTMLInputElement).checked" />
+                                Press<span class="text-[11px] tabular-nums"> ({{ a.press.length ? `${shownPress(a)} of ${a.press.length}` : 'none yet' }})</span>
+                            </label>
+                        </fieldset>
+                        <span v-if="artists.length > 1" class="flex">
+                            <button type="button" :class="btnGhost" :disabled="i === 0" :aria-label="`Move ${a.name} up`" @click="moveArtist(i, -1)">↑</button>
+                            <button type="button" :class="btnGhost" :disabled="i === artists.length - 1" :aria-label="`Move ${a.name} down`" @click="moveArtist(i, 1)">↓</button>
+                        </span>
                     </div>
-                    <div class="grid gap-x-6 sm:grid-cols-3">
-                        <div>
-                            <Switch v-model="a.showBio" label="Bio" :hint="a.hasBio ? '' : 'No bio yet'" />
-                        </div>
-                        <div>
-                            <Switch v-model="a.showCv" label="CV" :hint="a.hasCv ? 'With a PDF download' : 'No CV yet'" />
-                        </div>
-                        <div>
-                            <Switch v-model="a.showPress" label="Press" :hint="a.press.length ? `${a.press.length - a.hiddenPressIds.filter((h) => a.press.some((p) => p.id === h)).length} of ${a.press.length} shown` : 'No press yet'" />
-                        </div>
-                    </div>
-                    <details v-if="a.showPress && a.press.length" class="mt-1 text-sm">
-                        <summary class="cursor-pointer text-xs text-slate-600">Choose press</summary>
-                        <ul class="mt-1 space-y-1">
+                    <details v-if="a.showPress && a.press.length" class="mt-2 text-sm">
+                        <summary class="cursor-pointer text-xs text-sky-800 hover:underline">Choose which press to show</summary>
+                        <ul class="mt-1.5 space-y-1 pl-1">
                             <li v-for="p in a.press" :key="p.id">
                                 <label class="flex items-start gap-2">
-                                    <input type="checkbox" class="mt-1 h-3.5 w-3.5" :checked="!a.hiddenPressIds.includes(p.id)" @change="togglePress(a, p.id, ($event.target as HTMLInputElement).checked)" />
-                                    <span><span class="italic">{{ p.outlet }}</span> — {{ p.title }} <span class="text-xs text-slate-500">({{ p.issueLabel ?? p.publishedOn.slice(0, 4) }})</span></span>
+                                    <input type="checkbox" class="mt-1 h-3.5 w-3.5 shrink-0" :checked="!a.hiddenPressIds.includes(p.id)" @change="togglePress(a, p.id, ($event.target as HTMLInputElement).checked)" />
+                                    <span class="min-w-0"><span class="italic">{{ p.outlet }}</span> — {{ p.title }} <span class="text-xs text-slate-500">({{ p.issueLabel ?? p.publishedOn.slice(0, 4) }})</span></span>
                                 </label>
                             </li>
                         </ul>
                     </details>
-                    <p v-if="!a.hasBio || !a.hasCv" class="mt-1 text-xs">
+                    <p v-if="!a.hasBio || !a.hasCv" class="mt-1.5 text-xs">
                         <RouterLink :to="{ name: 'bo-person', params: { id: a.artistId, profile: 'artist' } }" class="text-sky-800 hover:underline">Add {{ !a.hasBio && !a.hasCv ? 'a bio and CV' : !a.hasBio ? 'a bio' : 'a CV' }} on their profile</RouterLink>
                     </p>
                 </li>
@@ -426,3 +437,16 @@ const setPriceMode = (w: RoomWorkSettings, v: string) => (w.showPrice = v === 'i
         <HistoryDialog v-if="room" v-model:open="historyOpen" entity="viewing_room" :id="room.id" @restored="load" />
     </div>
 </template>
+
+<style scoped>
+@reference "@/style.css";
+.artist-opt {
+    @apply inline-flex cursor-pointer items-center gap-1.5 rounded border border-slate-300 bg-white px-2 py-1 text-slate-800 hover:border-sky-700;
+}
+.artist-opt:has(input:checked) {
+    @apply border-sky-700 bg-sky-50 text-sky-900;
+}
+.artist-opt-off {
+    @apply cursor-not-allowed border-dashed text-slate-400 hover:border-slate-300;
+}
+</style>

@@ -114,7 +114,7 @@ test('an admin creates a room from the inventory', async ({ page }) => {
 
     // Hide one press item for this room.
     const settings = page.getByTestId('room-artist-settings');
-    await settings.getByText('Choose press').click();
+    await settings.getByText('Choose which press to show').click();
     await settings.getByLabel(/Not for this room/).uncheck();
     await page.getByTestId('save-room').click();
     await expect(page.getByText('● Unsaved changes')).toHaveCount(0);
@@ -165,6 +165,8 @@ test('a visitor enters through the gate and the browser is remembered', async ({
     // The artist: bio, CV, press minus the hidden item.
     await page.getByRole('button', { name: 'About the artist' }).click();
     const artist = page.getByTestId('room-artist');
+    await expect(artist).toHaveCount(1);
+    await expect(page.getByTestId('back-to-work')).toBeVisible();
     await expect(artist).toContainText('Ezra paints harbours.');
     await artist.getByRole('button', { name: 'Read CV' }).click();
     await expect(artist.getByTestId('room-cv')).toContainText('MFA, 2010');

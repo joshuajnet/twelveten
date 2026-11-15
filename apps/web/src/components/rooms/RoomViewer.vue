@@ -118,11 +118,18 @@ function aboutArtist(w: PublicRoomWork) {
     tracker.countArtist(w.artistId, 'opens');
     tracker.event('artist_open', { artistId: w.artistId, workId: w.id });
 }
+/** The Artists tab lists every artist (also leaves a single artist opened from a work). */
 function openArtistsTab() {
-    if (tab.value === 'artists') return;
+    if (tab.value === 'artists' && !focusArtist.value) return;
     focusArtist.value = null;
     tab.value = 'artists';
     tracker.event('view_mode', { data: { mode: 'artists' } });
+}
+/** "About the artist" shows that artist only. */
+const shownArtists = computed(() => (focusArtist.value ? props.room.artists.filter((a) => a.id === focusArtist.value) : props.room.artists));
+function backToWork() {
+    focusArtist.value = null;
+    tab.value = 'works';
 }
 function showWorksBy(artistId: string) {
     filterArtist.value = artistId;
@@ -270,7 +277,11 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
 
         <p v-else-if="tab === 'works'" class="container mx-auto px-3 py-16 text-center text-slate-500">There are no works in this room yet.</p>
 
-        <RoomArtists v-if="tab === 'artists'" :artists="room.artists" :token="token" :tracker="tracker" :focus="focusArtist" @show-works="showWorksBy" />
+        <div v-if="tab === 'artists' && focusArtist" class="container mx-auto flex flex-wrap gap-x-4 px-3 pt-2 font-roboto text-sm font-light">
+            <button type="button" class="text-sky-900 underline hover:text-slate-900" data-testid="back-to-work" @click="backToWork">← Back to the work</button>
+            <button v-if="room.artists.length > 1" type="button" class="text-sky-900 underline hover:text-slate-900" @click="openArtistsTab">See all artists</button>
+        </div>
+        <RoomArtists v-if="tab === 'artists'" :artists="shownArtists" :token="token" :tracker="tracker" :focus="focusArtist" @show-works="showWorksBy" />
 
         <ZoomViewer
             v-model:open="zoomOpen"
