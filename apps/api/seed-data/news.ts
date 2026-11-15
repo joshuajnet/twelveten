@@ -42,7 +42,8 @@ function parseDate(text: string): string {
 }
 
 export function loadNews(): SeedNewsPost[] {
-    const file = fileURLToPath(new URL('./news.json', import.meta.url));
+    const dir = process.env.SEED_DATA_DIR;
+    const file = dir ? `${dir}/news.json` : fileURLToPath(new URL('./news.json', import.meta.url));
     const legacy = JSON.parse(readFileSync(file, 'utf8')) as LegacyNews[];
     return legacy.map((n) => ({
         slug: n.path,

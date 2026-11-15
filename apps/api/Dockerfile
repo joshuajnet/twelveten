@@ -23,8 +23,10 @@ FROM public.ecr.aws/lambda/nodejs:22
 ENV NODE_OPTIONS=--enable-source-maps \
     DATABASE_SSL=true \
     DATABASE_SSL_CA_FILE=/opt/rds-ca.pem \
-    DATABASE_POOL_MAX=1
+    DATABASE_POOL_MAX=1 \
+    SEED_DATA_DIR=/var/task/seed-data
 COPY --from=build /opt/rds-ca.pem /opt/rds-ca.pem
 COPY --from=build /repo/apps/api/dist/ ${LAMBDA_TASK_ROOT}/
+COPY --from=build /repo/apps/api/seed-data/ ${LAMBDA_TASK_ROOT}/seed-data/
 COPY --from=build /opt/native/node_modules/ ${LAMBDA_TASK_ROOT}/node_modules/
 CMD ["lambda.handler"]

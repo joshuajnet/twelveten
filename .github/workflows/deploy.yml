@@ -1,0 +1,116 @@
+# Tests, then deploys to AWS (us-east-2):
+#   - pull requests into master → the shared `staging` stage (its CloudFront URL shows on the PR)
+#   - pushes to master → `prod`, only when the repository variable PROD_ENABLED is `true`
+#
+# Repository secrets (Settings > Secrets and variables > Actions):
+#   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY  access key of the twelveten-github-deploy user (apps/api/bootstrap.yml)
+# Repository variables (optional):
+#   PROD_ENABLED                 `true` to deploy master to prod
+#   SITE_URL                     prod's public origin; otherwise the stage's CloudFront URL is used
+#   DOMAIN, CERTIFICATE_ARN      prod custom domain (certificate in us-east-1)
+# Before a stage's first CI deploy: npm run secrets:init -w apps/api -- --stage <stage>
+
+name: Deploy
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: twelveten
+          POSTGRES_PASSWORD: twelveten
+          POSTGRES_DB: twelveten_test
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U twelveten" --health-interval 2s --health-retries 30
+      localstack:
+        image: localstack/localstack:4.14.0
+        env:
+          SERVICES: s3,ssm
+          AWS_DEFAULT_REGION: us-east-2
+        ports: ['4566:4566']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm test
+
+  deploy:
+    needs: test
+    # Same-repository pull requests only (forks never get the AWS secrets); prod only when enabled.
+    if: >-
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
+      (github.event_name != 'pull_request' && vars.PROD_ENABLED == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment:
+      name: ${{ github.event_name == 'pull_request' && 'staging' || 'prod' }}
+      url: ${{ steps.url.outputs.url }}
+    # One deploy per stage at a time; never cancel a CloudFormation update midway.
+    concurrency:
+      group: deploy-${{ github.event_name == 'pull_request' && 'staging' || 'prod' }}
+      cancel-in-progress: false
+    env:
+      STAGE: ${{ github.event_name == 'pull_request' && 'staging' || 'prod' }}
+      AWS_REGION: us-east-2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+      - name: Write stage config
+        id: url
+        env:
+          SITE_URL: ${{ env.STAGE == 'prod' && vars.SITE_URL || '' }}
+          DOMAIN: ${{ env.STAGE == 'prod' && vars.DOMAIN || '' }}
+          CERTIFICATE_ARN: ${{ env.STAGE == 'prod' && vars.CERTIFICATE_ARN || '' }}
+        run: |
+          if [ -z "$SITE_URL" ]; then
+            domain=$(aws cloudformation describe-stacks --stack-name "twelveten-$STAGE" \
+              --query "Stacks[0].Outputs[?OutputKey=='DistributionDomain'].OutputValue" --output text 2>/dev/null || true)
+            if [ -n "$domain" ] && [ "$domain" != "None" ]; then SITE_URL="https://$domain"; fi
+          fi
+          f="apps/api/config.$STAGE.yml"
+          {
+            if [ -n "$SITE_URL" ]; then echo "siteUrl: $SITE_URL"; fi
+            if [ -n "$DOMAIN" ]; then echo "domain: $DOMAIN"; fi
+            if [ -n "$CERTIFICATE_ARN" ]; then echo "certificateArn: $CERTIFICATE_ARN"; fi
+          } > "$f"
+          if [ ! -s "$f" ]; then echo "{}" > "$f"; fi
+          cat "$f"
+          echo "url=$SITE_URL" >> "$GITHUB_OUTPUT"
+      - name: Deploy infrastructure and Lambda image
+        working-directory: apps/api
+        run: npx osls deploy --stage "$STAGE" --region "$AWS_REGION"
+      - name: Migrate and seed database
+        working-directory: apps/api
+        run: npx osls invoke -f migrate --stage "$STAGE" --region "$AWS_REGION" -d '{"seed":true}'
+      - name: Build and upload site
+        run: |
+          npm run build -w apps/web
+          npm run deploy:site -w apps/api -- --stage "$STAGE" --region "$AWS_REGION"
+      - name: Summary
+        run: echo "Deployed \`$STAGE\` → ${{ steps.url.outputs.url || 'CloudFront URL (run again to set siteUrl)' }}" >> "$GITHUB_STEP_SUMMARY"

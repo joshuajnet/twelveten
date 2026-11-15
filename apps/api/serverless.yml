@@ -17,6 +17,8 @@ params:
   default:
     dbInstanceClass: db.t4g.micro
     dbDeletionProtection: false
+    # The Free plan allows at most 1 day of automated backups; raise this on a Paid plan.
+    dbBackupRetentionDays: 1
     reservedConcurrency: 10
   prod:
     dbDeletionProtection: true
@@ -102,11 +104,13 @@ functions:
       name: api
       command: ['migrate.handler']
     timeout: 300
+    reservedConcurrency: 1
   rebuild:
     image:
       name: api
       command: ['rebuild.handler']
     timeout: 300
+    reservedConcurrency: 1
     events:
       # Daily, just after midnight in Chicago: Current / Upcoming / Past change as dates pass.
       - schedule: cron(15 6 * * ? *)
@@ -118,6 +122,8 @@ functions:
       command: ['media.mediaHandler']
     memorySize: 2048
     timeout: 300
+    # A bulk upload queues (EventBridge retries throttled events) instead of fanning out.
+    reservedConcurrency: 2
     events:
       - eventBridge:
           pattern:
@@ -214,7 +220,7 @@ resources:
         VPCSecurityGroups: [!Ref DatabaseSecurityGroup]
         PubliclyAccessible: false
         MultiAZ: false
-        BackupRetentionPeriod: 7
+        BackupRetentionPeriod: ${param:dbBackupRetentionDays}
         DeletionProtection: ${param:dbDeletionProtection}
         AutoMinorVersionUpgrade: true
         CopyTagsToSnapshot: true

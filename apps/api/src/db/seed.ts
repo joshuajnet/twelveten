@@ -1,5 +1,5 @@
 import { readFileSync, existsSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { zonedToIso, GALLERY_TIMEZONE, type RichDoc } from '@twelveten/shared';
 import { htmlToRich, normalizeLegacyHtml } from '@twelveten/shared/rich/server';
 import type { DB } from './index.ts';
@@ -20,8 +20,9 @@ export function toMedia<T extends string | null | undefined>(url: T): T {
 export function htmlToMedia(html: string): string {
     return html.replace(/(["'(])\/(images|docs)\//g, '$1/media/$2/');
 }
-const seedDir = new URL('../../seed-data/', import.meta.url);
-const slideshowDir = new URL('../../seed-data/slideshows/', import.meta.url);
+// SEED_DATA_DIR: where the Lambda image keeps the seed files (the bundle moves import.meta.url).
+const seedDir = process.env.SEED_DATA_DIR ? pathToFileURL(`${process.env.SEED_DATA_DIR}/`) : new URL('../../seed-data/', import.meta.url);
+const slideshowDir = new URL('slideshows/', seedDir);
 
 interface LegacySlide {
     image?: string;

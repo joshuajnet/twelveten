@@ -1,0 +1,81 @@
+# One-time, per AWS project: a deploy user for GitHub Actions, and budget alerts.
+#
+#   aws cloudformation deploy --profile twelveten --region us-east-2 \
+#     --stack-name twelveten-bootstrap --template-file apps/api/bootstrap.yml \
+#     --capabilities CAPABILITY_NAMED_IAM \
+#     --parameter-overrides BudgetEmail=<address> MonthlyBudgetUsd=30
+#
+# Then create an access key for the user and store it as the GitHub secrets AWS_ACCESS_KEY_ID /
+# AWS_SECRET_ACCESS_KEY (projects on the new AWS experience can't create OIDC identity providers,
+# so keyless GitHub sign-in isn't available):
+#   aws iam create-access-key --profile twelveten --user-name twelveten-github-deploy
+# The Free plan can't spend past its credits; on a Paid plan, the project's spend limit
+# (AWS Settings > Billing, owner only) is the hard cap. These alerts arrive before either.
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Twelve Ten — GitHub Actions deploy user and budget alerts
+
+Parameters:
+  BudgetEmail:
+    Type: String
+    Description: Where budget alerts are sent
+  MonthlyBudgetUsd:
+    Type: Number
+    Default: 30
+
+Resources:
+  DeployUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: twelveten-github-deploy
+      # Everything the stack uses except IAM; IAM is limited to the stack's own roles below.
+      ManagedPolicyArns: [arn:aws:iam::aws:policy/PowerUserAccess]
+      Policies:
+        - PolicyName: stack-roles
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iam:CreateRole
+                  - iam:DeleteRole
+                  - iam:GetRole
+                  - iam:UpdateRole
+                  - iam:PassRole
+                  - iam:TagRole
+                  - iam:UntagRole
+                  - iam:PutRolePolicy
+                  - iam:GetRolePolicy
+                  - iam:DeleteRolePolicy
+                  - iam:AttachRolePolicy
+                  - iam:DetachRolePolicy
+                  - iam:ListRolePolicies
+                  - iam:ListAttachedRolePolicies
+                Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/twelveten-*
+              # RDS creates its service-linked role on first use.
+              - Effect: Allow
+                Action: iam:CreateServiceLinkedRole
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    iam:AWSServiceName: rds.amazonaws.com
+
+  MonthlyBudget:
+    Type: AWS::Budgets::Budget
+    Properties:
+      Budget:
+        BudgetName: twelveten-monthly
+        BudgetType: COST
+        TimeUnit: MONTHLY
+        BudgetLimit: { Amount: !Ref MonthlyBudgetUsd, Unit: USD }
+      NotificationsWithSubscribers:
+        - Notification: { NotificationType: ACTUAL, ComparisonOperator: GREATER_THAN, Threshold: 50, ThresholdType: PERCENTAGE }
+          Subscribers: [{ SubscriptionType: EMAIL, Address: !Ref BudgetEmail }]
+        - Notification: { NotificationType: ACTUAL, ComparisonOperator: GREATER_THAN, Threshold: 80, ThresholdType: PERCENTAGE }
+          Subscribers: [{ SubscriptionType: EMAIL, Address: !Ref BudgetEmail }]
+        - Notification: { NotificationType: FORECASTED, ComparisonOperator: GREATER_THAN, Threshold: 100, ThresholdType: PERCENTAGE }
+          Subscribers: [{ SubscriptionType: EMAIL, Address: !Ref BudgetEmail }]
+
+Outputs:
+  DeployUserName:
+    Value: !Ref DeployUser
