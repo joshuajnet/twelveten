@@ -120,7 +120,8 @@ export type NewsPatch = z.infer<typeof newsPatchSchema>;
 const pressFields = {
     outlet: text.min(1),
     title: text.min(1),
-    url: z.url(),
+    /** The article, or an uploaded scan (/media/uploads/…). */
+    url: z.string().trim().refine((v) => v.startsWith('/media/') || /^https?:\/\/\S+$/i.test(v), 'Must be an http(s) link or an uploaded file'),
     publishedOn: isoDate,
     issueLabel: optionalText,
     byline: optionalText,

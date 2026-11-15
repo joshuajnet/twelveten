@@ -50,6 +50,8 @@ async function removePerson(page: Page, name: string) {
         await api(page).send('DELETE', `/works/${w.id}`);
     }
     if (p.artistProfile) {
+        // Unlinking direct press deletes items nothing else uses.
+        for (const pr of p.artistProfile.press.filter((x: { direct: boolean }) => x.direct)) await api(page).send('DELETE', `/persons/${p.id}/artist-profile/press/${pr.id}`);
         await api(page).send('PUT', `/persons/${p.id}/artist-profile/exhibitions`, { exhibitionIds: [] });
         await api(page).send('DELETE', `/persons/${p.id}/artist-profile`);
     }
@@ -126,6 +128,10 @@ test('people list: profile filter, plain people, and opening an artist', async (
         // Details come first, then the profile's management features.
         expect((await name.boundingBox())!.y).toBeLessThan((await panel.boundingBox())!.y);
         await expect(panel.getByRole('link', { name: 'The Darling Maneuver', exact: true })).toBeVisible();
+        // Press about that exhibition, linking out to the article.
+        const press = panel.getByRole('region', { name: /^Press/ });
+        await expect(press.getByRole('link', { name: /Collin Leitch Frames Nature Through the Machine/ })).toHaveAttribute('href', /art\.newcity\.com/);
+        await expect(press.getByText('Newcity Art')).toBeVisible();
         await page.getByRole('link', { name: '← Back to people' }).click();
         await expect(page).toHaveURL(/profile=artist/);
     } finally {
@@ -223,6 +229,26 @@ test('artist: contact details, addresses, a priced work with history, a buyer, a
         await page.getByRole('link', { name: 'Download PDF' }).click();
         expect((await download).suggestedFilename()).toBe('e2e-artist-cv.pdf');
 
+        // External press: added privately, edited, then removed.
+        const pressSection = page.getByRole('region', { name: /^Press/ });
+        await pressSection.getByRole('button', { name: '+ Add press' }).click();
+        const pd = page.getByRole('dialog');
+        await pd.getByLabel('Outlet').fill('E2E Quarterly');
+        await pd.getByLabel('Headline').fill('E2E Artist abroad');
+        await pd.getByLabel('Link').fill(`https://example.com/e2e-artist-abroad-${Date.now()}`);
+        await pd.getByLabel('Date', { exact: true }).fill('2025-03-01');
+        await pd.getByRole('button', { name: 'Add press' }).click();
+        await expect(pressSection.getByRole('link', { name: 'E2E Artist abroad' })).toBeVisible();
+        await expect(pressSection.getByText('External press')).toBeVisible();
+        await expect(pressSection.getByText('Not on site')).toBeVisible();
+        await pressSection.getByRole('button', { name: 'Edit E2E Artist abroad' }).click();
+        await pd.getByLabel('Headline').fill('E2E Artist abroad, revised');
+        await pd.getByRole('button', { name: 'Save' }).click();
+        await expect(pressSection.getByRole('link', { name: 'E2E Artist abroad, revised' })).toBeVisible();
+        page.once('dialog', (d) => void d.accept());
+        await pressSection.getByRole('button', { name: 'Remove E2E Artist abroad, revised' }).click();
+        await expect(pressSection.getByText('No press yet.')).toBeVisible();
+
         const buyer = await findPerson(page, 'E2E Buyer');
         await page.goto(`/admin/people/${buyer.id}`);
         await expect(page.getByRole('link', { name: 'E2E Work' })).toBeVisible();
@@ -279,7 +305,7 @@ test('exhibition slides link to artist profiles from the edit view', async ({ pa
         const href = await page.getByRole('link', { name: 'E2E Linked Artist ↗' }).getAttribute('href');
         await page.goto(href!);
         const panel = page.getByTestId('artist-panel');
-        await expect(panel.getByRole('link', { name: 'Terror Element' })).toBeVisible();
+        await expect(panel.getByRole('link', { name: /^terror element$/i })).toBeVisible();
         await expect(panel.getByText('Works (1)')).toBeVisible();
     } finally {
         await removePerson(page, 'E2E Linked Artist');

@@ -57,13 +57,31 @@ export async function getArtistProfile(db: Q, personId: string): Promise<ArtistP
         .where('person_id', '=', personId)
         .executeTakeFirst();
     if (!row) return null;
-    const [exhibitions, works] = await Promise.all([
+    const [exhibitions, press, works] = await Promise.all([
         db
             .selectFrom('exhibition_artists as ea')
             .innerJoin('exhibitions as e', 'e.id', 'ea.exhibition_id')
             .select(['e.id', 'e.slug', 'e.kind', 'e.title', 'e.artists', 'e.starts_on', 'e.ends_on', 'e.published'])
             .where('ea.artist_id', '=', personId)
             .orderBy('e.starts_on', 'desc')
+            .execute(),
+        db
+            .selectFrom('press_items as pi')
+            .leftJoin('exhibitions as e', 'e.id', 'pi.exhibition_id')
+            .select(['pi.id', 'pi.outlet', 'pi.title', 'pi.url', 'pi.published_on', 'pi.issue_label', 'pi.byline', 'pi.published', 'pi.updated_at', 'e.id as exhibition_id', 'e.title as exhibition_title'])
+            .select((eb) =>
+                eb
+                    .exists(eb.selectFrom('press_artists as pa').select('pa.artist_id').whereRef('pa.press_item_id', '=', 'pi.id').where('pa.artist_id', '=', personId))
+                    .as('direct'),
+            )
+            .where((eb) =>
+                eb.or([
+                    eb.exists(eb.selectFrom('press_artists as pa').select('pa.artist_id').whereRef('pa.press_item_id', '=', 'pi.id').where('pa.artist_id', '=', personId)),
+                    eb.exists(eb.selectFrom('exhibition_artists as ea').select('ea.artist_id').whereRef('ea.exhibition_id', '=', 'pi.exhibition_id').where('ea.artist_id', '=', personId)),
+                ]),
+            )
+            .orderBy('pi.published_on', 'desc')
+            .orderBy('pi.id', 'desc')
             .execute(),
         worksByArtist(db, personId),
     ]);
@@ -83,6 +101,20 @@ export async function getArtistProfile(db: Q, personId: string): Promise<ArtistP
             startsOn: e.starts_on,
             endsOn: e.ends_on,
             published: e.published,
+        })),
+        press: press.map((p) => ({
+            id: p.id,
+            outlet: p.outlet,
+            title: p.title,
+            url: p.url,
+            publishedOn: p.published_on,
+            issueLabel: p.issue_label,
+            byline: p.byline,
+            published: p.published,
+            exhibitionId: p.exhibition_id,
+            exhibitionTitle: p.exhibition_title,
+            direct: Boolean(p.direct),
+            updatedAt: p.updated_at,
         })),
         works,
         updatedAt: row.updated_at,

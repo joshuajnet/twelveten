@@ -25,6 +25,8 @@ describe('access', () => {
             ['DELETE', `/admin/persons/${id}`],
             ['PUT', `/admin/persons/${id}/artist-profile`],
             ['PUT', `/admin/persons/${id}/artist-profile/exhibitions`],
+            ['POST', `/admin/persons/${id}/artist-profile/press`],
+            ['DELETE', `/admin/persons/${id}/artist-profile/press/${id}`],
             ['GET', `/admin/persons/${id}/artist-profile/cv.pdf`],
             ['GET', `/admin/addresses?entity=person&id=${id}`],
             ['POST', '/admin/addresses'],
@@ -84,6 +86,56 @@ describe('artists backfill', () => {
         const bornstein = await personBySlug('sam-bornstein');
         expect(JSON.stringify(bornstein.artistProfile.bio)).toContain('Hunter College');
         expect(JSON.stringify(bornstein.artistProfile.bio)).not.toContain('Aisling Hamrogue');
+    });
+
+    it('lists press about the artist’s exhibitions, newest first', async () => {
+        const halpern = await personBySlug('tali-halpern');
+        const press = halpern.artistProfile.press as { outlet: string; title: string; exhibitionTitle: string; publishedOn: string }[];
+        expect(press.map((p) => p.outlet)).toEqual(['Newcity Art', 'Chicago Reader']);
+        expect(press[1]).toMatchObject({ title: 'Tali Halpern dreams big', publishedOn: '2024-09-25' });
+        // Group show coverage reaches every artist in the show.
+        const tilford = await personBySlug('keith-tilford');
+        expect(tilford.artistProfile.press.map((p: { outlet: string }) => p.outlet)).toEqual(['New Art Examiner', 'Art Viewer', 'Newcity Art']);
+        // Unlinking the exhibition removes its press; linking it again brings it back.
+        const ids = halpern.artistProfile.exhibitions.map((e: { id: string }) => e.id);
+        const shown = (halpern.artistProfile.press[0] as { exhibitionId: string }).exhibitionId;
+        const unlinked = await call('PUT', `/admin/persons/${halpern.id}/artist-profile/exhibitions`, { exhibitionIds: ids.filter((id: string) => id !== shown) });
+        expect(unlinked.body.artistProfile.press).toEqual([]);
+        const relinked = await call('PUT', `/admin/persons/${halpern.id}/artist-profile/exhibitions`, { exhibitionIds: ids });
+        expect(relinked.body.artistProfile.press).toHaveLength(2);
+    });
+
+    it('links external press straight to an artist, privately, and removes it when unused', async () => {
+        const artist = (await call('POST', '/admin/persons', { name: 'Press Person', profiles: ['artist'] })).body;
+        const press = { outlet: 'Elsewhere Weekly', title: 'Press Person in Berlin', url: 'https://example.com/press-person-berlin', publishedOn: '2025-05-01', byline: 'by A. Writer' };
+        const added = await call('POST', `/admin/persons/${artist.id}/artist-profile/press`, { press });
+        expect(added.status).toBe(201);
+        const item = added.body.artistProfile.press[0];
+        expect(item).toMatchObject({ outlet: 'Elsewhere Weekly', direct: true, published: false, exhibitionId: null });
+        // Not on the public press list.
+        const pub = await call('GET', '/press?limit=50', undefined, 'anon');
+        expect(JSON.stringify(pub.body)).not.toContain('press-person-berlin');
+
+        // The same URL again links the existing item; an uploaded scan is accepted as the link.
+        const other = (await call('POST', '/admin/persons', { name: 'Second Press Person', profiles: ['artist'] })).body;
+        const again = await call('POST', `/admin/persons/${other.id}/artist-profile/press`, { press: { ...press, title: 'Duplicate' } });
+        expect(again.body.artistProfile.press.map((p: { id: string }) => p.id)).toEqual([item.id]);
+        const scan = await call('POST', `/admin/persons/${other.id}/artist-profile/press`, { press: { outlet: 'Zine', title: 'Scan', url: '/media/uploads/2026/11/scan.pdf', publishedOn: '2024-01-01' } });
+        expect(scan.status).toBe(201);
+        expect((await call('POST', `/admin/persons/${other.id}/artist-profile/press`, { press: { ...press, url: 'javascript:alert(1)' } })).status).toBe(400);
+        expect((await call('POST', `/admin/persons/${other.id}/artist-profile/press`, {})).status).toBe(400);
+
+        // Edited through the press route.
+        const edited = await call('PATCH', `/admin/press/${item.id}`, { title: 'Press Person in Berlin, revisited', updatedAt: item.updatedAt });
+        expect(edited.status).toBe(200);
+
+        // Unlinking from one artist keeps it for the other; unlinking from the last deletes it.
+        const r1 = await call('DELETE', `/admin/persons/${artist.id}/artist-profile/press/${item.id}`);
+        expect(r1.body.artistProfile.press).toEqual([]);
+        expect((await call('GET', `/admin/persons/${other.id}`)).body.artistProfile.press.map((p: { title: string }) => p.title)).toContain('Press Person in Berlin, revisited');
+        await call('DELETE', `/admin/persons/${other.id}/artist-profile/press/${item.id}`);
+        expect(await db.selectFrom('press_items').select('id').where('id', '=', item.id).executeTakeFirst()).toBeUndefined();
+        expect((await call('DELETE', `/admin/persons/${other.id}/artist-profile/press/${item.id}`)).status).toBe(404);
     });
 
     it('never overwrites a bio that has text', async () => {

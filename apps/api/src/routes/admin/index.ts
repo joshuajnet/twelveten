@@ -714,7 +714,7 @@ export function adminRoutes(deps: AdminDeps) {
                     break;
                 }
                 case 'artist_profile': {
-                    const row = strip(snap, ['exhibition_ids']);
+                    const row = strip(snap, ['exhibition_ids', 'press_ids']);
                     if (!(await trx.selectFrom('persons').select('id').where('id', '=', String(snap.person_id)).executeTakeFirst())) {
                         throw new HttpError(409, 'Restore the person first');
                     }
@@ -724,6 +724,13 @@ export function adminRoutes(deps: AdminDeps) {
                     await trx.deleteFrom('exhibition_artists').where('artist_id', '=', String(snap.person_id)).execute();
                     for (const exhibitionId of ids.filter((x) => existing.includes(x))) {
                         await trx.insertInto('exhibition_artists').values({ exhibition_id: exhibitionId, artist_id: String(snap.person_id) }).execute();
+                    }
+                    // Snapshots from before direct press links have no press_ids; leave links alone then.
+                    if (Array.isArray(snap.press_ids)) {
+                        const pressIds = (snap.press_ids as string[]).filter(Boolean);
+                        const found = pressIds.length ? (await trx.selectFrom('press_items').select('id').where('id', 'in', pressIds).execute()).map((r) => r.id) : [];
+                        await trx.deleteFrom('press_artists').where('artist_id', '=', String(snap.person_id)).execute();
+                        for (const pressItemId of found) await trx.insertInto('press_artists').values({ press_item_id: pressItemId, artist_id: String(snap.person_id) }).execute();
                     }
                     break;
                 }

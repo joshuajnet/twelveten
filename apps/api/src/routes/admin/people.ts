@@ -6,6 +6,7 @@ import {
     addressPatchSchema,
     addressEntity,
     artistExhibitionsPutSchema,
+    artistPressAddSchema,
     artistProfilePutSchema,
     collectorProfilePutSchema,
     personCreateSchema,
@@ -48,12 +49,13 @@ const ADDRESS_COLUMNS = {
 
 const EMPTY_DOC = JSON.stringify({ type: 'doc', content: [] });
 
-/** Snapshot of an artist profile for revisions: the row plus its linked exhibitions. */
+/** Snapshot of an artist profile for revisions: the row plus its linked exhibitions and press. */
 async function profileSnapshot(trx: Transaction<Database> | DB, personId: string) {
     const row = await trx.selectFrom('artist_profiles').selectAll().where('person_id', '=', personId).executeTakeFirst();
     if (!row) return null;
     const links = await trx.selectFrom('exhibition_artists').select('exhibition_id').where('artist_id', '=', personId).orderBy('position').execute();
-    return { ...row, exhibition_ids: links.map((l) => l.exhibition_id) };
+    const press = await trx.selectFrom('press_artists').select('press_item_id').where('artist_id', '=', personId).orderBy('created_at').execute();
+    return { ...row, exhibition_ids: links.map((l) => l.exhibition_id), press_ids: press.map((p) => p.press_item_id) };
 }
 
 /** Owners an address can be attached to must exist. */
@@ -232,6 +234,64 @@ export function peopleRoutes() {
             return Boolean(updated);
         });
         if (!ok) return conflictOr404(true, () => getPerson(db, id));
+        return c.json(await getPerson(db, id));
+    });
+
+    app.post('/persons/:id/artist-profile/press', async (c) => {
+        const id = c.req.param('id');
+        const input = await body(c, artistPressAddSchema);
+        const db = c.var.db;
+        const person = await personOr404(db, id);
+        if (!person.artistProfile) throw new HttpError(404, 'This person has no artist profile');
+        if (input.pressId && !(await db.selectFrom('press_items').select('id').where('id', '=', input.pressId).executeTakeFirst())) {
+            throw new HttpError(400, 'Press item not found');
+        }
+        await db.transaction().execute(async (trx) => {
+            await ensureBaseline(trx, 'artist_profile', id, () => profileSnapshot(trx, id));
+            let pressId = input.pressId;
+            if (input.press) {
+                // Same article already in press: link that item rather than duplicating it.
+                const existing = await trx.selectFrom('press_items').select('id').where('url', '=', input.press.url).executeTakeFirst();
+                if (existing) pressId = existing.id;
+                else {
+                    const p = input.press;
+                    const created = await trx
+                        .insertInto('press_items')
+                        .values({ outlet: p.outlet, title: p.title, url: p.url, published_on: p.publishedOn, issue_label: p.issueLabel ?? null, byline: p.byline ?? null, published: false })
+                        .returningAll()
+                        .executeTakeFirstOrThrow();
+                    await recordRevision(trx, { entity: 'press_item', entityId: created.id, action: 'create', snapshot: created, userId: c.var.userId });
+                    pressId = created.id;
+                }
+            }
+            await trx.insertInto('press_artists').values({ press_item_id: pressId!, artist_id: id }).onConflict((oc) => oc.columns(['press_item_id', 'artist_id']).doNothing()).execute();
+            await trx.updateTable('artist_profiles').set({ updated_at: new Date() }).where('person_id', '=', id).execute();
+            await recordRevision(trx, { entity: 'artist_profile', entityId: id, action: 'update', snapshot: await profileSnapshot(trx, id), userId: c.var.userId });
+        });
+        return c.json(await getPerson(db, id), 201);
+    });
+
+    /** Unlink press from the artist. Press that then belongs nowhere (no artist, no exhibition, not on the site) is deleted. */
+    app.delete('/persons/:id/artist-profile/press/:pressId', async (c) => {
+        const id = c.req.param('id');
+        const pressId = c.req.param('pressId');
+        const db = c.var.db;
+        const person = await personOr404(db, id);
+        if (!person.artistProfile || !isUuid(pressId)) throw new HttpError(404, 'Not found');
+        const link = await db.selectFrom('press_artists').select('press_item_id').where('artist_id', '=', id).where('press_item_id', '=', pressId).executeTakeFirst();
+        if (!link) throw new HttpError(404, 'That press is not linked to this artist directly');
+        await db.transaction().execute(async (trx) => {
+            await ensureBaseline(trx, 'artist_profile', id, () => profileSnapshot(trx, id));
+            await trx.deleteFrom('press_artists').where('artist_id', '=', id).where('press_item_id', '=', pressId).execute();
+            const item = await trx.selectFrom('press_items').selectAll().where('id', '=', pressId).executeTakeFirstOrThrow();
+            const stillLinked = await trx.selectFrom('press_artists').select('artist_id').where('press_item_id', '=', pressId).executeTakeFirst();
+            if (!stillLinked && !item.exhibition_id && !item.published) {
+                await recordRevision(trx, { entity: 'press_item', entityId: pressId, action: 'delete', snapshot: item, userId: c.var.userId });
+                await trx.deleteFrom('press_items').where('id', '=', pressId).execute();
+            }
+            await trx.updateTable('artist_profiles').set({ updated_at: new Date() }).where('person_id', '=', id).execute();
+            await recordRevision(trx, { entity: 'artist_profile', entityId: id, action: 'update', snapshot: await profileSnapshot(trx, id), userId: c.var.userId });
+        });
         return c.json(await getPerson(db, id));
     });
 

@@ -1,4 +1,5 @@
 import type {
+    ArtistPressAdd,
     AddressAttach,
     AddressLink,
     AddressLinkPatch,
@@ -79,6 +80,8 @@ export const boApi = {
     putArtistProfile: (id: string, input: ArtistProfilePut) => send<Person>('PUT', `/persons/${id}/artist-profile`, input),
     deleteArtistProfile: (id: string) => send<Person>('DELETE', `/persons/${id}/artist-profile`),
     putArtistExhibitions: (id: string, exhibitionIds: string[]) => send<Person>('PUT', `/persons/${id}/artist-profile/exhibitions`, { exhibitionIds }),
+    addArtistPress: (id: string, input: ArtistPressAdd) => send<Person>('POST', `/persons/${id}/artist-profile/press`, input),
+    removeArtistPress: (id: string, pressId: string) => send<Person>('DELETE', `/persons/${id}/artist-profile/press/${pressId}`),
     cvPdfUrl: (id: string) => `/api/admin/persons/${id}/artist-profile/cv.pdf`,
 
     addresses: (entity: AddressEntity, id: string) => send<{ items: AddressLink[] }>('GET', `/addresses${qs({ entity, id })}`).then((r) => r.items),

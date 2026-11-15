@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
-import { exhibitionPath, formatDateRange, formatPrice, WORK_STATUSES, type ExhibitionSummary, type Person, type RichDoc, type WorkStatus } from '@twelveten/shared';
+import { exhibitionPath, formatDate, formatDateRange, formatPrice, WORK_STATUSES, type ArtistPress, type ExhibitionSummary, type Person, type RichDoc, type WorkStatus } from '@twelveten/shared';
+import Field from '@/admin/ui/Field.vue';
+import { adminApi } from '@/admin/api';
+import { pickFiles, uploadFile } from '@/admin/upload';
 import RichEditor from '@/admin/RichEditor.vue';
 import HistoryDialog from '@/admin/HistoryDialog.vue';
 import Dialog from '@/admin/ui/Dialog.vue';
@@ -98,6 +101,66 @@ async function addExhibition() {
     toAdd.value = '';
 }
 
+// ---- Press ----
+/** Add (no `editing`) or edit a press item linked straight to this artist. */
+const pressDialog = ref(false);
+const editing = ref<ArtistPress | null>(null);
+const pressForm = ref({ outlet: '', title: '', url: '', publishedOn: '', issueLabel: '', byline: '' });
+const pressSaving = ref(false);
+const uploading = ref(0);
+function openPress(p: ArtistPress | null) {
+    editing.value = p;
+    pressForm.value = p
+        ? { outlet: p.outlet, title: p.title, url: p.url, publishedOn: p.publishedOn, issueLabel: p.issueLabel ?? '', byline: p.byline ?? '' }
+        : { outlet: '', title: '', url: '', publishedOn: new Date().toISOString().slice(0, 10), issueLabel: '', byline: '' };
+    pressDialog.value = true;
+}
+async function uploadScan() {
+    const [file] = await pickFiles('document');
+    if (!file) return;
+    uploading.value = 0.01;
+    try {
+        pressForm.value.url = await uploadFile(file, (f) => (uploading.value = Math.max(0.01, f)));
+    } catch (e) {
+        toast(errorMessage(e), 'error');
+    } finally {
+        uploading.value = 0;
+    }
+}
+async function savePress() {
+    const f = pressForm.value;
+    const fields = { outlet: f.outlet, title: f.title, url: f.url, publishedOn: f.publishedOn, issueLabel: f.issueLabel.trim() || null, byline: f.byline.trim() || null };
+    pressSaving.value = true;
+    try {
+        if (editing.value) {
+            await adminApi.patchPress(editing.value.id, { ...fields, updatedAt: editing.value.updatedAt });
+            emit('update', await boApi.person(props.person.id));
+        } else {
+            emit('update', await boApi.addArtistPress(props.person.id, { press: fields }));
+        }
+        pressDialog.value = false;
+        toast(editing.value ? 'Press saved' : 'Press added', 'success', 1500);
+    } catch (e) {
+        if (isConflict(e)) {
+            emit('update', await boApi.person(props.person.id));
+            pressDialog.value = false;
+            toast('Someone else changed this press item; reloaded it', 'info');
+        } else toast(errorMessage(e), 'error');
+    } finally {
+        pressSaving.value = false;
+    }
+}
+async function removePress(p: ArtistPress) {
+    const gone = !p.exhibitionId && !p.published;
+    if (!window.confirm(gone ? `Remove “${p.title}”? It isn’t used anywhere else, so it will be deleted (restorable from History).` : `Unlink “${p.title}” from this artist?`)) return;
+    try {
+        emit('update', await boApi.removeArtistPress(props.person.id, p.id));
+    } catch (e) {
+        toast(errorMessage(e), 'error');
+    }
+}
+const isUpload = (url: string) => url.startsWith('/media/');
+
 // ---- Works ----
 const statusFilter = ref<WorkStatus | ''>('');
 const works = computed(() => profile.value.works.filter((w) => !statusFilter.value || w.status === statusFilter.value));
@@ -192,6 +255,41 @@ function downloadCv(e: MouseEvent) {
             </form>
         </section>
 
+        <section aria-labelledby="press-h" class="rounded-md border border-slate-200 bg-white p-4">
+            <div class="mb-2 flex flex-wrap items-center gap-2">
+                <h3 id="press-h" class="text-sm font-semibold">Press ({{ profile.press.length }})</h3>
+                <span class="flex-1" />
+                <button type="button" :class="btnOutline" @click="openPress(null)">+ Add press</button>
+            </div>
+            <ul v-if="profile.press.length" class="divide-y divide-slate-100 text-sm">
+                <li v-for="p in profile.press" :key="p.id" class="flex items-start gap-3 py-2">
+                    <div class="min-w-0 flex-1">
+                        <p>
+                            <span class="font-medium">{{ p.outlet }}</span>
+                            <span class="text-slate-500"> · {{ p.issueLabel ?? formatDate(p.publishedOn) }}</span>
+                            <span v-if="!p.published" class="ml-2 rounded bg-slate-100 px-1.5 text-xs text-slate-700">Not on site</span>
+                        </p>
+                        <a :href="p.url" target="_blank" rel="noopener" class="text-sky-900 hover:underline">{{ p.title }}</a>
+                        <span v-if="isUpload(p.url)" class="ml-1 text-xs text-slate-500">(uploaded file)</span>
+                        <p class="text-xs text-slate-500">
+                            <template v-if="p.byline">{{ p.byline }} · </template>
+                            <template v-if="p.exhibitionTitle">On <em>{{ p.exhibitionTitle }}</em></template>
+                            <template v-else>External press</template>
+                        </p>
+                    </div>
+                    <template v-if="p.direct">
+                        <button type="button" class="text-xs text-sky-900 hover:underline" :aria-label="`Edit ${p.title}`" @click="openPress(p)">Edit</button>
+                        <button type="button" class="text-xs text-red-700 hover:underline" :aria-label="`Remove ${p.title}`" @click="removePress(p)">Remove</button>
+                    </template>
+                </li>
+            </ul>
+            <p v-else class="text-sm text-slate-500">No press yet.</p>
+            <p class="mt-2 text-xs text-slate-500">
+                Press about an exhibition above appears automatically (edit it on the site’s
+                <a href="/news" target="_blank" rel="noopener" class="text-sky-900 hover:underline">News page</a>). Use “Add press” for coverage elsewhere: a link or an uploaded PDF or scan. Added press stays private unless it is published from the News page.
+            </p>
+        </section>
+
         <section aria-labelledby="works-h">
             <div class="mb-3 flex flex-wrap items-center gap-2">
                 <h3 id="works-h" class="text-sm font-semibold">Works ({{ profile.works.length }})</h3>
@@ -236,6 +334,32 @@ function downloadCv(e: MouseEvent) {
         </div>
 
         <HistoryDialog v-model:open="historyOpen" entity="artist_profile" :id="person.id" @restored="onRestored" />
+        <Dialog v-model:open="pressDialog" :title="editing ? 'Edit press' : 'Add press'" description="Coverage of this artist, as a link to the article or an uploaded PDF or scan.">
+            <form id="press-form" class="space-y-1" @submit.prevent="savePress">
+                <Field v-model="pressForm.outlet" label="Outlet" placeholder="Artforum" />
+                <Field v-model="pressForm.title" label="Headline" />
+                <div class="flex items-end gap-2">
+                    <div class="min-w-0 flex-1"><Field v-model="pressForm.url" label="Link" placeholder="https://…" /></div>
+                    <button type="button" :class="btnOutline" class="mb-1" :disabled="uploading > 0" @click="uploadScan">
+                        {{ uploading ? `Uploading ${Math.round(uploading * 100)}%` : 'Upload PDF or image' }}
+                    </button>
+                </div>
+                <div class="grid gap-x-3 sm:grid-cols-2">
+                    <label class="block py-1.5">
+                        <span class="block text-xs font-medium text-slate-600">Date</span>
+                        <input v-model="pressForm.publishedOn" type="date" aria-label="Date" class="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm" />
+                    </label>
+                    <Field v-model="pressForm.issueLabel" label="Issue label" hint="Shown instead of the date, for journals" placeholder="Spring 2025" />
+                </div>
+                <Field v-model="pressForm.byline" label="Byline" placeholder="by …" />
+            </form>
+            <template #footer>
+                <button type="button" :class="btnOutline" @click="pressDialog = false">Cancel</button>
+                <button type="submit" form="press-form" :class="btnPrimary" :disabled="pressSaving || uploading > 0 || !pressForm.outlet.trim() || !pressForm.title.trim() || !pressForm.url.trim() || !pressForm.publishedOn">
+                    {{ pressSaving ? 'Saving…' : editing ? 'Save' : 'Add press' }}
+                </button>
+            </template>
+        </Dialog>
         <Dialog v-model:open="confirmRemove" title="Remove the artist profile?" description="The person stays; their bio, CV and exhibition links are removed. It can be restored from History. Works must be moved or deleted first.">
             <template #footer>
                 <button type="button" :class="btnOutline" @click="confirmRemove = false">Cancel</button>

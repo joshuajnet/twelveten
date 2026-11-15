@@ -191,6 +191,13 @@ export interface ExhibitionArtistTable {
     position: Generated<number>;
 }
 
+/** Press linked straight to an artist (not only through an exhibition). */
+export interface PressArtistTable {
+    press_item_id: string;
+    artist_id: string;
+    created_at: CreatedAt;
+}
+
 export type WorkStatusName = 'available' | 'on_hold' | 'sold' | 'nfs' | 'returned';
 export type WorkLocationName = 'gallery' | 'storage' | 'artist' | 'collector' | 'on_loan' | 'other';
 
@@ -351,6 +358,7 @@ export interface Database {
     addresses: AddressTable;
     address_links: AddressLinkTable;
     exhibition_artists: ExhibitionArtistTable;
+    press_artists: PressArtistTable;
     works: WorkTable;
     work_images: WorkImageTable;
     work_changes: WorkChangeTable;

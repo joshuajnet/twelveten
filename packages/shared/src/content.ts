@@ -72,7 +72,8 @@ export const pressItemSchema = z.object({
     id: uuid,
     outlet: z.string().min(1),
     title: z.string().min(1),
-    url: z.url(),
+    /** The article, or an uploaded scan (/media/uploads/…). */
+    url: z.string().min(1),
     publishedOn: isoDate,
     issueLabel: z.string().nullable(),
     byline: z.string().nullable(),

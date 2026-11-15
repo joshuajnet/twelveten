@@ -2,6 +2,7 @@
 import { z } from 'zod';
 import { richDocSchema, schemas, type ExhibitionKind, type RichDoc } from './content.ts';
 import type { AddressLink } from './addresses.ts';
+import { pressCreateSchema } from './admin.ts';
 import type { WorkSummary } from './inventory.ts';
 import type { InvoiceSummary } from './invoices.ts';
 
@@ -63,6 +64,26 @@ export interface ArtistExhibition {
     published: boolean;
 }
 
+/**
+ * Press about the artist: linked to them directly (`direct`), or about an exhibition they were in.
+ * Directly linked press that isn't on the site's press list (`published` false) is private.
+ */
+export interface ArtistPress {
+    id: string;
+    outlet: string;
+    title: string;
+    url: string;
+    publishedOn: string;
+    /** Shown instead of the date (journals). */
+    issueLabel: string | null;
+    byline: string | null;
+    published: boolean;
+    exhibitionId: string | null;
+    exhibitionTitle: string | null;
+    direct: boolean;
+    updatedAt: string;
+}
+
 export interface ArtistProfile {
     personId: string;
     slug: string;
@@ -73,6 +94,8 @@ export interface ArtistProfile {
     bio: RichDoc;
     cv: RichDoc;
     exhibitions: ArtistExhibition[];
+    /** Newest first. */
+    press: ArtistPress[];
     works: WorkSummary[];
     updatedAt: string;
 }
@@ -155,6 +178,19 @@ export const collectorProfilePutSchema = z.object({
     updatedAt: isoTimestamp.optional(),
 });
 export type CollectorProfilePut = z.input<typeof collectorProfilePutSchema>;
+
+/**
+ * Link press straight to an artist: an existing item (`pressId`) or a new one (`press`; it starts
+ * off the site's press list and without an exhibition). A new item whose URL is already in press
+ * is linked instead of duplicated.
+ */
+export const artistPressAddSchema = z
+    .object({
+        pressId: uuid.optional(),
+        press: pressCreateSchema.omit({ exhibitionId: true, published: true }).optional(),
+    })
+    .refine((v) => Boolean(v.pressId) !== Boolean(v.press), 'Give either pressId or press');
+export type ArtistPressAdd = z.input<typeof artistPressAddSchema>;
 
 export const artistExhibitionsPutSchema = z.object({ exhibitionIds: z.array(uuid).max(500) });
 export type ArtistExhibitionsPut = z.infer<typeof artistExhibitionsPutSchema>;

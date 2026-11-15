@@ -1,12 +1,14 @@
 import { MAX_UPLOAD_BYTES, UPLOAD_TYPES, type UploadRequest } from '@twelveten/shared';
 import { adminApi } from './api';
 
-export type UploadKind = 'image' | 'video' | 'pdf' | 'media';
+export type UploadKind = 'image' | 'video' | 'pdf' | 'media' | 'document';
 
 const ACCEPT: Record<UploadKind, string> = {
     image: 'image/jpeg,image/png,image/webp,image/gif,image/svg+xml',
     video: 'video/mp4',
     pdf: 'application/pdf',
+    /** A PDF or an image (e.g. a scanned article). */
+    document: 'application/pdf,image/jpeg,image/png,image/webp',
     media: 'image/jpeg,image/png,image/webp,image/gif,image/svg+xml,video/mp4',
 };
 
