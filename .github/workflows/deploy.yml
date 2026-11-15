@@ -1,6 +1,7 @@
 # Tests, then deploys to AWS (us-east-2):
 #   - pull requests into master → the shared `staging` stage (its CloudFront URL shows on the PR)
 #   - pushes to master → `prod`, only when the repository variable PROD_ENABLED is `true`
+#   - manual runs (Actions > Deploy > Run workflow) → the chosen stage, from the chosen branch
 #
 # Repository secrets (Settings > Secrets and variables > Actions):
 #   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY  access key of the twelveten-github-deploy user (apps/api/bootstrap.yml)
@@ -18,6 +19,12 @@ on:
   push:
     branches: [master]
   workflow_dispatch:
+    inputs:
+      stage:
+        description: Stage to deploy
+        type: choice
+        options: [staging, prod]
+        default: staging
 
 permissions:
   contents: read
@@ -53,21 +60,23 @@ jobs:
 
   deploy:
     needs: test
-    # Same-repository pull requests only (forks never get the AWS secrets); prod only when enabled.
+    # Same-repository pull requests only (forks never get the AWS secrets); manual runs always;
+    # pushes to master only when prod is enabled.
     if: >-
       (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
-      (github.event_name != 'pull_request' && vars.PROD_ENABLED == 'true')
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && vars.PROD_ENABLED == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 60
     environment:
-      name: ${{ github.event_name == 'pull_request' && 'staging' || 'prod' }}
+      name: ${{ github.event_name == 'pull_request' && 'staging' || inputs.stage || 'prod' }}
       url: ${{ steps.url.outputs.url }}
     # One deploy per stage at a time; never cancel a CloudFormation update midway.
     concurrency:
-      group: deploy-${{ github.event_name == 'pull_request' && 'staging' || 'prod' }}
+      group: deploy-${{ github.event_name == 'pull_request' && 'staging' || inputs.stage || 'prod' }}
       cancel-in-progress: false
     env:
-      STAGE: ${{ github.event_name == 'pull_request' && 'staging' || 'prod' }}
+      STAGE: ${{ github.event_name == 'pull_request' && 'staging' || inputs.stage || 'prod' }}
       AWS_REGION: us-east-2
     steps:
       - uses: actions/checkout@v4
