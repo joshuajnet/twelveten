@@ -1,15 +1,15 @@
 # Tests, then deploys to AWS (us-east-2):
 #   - pull requests into master → the shared `staging` stage (its CloudFront URL shows on the PR)
-#   - pushes to master → `prod`, only when the repository variable PROD_ENABLED is `true`
+#   - merges (pushes) to master → `prod`
 #   - manual runs (Actions > Deploy > Run workflow) → the chosen stage, from the chosen branch
 #
 # Repository secrets (Settings > Secrets and variables > Actions):
 #   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY  access key of the twelveten-github-deploy user (apps/api/bootstrap.yml)
 # Repository variables (optional):
-#   PROD_ENABLED                 `true` to deploy master to prod
 #   SITE_URL                     prod's public origin; otherwise the stage's CloudFront URL is used
 #   DOMAIN, CERTIFICATE_ARN      prod custom domain (certificate in us-east-1)
-# Before a stage's first CI deploy: npm run secrets:init -w apps/api -- --stage <stage>
+# A stage's first deploy creates its secrets (SSM) and deploys twice, the second time with siteUrl set
+# to the new CloudFront address. prod gets no data from CI: see npm run data:push.
 
 name: Deploy
 
@@ -60,17 +60,13 @@ jobs:
 
   deploy:
     needs: test
-    # Same-repository pull requests only (forks never get the AWS secrets); manual runs always;
-    # pushes to master only when prod is enabled.
-    if: >-
-      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'push' && vars.PROD_ENABLED == 'true')
+    # Same-repository pull requests only (forks never get the AWS secrets).
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 60
     environment:
       name: ${{ github.event_name == 'pull_request' && 'staging' || inputs.stage || 'prod' }}
-      url: ${{ steps.url.outputs.url }}
+      url: ${{ steps.url.outputs.url || steps.first.outputs.url }}
     # One deploy per stage at a time; never cancel a CloudFormation update midway.
     concurrency:
       group: deploy-${{ github.event_name == 'pull_request' && 'staging' || inputs.stage || 'prod' }}
@@ -90,6 +86,8 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-2
+      - name: Create stage secrets if missing
+        run: npm run secrets:init -w apps/api -- --stage "$STAGE" --region "$AWS_REGION"
       - name: Write stage config
         id: url
         env:
@@ -125,6 +123,17 @@ jobs:
       - name: Deploy infrastructure and Lambda image
         working-directory: apps/api
         run: npx osls deploy --stage "$STAGE" --region "$AWS_REGION"
+      # First deploy of a stage: point siteUrl (sign-in, CORS, canonical URLs) at the new distribution.
+      - name: Set siteUrl on first deploy
+        id: first
+        if: steps.url.outputs.url == ''
+        working-directory: apps/api
+        run: |
+          domain=$(aws cloudformation describe-stacks --stack-name "twelveten-$STAGE" \
+            --query "Stacks[0].Outputs[?OutputKey=='DistributionDomain'].OutputValue" --output text)
+          echo "siteUrl: https://$domain" > "config.$STAGE.yml"
+          npx osls deploy --stage "$STAGE" --region "$AWS_REGION"
+          echo "url=https://$domain" >> "$GITHUB_OUTPUT"
       # Staging gets the original public site content from git. Prod is never seeded: its data
       # arrives once, from the gallery's local database, through npm run data:push.
       - name: Migrate database (and seed staging)
@@ -137,4 +146,4 @@ jobs:
           npm run build -w apps/web
           npm run deploy:site -w apps/api -- --stage "$STAGE" --region "$AWS_REGION"
       - name: Summary
-        run: echo "Deployed \`$STAGE\` → ${{ steps.url.outputs.url || 'CloudFront URL (run again to set siteUrl)' }}" >> "$GITHUB_STEP_SUMMARY"
+        run: echo "Deployed \`$STAGE\` → ${{ steps.url.outputs.url || steps.first.outputs.url }}" >> "$GITHUB_STEP_SUMMARY"
