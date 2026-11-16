@@ -83,35 +83,36 @@ Resources:
       ResourceRecords: ['"v=DMARC1; p=none;"']
 
   # ---------- Website ----------
+  # The same records serve both targets and change in place (Route 53 UPSERT), so switching
+  # SiteTarget never leaves a name without an answer. (Logical ids kept from the first version.)
+  # Apex: A record on the old server, or an alias to CloudFront (Z2FDTNDATAQYW2 is CloudFront's
+  # fixed hosted zone id).
   LegacyApex:
     Type: AWS::Route53::RecordSet
-    Condition: OnLegacy
     Properties:
       HostedZoneId: !Ref Zone
       Name: !Ref DomainName
       Type: A
-      TTL: '300'
-      ResourceRecords: [!Ref LegacyIp]
+      TTL: !If [OnLegacy, '300', !Ref AWS::NoValue]
+      ResourceRecords: !If [OnLegacy, [!Ref LegacyIp], !Ref AWS::NoValue]
+      AliasTarget: !If [OnCloudFront, { DNSName: !Ref DistributionDomain, HostedZoneId: Z2FDTNDATAQYW2 }, !Ref AWS::NoValue]
+  ApexIpv6:
+    Type: AWS::Route53::RecordSet
+    Condition: OnCloudFront
+    Properties:
+      HostedZoneId: !Ref Zone
+      Name: !Ref DomainName
+      Type: AAAA
+      AliasTarget: { DNSName: !Ref DistributionDomain, HostedZoneId: Z2FDTNDATAQYW2 }
+  # www: CNAME to the apex (old server) or to the CloudFront distribution.
   LegacyWww:
     Type: AWS::Route53::RecordSet
-    Condition: OnLegacy
     Properties:
       HostedZoneId: !Ref Zone
       Name: !Sub www.${DomainName}
       Type: CNAME
       TTL: '300'
-      ResourceRecords: [!Ref DomainName]
-  # CloudFront aliases (Z2FDTNDATAQYW2 is CloudFront's fixed hosted zone id).
-  SiteRecords:
-    Type: AWS::Route53::RecordSetGroup
-    Condition: OnCloudFront
-    Properties:
-      HostedZoneId: !Ref Zone
-      RecordSets:
-        - { Name: !Ref DomainName, Type: A, AliasTarget: { DNSName: !Ref DistributionDomain, HostedZoneId: Z2FDTNDATAQYW2 } }
-        - { Name: !Ref DomainName, Type: AAAA, AliasTarget: { DNSName: !Ref DistributionDomain, HostedZoneId: Z2FDTNDATAQYW2 } }
-        - { Name: !Sub 'www.${DomainName}', Type: A, AliasTarget: { DNSName: !Ref DistributionDomain, HostedZoneId: Z2FDTNDATAQYW2 } }
-        - { Name: !Sub 'www.${DomainName}', Type: AAAA, AliasTarget: { DNSName: !Ref DistributionDomain, HostedZoneId: Z2FDTNDATAQYW2 } }
+      ResourceRecords: [!If [OnCloudFront, !Ref DistributionDomain, !Ref DomainName]]
 
   # ---------- Certificate validation (ACM, us-east-1) ----------
   WwwCertValidation:
