@@ -42,6 +42,7 @@ const form = reactive({
     closesAt: null as string | null,
     showPrices: false,
     hideUnavailable: false,
+    pdfHidden: false,
 });
 const works = ref<RoomWorkSettings[]>([]);
 const artists = ref<RoomArtistSettings[]>([]);
@@ -76,6 +77,7 @@ function reset(r: ViewingRoom | null) {
     form.closesAt = toLocal(r?.closesAt ?? null);
     form.showPrices = r?.showPrices ?? false;
     form.hideUnavailable = r?.hideUnavailable ?? false;
+    form.pdfHidden = r?.pdfHidden ?? false;
     works.value = (r?.works ?? []).map((w) => ({ ...w }));
     artists.value = (r?.artists ?? []).map((a) => ({ ...a, hiddenPressIds: [...a.hiddenPressIds] }));
     base.fields = fieldsJson();
@@ -118,6 +120,18 @@ async function generatePdf() {
         toast(errorMessage(e), 'error');
     } finally {
         generating.value = false;
+    }
+}
+const confirmRemovePdf = ref(false);
+async function removePdf() {
+    if (!room.value) return;
+    confirmRemovePdf.value = false;
+    try {
+        await boApi.removeRoomPdf(room.value.id);
+        pdf.value = null;
+        toast('PDF removed', 'success', 1500);
+    } catch (e) {
+        toast(errorMessage(e), 'error');
     }
 }
 const megabytes = (bytes: number) => `${(bytes / 1_048_576).toFixed(1)} MB`;
@@ -188,6 +202,7 @@ function fields() {
         closesAt: fromLocal(form.closesAt),
         showPrices: form.showPrices,
         hideUnavailable: form.hideUnavailable,
+        pdfHidden: form.pdfHidden,
     };
 }
 const worksPayload = () => ({ works: works.value.map((w) => ({ workId: w.workId, showPrice: w.showPrice, hidden: w.hidden })) });
@@ -345,6 +360,7 @@ const setPriceMode = (w: RoomWorkSettings, v: string) => (w.showPrice = v === 'i
                 <div class="flex flex-col items-end gap-1 text-right">
                     <div class="flex items-center gap-2">
                         <a v-if="pdf" :href="boApi.roomPdfUrl(room.id)" download :class="btnOutline" data-testid="room-pdf">Download PDF</a>
+                        <button v-if="pdf" type="button" :class="btnGhost" data-testid="remove-room-pdf" @click="confirmRemovePdf = true">Remove…</button>
                         <button type="button" :class="pdf && !pdf.outdated ? btnGhost : btnPrimary" :disabled="generating || dirty" :title="dirty ? 'Save first: the PDF is made from the saved room' : ''" data-testid="generate-room-pdf" @click="generatePdf">
                             {{ generating ? 'Generating…' : pdf ? 'Regenerate PDF' : 'Generate PDF' }}
                         </button>
@@ -352,11 +368,15 @@ const setPriceMode = (w: RoomWorkSettings, v: string) => (w.showPrice = v === 'i
                     <span class="text-xs" :class="pdf?.outdated ? 'text-amber-700' : 'text-slate-500'" data-testid="room-pdf-status">
                         <template v-if="dirty">Save to include your changes</template>
                         <template v-else-if="!pdf">Not generated yet; visitors don’t see a download</template>
+                        <template v-else-if="form.pdfHidden">Hidden from visitors · generated {{ when(pdf.generatedAt) }} · {{ megabytes(pdf.bytes) }}</template>
                         <template v-else>
                             {{ pdf.outdated ? 'Out of date: the room has changed since ' : 'Generated ' }}{{ when(pdf.generatedAt) }} · {{ megabytes(pdf.bytes) }}
                         </template>
                     </span>
                 </div>
+            </div>
+            <div v-if="pdf" class="mt-2 max-w-md">
+                <Switch :model-value="!form.pdfHidden" label="Offer to visitors" hint="Off keeps the PDF for you but takes “Download PDF” out of the room. Save to apply." @update:model-value="(v: boolean) => (form.pdfHidden = !v)" />
             </div>
             <p class="mt-1 text-xs text-slate-500">A presentation of the works the room shows, with its price settings and artist bios, offered to visitors as “Download PDF”. Without a cover image, the cover uses the first work; each artist’s bio page can be white, a colour or a photo (below). Earlier versions are kept for 30 days.</p>
         </section>
@@ -511,6 +531,12 @@ const setPriceMode = (w: RoomWorkSettings, v: string) => (w.showPrice = v === 'i
             <WorkPicker :selected-ids="selectedIds" testid="room-work-results" @toggle="toggleWork" />
             <template #footer>
                 <button type="button" :class="btnPrimary" @click="picking = false">Done ({{ works.length }})</button>
+            </template>
+        </Dialog>
+        <Dialog v-model:open="confirmRemovePdf" title="Remove the PDF?" description="Visitors and admins can’t download it any more, and the room shows no Download PDF until you generate a new one.">
+            <template #footer>
+                <button type="button" :class="btnOutline" @click="confirmRemovePdf = false">Cancel</button>
+                <button type="button" :class="btnDanger" data-testid="confirm-remove-pdf" @click="removePdf">Remove PDF</button>
             </template>
         </Dialog>
         <Dialog v-model:open="confirmNewLink" title="Make a new link?" description="The current link stops working, and everyone who entered the room will need the new link (and to enter their name and email again).">

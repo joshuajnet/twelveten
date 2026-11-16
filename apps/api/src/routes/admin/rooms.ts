@@ -17,7 +17,7 @@ import type { DB } from '../../db/index.ts';
 import type { Database } from '../../db/types.ts';
 import { getRoom, listRooms, roomDashboard, visitorDashboard } from '../../rooms/queries.ts';
 import { refreshEngagement } from '../../rooms/engagement.ts';
-import { generateRoomPdf, roomPdfDownload, roomPdfStatus } from '../../rooms/pdfExport.ts';
+import { generateRoomPdf, roomPdfDownload, roomPdfStatus, withdrawRoomPdf } from '../../rooms/pdfExport.ts';
 import type { Storage } from '../../storage/uploads.ts';
 import { body, HttpError } from './errors.ts';
 import { ensureBaseline, recordRevision } from './revisions.ts';
@@ -31,6 +31,7 @@ const ROOM_COLUMNS = {
     coverImage: 'cover_image',
     showPrices: 'show_prices',
     hideUnavailable: 'hide_unavailable',
+    pdfHidden: 'pdf_hidden',
     status: 'status',
     opensAt: 'opens_at',
     closesAt: 'closes_at',
@@ -147,6 +148,13 @@ export function roomRoutes(deps: { storage?: Storage } = {}) {
     app.post('/rooms/:id/pdf', async (c) => {
         const db = c.var.db;
         return c.json(await generateRoomPdf(db, deps.storage, await roomRowOr404(db, idParam(c)), c.var.userId), 201);
+    });
+
+    /** Withdraw the PDF: nobody is offered it until a new one is generated. */
+    app.delete('/rooms/:id/pdf', async (c) => {
+        const room = await roomRowOr404(c.var.db, idParam(c));
+        if (!(await withdrawRoomPdf(c.var.db, room.id))) throw new HttpError(404, 'No PDF has been generated for this room');
+        return c.body(null, 204);
     });
 
     app.get('/rooms/:id/room.pdf', async (c) => {

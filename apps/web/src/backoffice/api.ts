@@ -149,6 +149,7 @@ export const boApi = {
     roomPdfUrl: (id: string) => `/api/admin/rooms/${id}/room.pdf`,
     roomPdf: (id: string) => send<RoomPdfStatus | null>('GET', `/rooms/${id}/pdf`),
     generateRoomPdf: (id: string) => send<RoomPdfStatus>('POST', `/rooms/${id}/pdf`),
+    removeRoomPdf: (id: string) => send<void>('DELETE', `/rooms/${id}/pdf`),
     newRoomLink: (id: string) => send<ViewingRoom>('POST', `/rooms/${id}/token`),
     roomDashboard: (id: string) => send<RoomDashboard>('GET', `/rooms/${id}/dashboard`),
     visitorDashboard: (roomId: string, visitorId: string) => send<VisitorDashboard>('GET', `/rooms/${roomId}/visitors/${visitorId}`),

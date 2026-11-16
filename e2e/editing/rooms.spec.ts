@@ -281,3 +281,31 @@ test('a duplicate sign-up is suggested and merged', async ({ browser, page, requ
     expect([merged.email, ...merged.emails].sort()).toEqual([DUPE_EMAIL, VIEWER_EMAIL].sort());
     expect(merged.collectorProfile.viewingRooms).toHaveLength(1);
 });
+
+test('the PDF can be hidden from visitors, then removed', async ({ page, browser }) => {
+    await page.goto(`/admin/rooms/${state.roomId}`);
+    const status = page.getByTestId('room-pdf-status');
+    // Generated in the first test (out of date by now: works were sold and hidden since).
+    await expect(status).toContainText(/\d MB/);
+    await page.getByRole('switch', { name: 'Offer to visitors' }).click();
+    await page.getByTestId('save-room').click();
+    await expect(page.getByText('● Unsaved changes')).toHaveCount(0);
+    await expect(status).toContainText('Hidden from visitors');
+
+    // A returning visitor no longer sees the download.
+    const visitorPage = await visitor(browser);
+    const path = new URL(state.link).pathname;
+    await visitorPage.goto(path);
+    await visitorPage.getByTestId('room-gate').getByLabel('Name').fill(VIEWER);
+    await visitorPage.getByTestId('room-gate').getByLabel('Email').fill(VIEWER_EMAIL);
+    await visitorPage.getByRole('button', { name: 'View the room' }).click();
+    await expect(visitorPage.getByText(`Welcome, ${VIEWER}.`)).toBeVisible();
+    await expect(visitorPage.getByRole('link', { name: 'Download PDF' })).toHaveCount(0);
+    await visitorPage.close();
+
+    await page.getByTestId('remove-room-pdf').click();
+    await page.getByTestId('confirm-remove-pdf').click();
+    await expect(status).toContainText('Not generated yet');
+    await expect(page.getByRole('link', { name: 'Download PDF' })).toHaveCount(0);
+    expect((await page.request.get(`/api/admin/rooms/${state.roomId}/room.pdf`)).status()).toBe(404);
+});

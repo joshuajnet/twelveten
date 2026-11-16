@@ -36,6 +36,8 @@ const roomFields = {
     coverImage: text.max(1000).transform((s) => s || null).nullable(),
     showPrices: z.boolean(),
     hideUnavailable: z.boolean(),
+    /** Keep the generated PDF but don't offer it to visitors. */
+    pdfHidden: z.boolean(),
     status: roomStatus,
     opensAt: isoTimestamp.nullable(),
     closesAt: isoTimestamp.nullable(),
@@ -122,6 +124,7 @@ export interface ViewingRoom {
     coverImage: string | null;
     showPrices: boolean;
     hideUnavailable: boolean;
+    pdfHidden: boolean;
     status: RoomStatus;
     opensAt: string | null;
     closesAt: string | null;
@@ -205,7 +208,7 @@ export interface PublicRoomArtist {
 export interface PublicRoom {
     title: string;
     subtitle: string | null;
-    /** A PDF has been generated, so visitors can download it. */
+    /** A PDF has been generated and is offered, so visitors can download it. */
     hasPdf: boolean;
     introHtml: string | null;
     works: PublicRoomWork[];

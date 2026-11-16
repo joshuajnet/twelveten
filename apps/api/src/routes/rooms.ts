@@ -320,7 +320,7 @@ ON CONFLICT (visitor_id, artist_id) DO UPDATE SET cv_opens = t.cv_opens + 1`.exe
         const { room } = await roomFor(c);
         const visitor = await visitorFor(c, room);
         if (!visitor) throw new HttpError(401, 'Enter the room first');
-        if (!(await latestRoomPdf(c.var.db, room.id))) throw new HttpError(404, 'Not found');
+        if (room.pdf_hidden || !(await latestRoomPdf(c.var.db, room.id))) throw new HttpError(404, 'Not found');
         await c.var.db.transaction().execute(async (trx) => {
             const visitId = await currentVisit(trx, visitor.id, c.req.header('user-agent'));
             await trx.insertInto('viewing_room_events').values({ visit_id: visitId, type: 'room_pdf' }).execute();

@@ -91,6 +91,7 @@ export async function getRoom(db: Q, id: string): Promise<ViewingRoom | null> {
         coverImage: row.cover_image,
         showPrices: row.show_prices,
         hideUnavailable: row.hide_unavailable,
+        pdfHidden: row.pdf_hidden,
         status: row.status,
         opensAt: row.opens_at,
         closesAt: row.closes_at,
@@ -474,7 +475,7 @@ export async function publicRoom(db: Q, room: ViewingRoomRow, viewer: { name: st
     return {
         title: room.title,
         subtitle: room.subtitle,
-        hasPdf: Boolean(await db.selectFrom('viewing_room_pdfs').select('id').where('room_id', '=', room.id).limit(1).executeTakeFirst()),
+        hasPdf: !room.pdf_hidden && Boolean(await db.selectFrom('viewing_room_pdfs').select('id').where('room_id', '=', room.id).where('withdrawn_at', 'is', null).limit(1).executeTakeFirst()),
         introHtml: isEmptyDoc(room.intro) ? null : richToHtmlServer(room.intro),
         works,
         artists,

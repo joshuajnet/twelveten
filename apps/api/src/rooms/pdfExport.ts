@@ -185,9 +185,19 @@ export async function buildRoomPdf(db: DB, storage: Storage | undefined, room: V
     return { pdf, model };
 }
 
-/** The PDF on offer for a room: the newest one generated. */
+/** The PDF on offer for a room: the newest one generated, unless an admin withdrew it. */
 export async function latestRoomPdf(db: DB, roomId: string) {
-    return (await db.selectFrom('viewing_room_pdfs').selectAll().where('room_id', '=', roomId).orderBy('created_at', 'desc').limit(1).executeTakeFirst()) ?? null;
+    const newest = await db.selectFrom('viewing_room_pdfs').selectAll().where('room_id', '=', roomId).orderBy('created_at', 'desc').limit(1).executeTakeFirst();
+    return newest && !newest.withdrawn_at ? newest : null;
+}
+
+/**
+ * Withdraw the room's PDF (an admin action): nothing is offered until a new one is generated. The
+ * file stays for the retention period and is pruned with the others. False when there was none.
+ */
+export async function withdrawRoomPdf(db: DB, roomId: string): Promise<boolean> {
+    const r = await db.updateTable('viewing_room_pdfs').set({ withdrawn_at: sql<string>`now()` }).where('room_id', '=', roomId).where('withdrawn_at', 'is', null).executeTakeFirst();
+    return Number(r.numUpdatedRows) > 0;
 }
 
 /** The newest PDF and whether the room has changed since (works, prices, bios, cover, subtitle, …). */
@@ -219,15 +229,12 @@ export async function generateRoomPdf(db: DB, storage: Storage | undefined, room
     return { generatedAt: row.created_at, bytes: pdf.length, filename, outdated: false };
 }
 
-/** Remove this room's replaced PDFs older than the retention period (never the newest). */
+/** Remove this room's replaced or withdrawn PDFs older than the retention period (never the one on offer). */
 async function pruneRoomPdfs(db: DB, storage: Storage, roomId: string): Promise<void> {
     const latest = await latestRoomPdf(db, roomId);
-    if (!latest) return;
-    const old = await db
-        .selectFrom('viewing_room_pdfs')
-        .select(['id', 's3_key'])
-        .where('room_id', '=', roomId)
-        .where('id', '!=', latest.id)
+    let q = db.selectFrom('viewing_room_pdfs').select(['id', 's3_key']).where('room_id', '=', roomId);
+    if (latest) q = q.where('id', '!=', latest.id);
+    const old = await q
         .where('created_at', '<', sql<string>`now() - make_interval(days => ${PDF_RETENTION_DAYS})`)
         .execute();
     for (const r of old) {

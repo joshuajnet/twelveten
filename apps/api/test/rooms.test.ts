@@ -422,6 +422,37 @@ describe('viewing a room', () => {
         expect((await call('PUT', `/admin/rooms/${room.id}/artists`, { artists: [{ artistId, showBio: true, showCv: true, showPress: true, bioBackgroundColor: 'red' }] })).status).toBe(400);
     });
 
+    it('can hide the PDF from visitors, or withdraw it entirely', async () => {
+        const { room } = await setupRoom('Hidden PDF Room', { status: 'live' });
+        await call('POST', `/admin/rooms/${room.id}/pdf`);
+        const b = browser({ ip: '203.0.113.62' });
+        await b.req('POST', `/rooms/${room.token}/enter`, { name: 'Hide Reader', email: 'hide-reader@example.com' });
+        expect((await b.req('GET', `/rooms/${room.token}`)).body.room.hasPdf).toBe(true);
+
+        // Hidden: kept for admins, not offered to visitors.
+        const hidden = await call('PATCH', `/admin/rooms/${room.id}`, { updatedAt: room.updatedAt, pdfHidden: true });
+        expect(hidden.body.pdfHidden).toBe(true);
+        expect((await b.req('GET', `/rooms/${room.token}`)).body.room.hasPdf).toBe(false);
+        expect((await b.req('GET', `/rooms/${room.token}/room.pdf`)).status).toBe(404);
+        expect((await call('GET', `/admin/rooms/${room.id}/room.pdf`)).status).toBe(200);
+        await call('PATCH', `/admin/rooms/${room.id}`, { updatedAt: hidden.body.updatedAt, pdfHidden: false });
+        expect((await b.req('GET', `/rooms/${room.token}/room.pdf`)).status).toBe(200);
+
+        // Withdrawn: offered to nobody until a new one is generated; the file is kept for the retention period.
+        expect((await call('DELETE', `/admin/rooms/${room.id}/pdf`)).status).toBe(204);
+        expect((await call('DELETE', `/admin/rooms/${room.id}/pdf`)).status).toBe(404);
+        expect((await call('GET', `/admin/rooms/${room.id}/pdf`)).body).toBeNull();
+        expect((await call('GET', `/admin/rooms/${room.id}/room.pdf`)).status).toBe(404);
+        expect((await b.req('GET', `/rooms/${room.token}`)).body.room.hasPdf).toBe(false);
+        expect((await b.req('GET', `/rooms/${room.token}/room.pdf`)).status).toBe(404);
+        const [row] = await db.selectFrom('viewing_room_pdfs').select(['s3_key', 'withdrawn_at']).where('room_id', '=', room.id).execute();
+        expect(row!.withdrawn_at).not.toBeNull();
+        expect(await storage.client.send(new HeadObjectCommand({ Bucket: storage.bucket, Key: row!.s3_key })).then(() => true)).toBe(true);
+
+        await call('POST', `/admin/rooms/${room.id}/pdf`);
+        expect((await b.req('GET', `/rooms/${room.token}/room.pdf`)).status).toBe(200);
+    });
+
     it('keeps replaced PDFs for 30 days and the newest until it is replaced', async () => {
         const { room } = await setupRoom('Kept PDF Room');
         const keys = async () => (await db.selectFrom('viewing_room_pdfs').select(['s3_key', 'created_at']).where('room_id', '=', room.id).orderBy('created_at').execute()).map((r) => r.s3_key);

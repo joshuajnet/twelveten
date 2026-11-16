@@ -361,6 +361,7 @@ export interface ViewingRoomTable {
     subtitle: string | null;
     intro: JsonWithDefault<RichDoc>;
     cover_image: string | null;
+    pdf_hidden: Generated<boolean>;
     show_prices: Generated<boolean>;
     hide_unavailable: Generated<boolean>;
     status: Generated<'draft' | 'live' | 'closed'>;
@@ -380,6 +381,7 @@ export interface ViewingRoomPdfTable {
     content_hash: string;
     created_by: string | null;
     created_at: CreatedAt;
+    withdrawn_at: string | null;
 }
 
 export interface ViewingRoomWorkTable {
