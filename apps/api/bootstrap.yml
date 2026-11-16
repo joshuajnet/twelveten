@@ -59,6 +59,20 @@ Resources:
                 Condition:
                   StringEquals:
                     iam:AWSServiceName: rds.amazonaws.com
+              # CI deploys and updates; it never deletes an environment or its data stores.
+              - Effect: Deny
+                Action:
+                  - cloudformation:DeleteStack
+                  - cloudformation:UpdateTerminationProtection
+                  - rds:DeleteDBInstance
+                  - rds:DeleteDBCluster
+                  - rds:DeleteDBSnapshot
+                  - rds:DeleteDBClusterSnapshot
+                  - s3:DeleteBucket
+                  - ecr:DeleteRepository
+                  - ssm:DeleteParameter
+                  - ssm:DeleteParameters
+                Resource: '*'
 
   MonthlyBudget:
     Type: AWS::Budgets::Budget

@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(*osls remove*)",
+      "Bash(*serverless remove*)",
+      "Bash(*sls remove*)",
+      "Bash(*cloudformation delete-stack*)",
+      "Bash(*update-termination-protection*--no-enable-termination-protection*)",
+      "Bash(*rds delete-*)",
+      "Bash(*--no-deletion-protection*)",
+      "Bash(*s3 rb *)",
+      "Bash(*s3 rm *)",
+      "Bash(*s3api delete-*)",
+      "Bash(*ecr delete-*)",
+      "Bash(*ssm delete-parameter*)",
+      "Bash(*iam delete-*)",
+      "Bash(*cloudfront delete-*)",
+      "Bash(*lambda delete-function*)",
+      "Bash(*ec2 delete-vpc*)",
+      "Bash(*remove-staging*)"
+    ]
+  }
+}

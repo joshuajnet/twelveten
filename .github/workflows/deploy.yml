@@ -7,6 +7,7 @@
 # Repository variables (optional):
 #   SITE_URL                     prod's public origin; otherwise prod's CloudFront URL is used
 #   DOMAIN, CERTIFICATE_ARN      custom domain (certificate in us-east-1)
+#   REDIRECT_DOMAINS             extra hostnames that redirect to DOMAIN (comma-separated), e.g. the bare domain
 # The first deploy creates prod's secrets (SSM) and deploys twice, the second time with siteUrl set
 # to the new CloudFront address. CI never writes data to prod: see npm run data:push.
 
@@ -86,6 +87,7 @@ jobs:
           SITE_URL: ${{ vars.SITE_URL }}
           DOMAIN: ${{ vars.DOMAIN }}
           CERTIFICATE_ARN: ${{ vars.CERTIFICATE_ARN }}
+          REDIRECT_DOMAINS: ${{ vars.REDIRECT_DOMAINS }}
         run: |
           if [ -z "$SITE_URL" ]; then
             domain=$(aws cloudformation describe-stacks --stack-name "twelveten-$STAGE" \
@@ -97,6 +99,7 @@ jobs:
             if [ -n "$SITE_URL" ]; then echo "siteUrl: $SITE_URL"; fi
             if [ -n "$DOMAIN" ]; then echo "domain: $DOMAIN"; fi
             if [ -n "$CERTIFICATE_ARN" ]; then echo "certificateArn: $CERTIFICATE_ARN"; fi
+            if [ -n "$REDIRECT_DOMAINS" ]; then echo "redirectDomains: $REDIRECT_DOMAINS"; fi
           } > "$f"
           if [ ! -s "$f" ]; then echo "{}" > "$f"; fi
           cat "$f"

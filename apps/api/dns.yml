@@ -1,0 +1,138 @@
+# DNS for twelvetengallery.com in Route 53 (stack twelveten-dns). The domain stays registered at
+# A2 Hosting; its nameservers point here (NameServers output).
+#
+#   aws cloudformation deploy --profile twelveten --region us-east-2 \
+#     --stack-name twelveten-dns --template-file apps/api/dns.yml \
+#     --parameter-overrides SiteTarget=cloudfront DistributionDomain=<prod DistributionDomain>
+#
+# SiteTarget: `legacy` keeps the website on the old A2 server (used while moving DNS);
+# `cloudfront` points twelvetengallery.com and www at prod's CloudFront distribution.
+# Email is Google Workspace: keep MX, the site-verification TXT and DMARC exactly as they are.
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Twelve Ten — twelvetengallery.com DNS
+
+Parameters:
+  DomainName:
+    Type: String
+    Default: twelvetengallery.com
+  SiteTarget:
+    Type: String
+    AllowedValues: [legacy, cloudfront]
+    Default: legacy
+  LegacyIp:
+    Type: String
+    Default: 68.66.200.199
+  DistributionDomain:
+    Type: String
+    Default: ''
+    Description: prod's CloudFront domain (d….cloudfront.net), needed when SiteTarget is cloudfront
+  # DNS validation for the site certificate (ACM, us-east-1:
+  # arn:aws:acm:us-east-1:316067823132:certificate/8c90db30-183d-45c5-ac11-175f7ed08477).
+  # Keep these records so ACM can renew the certificate automatically.
+  WwwValidationName:
+    Type: String
+    Default: _fe12b10c0853be9d8c8b7a8726542ea4.www.twelvetengallery.com.
+  WwwValidationValue:
+    Type: String
+    Default: _fd08fee08ab3d2ab2841738fc8676ab0.wzccmgtwzk.acm-validations.aws.
+  ApexValidationName:
+    Type: String
+    Default: _48b354263a89b3d980023de8687186b4.twelvetengallery.com.
+  ApexValidationValue:
+    Type: String
+    Default: _926c85a5243b7fce823ba8641a30dd4a.wzccmgtwzk.acm-validations.aws.
+
+Conditions:
+  OnCloudFront: !Equals [!Ref SiteTarget, cloudfront]
+  OnLegacy: !Equals [!Ref SiteTarget, legacy]
+
+Resources:
+  Zone:
+    Type: AWS::Route53::HostedZone
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Name: !Ref DomainName
+      HostedZoneConfig: { Comment: Twelve Ten (managed by stack twelveten-dns) }
+
+  # ---------- Email (Google Workspace) ----------
+  Mx:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref Zone
+      Name: !Ref DomainName
+      Type: MX
+      TTL: '3600'
+      ResourceRecords: ['1 smtp.google.com.']
+  RootTxt:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref Zone
+      Name: !Ref DomainName
+      Type: TXT
+      TTL: '3600'
+      ResourceRecords: ['"google-site-verification=mvfEXlNMpUWJqCExArfgcIGBf17ZfSulgENfwSq6xXg"']
+  Dmarc:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref Zone
+      Name: !Sub _dmarc.${DomainName}
+      Type: TXT
+      TTL: '3600'
+      ResourceRecords: ['"v=DMARC1; p=none;"']
+
+  # ---------- Website ----------
+  LegacyApex:
+    Type: AWS::Route53::RecordSet
+    Condition: OnLegacy
+    Properties:
+      HostedZoneId: !Ref Zone
+      Name: !Ref DomainName
+      Type: A
+      TTL: '300'
+      ResourceRecords: [!Ref LegacyIp]
+  LegacyWww:
+    Type: AWS::Route53::RecordSet
+    Condition: OnLegacy
+    Properties:
+      HostedZoneId: !Ref Zone
+      Name: !Sub www.${DomainName}
+      Type: CNAME
+      TTL: '300'
+      ResourceRecords: [!Ref DomainName]
+  # CloudFront aliases (Z2FDTNDATAQYW2 is CloudFront's fixed hosted zone id).
+  SiteRecords:
+    Type: AWS::Route53::RecordSetGroup
+    Condition: OnCloudFront
+    Properties:
+      HostedZoneId: !Ref Zone
+      RecordSets:
+        - { Name: !Ref DomainName, Type: A, AliasTarget: { DNSName: !Ref DistributionDomain, HostedZoneId: Z2FDTNDATAQYW2 } }
+        - { Name: !Ref DomainName, Type: AAAA, AliasTarget: { DNSName: !Ref DistributionDomain, HostedZoneId: Z2FDTNDATAQYW2 } }
+        - { Name: !Sub 'www.${DomainName}', Type: A, AliasTarget: { DNSName: !Ref DistributionDomain, HostedZoneId: Z2FDTNDATAQYW2 } }
+        - { Name: !Sub 'www.${DomainName}', Type: AAAA, AliasTarget: { DNSName: !Ref DistributionDomain, HostedZoneId: Z2FDTNDATAQYW2 } }
+
+  # ---------- Certificate validation (ACM, us-east-1) ----------
+  WwwCertValidation:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref Zone
+      Name: !Ref WwwValidationName
+      Type: CNAME
+      TTL: '300'
+      ResourceRecords: [!Ref WwwValidationValue]
+  ApexCertValidation:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref Zone
+      Name: !Ref ApexValidationName
+      Type: CNAME
+      TTL: '300'
+      ResourceRecords: [!Ref ApexValidationValue]
+
+Outputs:
+  HostedZoneId:
+    Value: !Ref Zone
+  NameServers:
+    Value: !Join [' ', !GetAtt Zone.NameServers]
