@@ -423,8 +423,17 @@ describe('viewing a room', () => {
     });
 
     it('can hide the PDF from visitors, or withdraw it entirely', async () => {
-        const { room } = await setupRoom('Hidden PDF Room', { status: 'live' });
+        const { room } = await setupRoom('Hidden PDF Room');
         await call('POST', `/admin/rooms/${room.id}/pdf`);
+        // Admin preview downloads it in any status, without a visitor and without recording anything.
+        expect((await call('GET', `/rooms/${room.token}?preview=1`)).body.room.hasPdf).toBe(true);
+        const preview = await call('GET', `/rooms/${room.token}/room.pdf?preview=1`);
+        expect(preview.status).toBe(200);
+        expect(preview.bytes!.subarray(0, 5).toString()).toBe('%PDF-');
+        expect((await call('GET', `/rooms/${room.token}/room.pdf?preview=1`, undefined, 'anon')).status).toBe(404);
+        expect(await db.selectFrom('viewing_room_visitors').select('id').where('room_id', '=', room.id).execute()).toEqual([]);
+        await call('PATCH', `/admin/rooms/${room.id}`, { updatedAt: room.updatedAt, status: 'live' });
+        room.updatedAt = (await call('GET', `/admin/rooms/${room.id}`)).body.updatedAt;
         const b = browser({ ip: '203.0.113.62' });
         await b.req('POST', `/rooms/${room.token}/enter`, { name: 'Hide Reader', email: 'hide-reader@example.com' });
         expect((await b.req('GET', `/rooms/${room.token}`)).body.room.hasPdf).toBe(true);

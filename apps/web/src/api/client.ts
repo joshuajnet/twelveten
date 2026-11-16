@@ -57,7 +57,7 @@ export const api = {
     enterRoom: (token: string, input: RoomEnter) =>
         request<{ room: PublicRoom }>(`/rooms/${token}/enter`, { method: 'POST', body: JSON.stringify(input) }).then((r) => r.room),
     roomCvUrl: (token: string, artistId: string) => `/api/rooms/${token}/artists/${artistId}/cv.pdf`,
-    roomPdfUrl: (token: string) => `/api/rooms/${token}/room.pdf`,
+    roomPdfUrl: (token: string, preview = false) => `/api/rooms/${token}/room.pdf${preview ? '?preview=1' : ''}`,
     /** Who this browser is (set by a room gate or an inquiry), or null. */
     visitor: () => request<VisitorIdentity | null>('/visitor'),
     forgetVisitor: () => request<void>('/visitor/forget', { method: 'POST' }),

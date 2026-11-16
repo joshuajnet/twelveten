@@ -287,6 +287,15 @@ test('the PDF can be hidden from visitors, then removed', async ({ page, browser
     const status = page.getByTestId('room-pdf-status');
     // Generated in the first test (out of date by now: works were sold and hidden since).
     await expect(status).toContainText(/\d MB/);
+
+    // Admin preview offers the download too, without recording it.
+    const roomPath = new URL(state.link).pathname;
+    await page.goto(`${roomPath}?preview=1`);
+    const previewLink = page.getByRole('link', { name: 'Download PDF' });
+    await expect(previewLink).toHaveAttribute('href', /\/room\.pdf\?preview=1$/);
+    expect((await page.request.get((await previewLink.getAttribute('href'))!)).status()).toBe(200);
+    await page.goto(`/admin/rooms/${state.roomId}`);
+
     await page.getByRole('switch', { name: 'Offer to visitors' }).click();
     await page.getByTestId('save-room').click();
     await expect(page.getByText('● Unsaved changes')).toHaveCount(0);
