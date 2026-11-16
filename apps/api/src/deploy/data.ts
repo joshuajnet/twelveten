@@ -3,8 +3,10 @@
  *
  *   npm run data:push -w apps/api -- --stage prod --yes [--force]
  *
- * 1. Copies back-office uploads (`media/uploads/*`) from the local LocalStack media bucket to the
- *    stage's media bucket (skipping ones already there); the media function makes their derivatives.
+ * 1. Copies the site's media from .media (public images and PDFs, kept out of git) and back-office
+ *    uploads (`media/uploads/*`) from the local LocalStack media bucket to the stage's media bucket,
+ *    skipping files already there. Image derivatives for .media are made here (sharp, from the local
+ *    files); the media function makes the uploads' derivatives.
  * 2. Exports every local table except sign-in state (see db/transfer.ts), gzips it in memory and
  *    uploads it to the private `import/` prefix of the media bucket. Nothing is written to disk.
  * 3. Invokes the stage's `migrate` function to replace the stage's data with it; the function
@@ -22,6 +24,8 @@ import { InvokeCommand, LambdaClient } from '@aws-sdk/client-lambda';
 import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { createDb } from '../db/index.ts';
 import { exportData } from '../db/transfer.ts';
+import { deriveAll, diskIO, s3IO, withLocalOriginals } from '../media/derive.ts';
+import { syncMedia } from '../media/sync.ts';
 
 const arg = (name: string, fallback?: string) => {
     const i = process.argv.indexOf(`--${name}`);
@@ -68,7 +72,12 @@ async function invoke(fn: string, payload: unknown): Promise<unknown> {
     return body;
 }
 
-// 1. Uploads.
+// 1. Site media (.media) and its derivatives, then back-office uploads.
+const mediaDir = fileURLToPath(new URL('../../../../.media', import.meta.url));
+const synced = await syncMedia({ client: s3, bucket, dir: mediaDir });
+console.log(`Site media: ${synced.uploaded} uploaded, ${synced.skipped} already there.`);
+const derived = await deriveAll(withLocalOriginals(s3IO(s3, bucket), diskIO(mediaDir)), { prefix: 'images/' });
+console.log(`Image derivatives: ${derived.derived} made, ${derived.skipped} already there, ${derived.missing} failed.`);
 let copied = 0;
 let present = 0;
 let token: string | undefined;
