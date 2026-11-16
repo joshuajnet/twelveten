@@ -1,6 +1,3 @@
-import { readFile } from 'node:fs/promises';
-import { resolve, sep } from 'node:path';
-import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { Hono } from 'hono';
 import { sql, type Transaction } from 'kysely';
 import {
@@ -24,8 +21,8 @@ import { addressesFor } from '../../people/queries.ts';
 import { getInvoice, getSettings, listInvoices, toSettings } from '../../invoices/queries.ts';
 import { renderInvoicePdf, type ImageMap } from '../../invoices/invoicePdf.ts';
 import { maskedPaymentDetails, paymentDetails } from '../../invoices/payment.ts';
-import { config } from '../../config.ts';
 import type { Storage } from '../../storage/uploads.ts';
+import { readMedia } from '../../storage/mediaRead.ts';
 import { body, HttpError } from './errors.ts';
 import { recordWorkChanges } from './inventory.ts';
 import { closeGap, columns, conflictOr404, ensureCollectorProfile, findOr404, idParam, isUuid, nextPosition, pageParams, pdfResponse, sameVersion } from './util.ts';
@@ -203,33 +200,12 @@ async function refresh(trx: Trx, id: string, userId: string | null, explicitStat
     return after;
 }
 
-/**
- * Item images for the PDF: /media/… URLs from the media bucket, or (in development) from the local
- * media copy. Nothing external is fetched; a missing image leaves its cell blank.
- */
+/** Item images for the PDF; a missing image leaves its cell blank. */
 async function loadImages(storage: Storage | undefined, urls: (string | null)[]): Promise<ImageMap> {
     const out: ImageMap = new Map();
-    const localDir = config().LOCAL_MEDIA_DIR;
     for (const url of new Set(urls.filter((u): u is string => Boolean(u?.startsWith('/media/'))))) {
-        const key = decodeURIComponent(url.slice(1));
-        try {
-            const res = await storage?.client.send(new GetObjectCommand({ Bucket: storage.bucket, Key: key }));
-            if (res?.Body) {
-                out.set(url, Buffer.from(await res.Body.transformToByteArray()));
-                continue;
-            }
-        } catch {
-            // Fall through to the local copy.
-        }
-        if (!localDir) continue;
-        const root = resolve(localDir);
-        const file = resolve(root, key.slice('media/'.length));
-        if (!file.startsWith(root + sep)) continue;
-        try {
-            out.set(url, await readFile(file));
-        } catch {
-            // Not there either.
-        }
+        const data = await readMedia(storage, url);
+        if (data) out.set(url, data);
     }
     return out;
 }

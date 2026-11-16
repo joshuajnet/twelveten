@@ -4,7 +4,7 @@ import type { PublicRoom } from '@twelveten/shared';
 import { api, ApiError } from '@/api/client';
 
 /** Name and email before the room opens. The API remembers this browser afterwards. */
-const props = defineProps<{ token: string; title: string }>();
+const props = defineProps<{ token: string; title: string; subtitle?: string | null }>();
 const emit = defineEmits<{ entered: [room: PublicRoom] }>();
 
 const name = ref('');
@@ -34,7 +34,8 @@ async function submit() {
     <div class="flex grow items-center justify-center px-4 py-16">
         <form class="w-full max-w-sm" novalidate data-testid="room-gate" @submit.prevent="submit">
             <p class="mb-1 font-roboto text-xs font-light uppercase tracking-widest text-slate-500">Viewing room</p>
-            <h1 class="mb-6 text-3xl leading-tight">{{ title }}</h1>
+            <h1 class="text-3xl leading-tight" :class="subtitle ? 'mb-1' : 'mb-6'">{{ title }}</h1>
+            <p v-if="subtitle" class="mb-6 text-lg text-slate-600">{{ subtitle }}</p>
             <p class="mb-5 text-slate-600">Please introduce yourself to view the works.</p>
             <label class="mb-4 block">
                 <span class="mb-1 block font-roboto text-sm font-light text-slate-600">Name</span>

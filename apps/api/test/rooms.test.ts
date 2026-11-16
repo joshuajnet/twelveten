@@ -1,13 +1,23 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { CreateBucketCommand, HeadObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
+import sharp from 'sharp';
 import { createApp } from '../src/app.ts';
+import { prepareRoomImages, roomPdfDownload } from '../src/rooms/pdfExport.ts';
+import { PAGE_H, PAGE_W, pageKey, pixelsFor, workImagePlacement, type RoomPdfModel } from '../src/rooms/roomPdf.ts';
+import { createStorage } from '../src/storage/uploads.ts';
 import { adminHarness } from './admin-harness.ts';
 
-const { call, db } = adminHarness();
+// Generated room PDFs go to a LocalStack bucket of their own.
+const storage = createStorage({ bucket: `twelveten-test-rooms-${Date.now()}`, region: 'us-east-2', endpoint: process.env.AWS_ENDPOINT_URL, publicPrefix: '/media' });
+beforeAll(async () => {
+    await storage.client.send(new CreateBucketCommand({ Bucket: storage.bucket, CreateBucketConfiguration: { LocationConstraint: 'us-east-2' } }));
+});
+const { call, db } = adminHarness({ storage });
 
 /** A browser: keeps the room cookie between requests (scoped to its path). */
 function browser(opts: { ip?: string } = {}) {
     const jar = new Map<string, { value: string; path: string }>();
-    const app = createApp({ db: () => db, siteUrl: 'http://localhost:5173' });
+    const app = createApp({ db: () => db, siteUrl: 'http://localhost:5173', storage });
     async function req(method: string, path: string, json?: unknown, headers: Record<string, string> = {}) {
         const url = `/api${path}`;
         const cookie = [...jar.entries()].filter(([, c]) => url.startsWith(c.path)).map(([k, c]) => `${k}=${c.value}`).join('; ');
@@ -96,7 +106,7 @@ describe('viewing a room', () => {
 
         const gate = await b.req('GET', path);
         expect(gate.status).toBe(200);
-        expect(gate.body).toEqual({ gate: { title: 'Gate Room' } });
+        expect(gate.body).toEqual({ gate: { title: 'Gate Room', subtitle: null } });
         expect(gate.headers.get('cache-control')).toBe('private, no-store');
         expect((await b.req('POST', `${path}/enter`, { name: 'Pat', email: 'not-an-email' })).status).toBe(400);
         // Another site can't post on the viewer's behalf.
@@ -344,6 +354,174 @@ describe('viewing a room', () => {
         let last = 0;
         for (let i = 0; i < 11; i++) last = (await b.req('POST', `/rooms/${room.token}/enter`, { name: 'x', email: 'bad' })).status;
         expect(last).toBe(429);
+    });
+
+    it('sets a subtitle and cover image, shown at the gate and in the room', async () => {
+        const { room } = await setupRoom('Subtitled Room', { status: 'live', subtitle: '  NADA Miami 2026 ' });
+        expect(room).toMatchObject({ subtitle: 'NADA Miami 2026', coverImage: null });
+        const b = browser({ ip: '203.0.113.61' });
+        const patched = await call('PATCH', `/admin/rooms/${room.id}`, { updatedAt: room.updatedAt, coverImage: '/media/cover.jpg' });
+        expect(patched.body.coverImage).toBe('/media/cover.jpg');
+        const list = await call('GET', '/admin/rooms?q=subtitled');
+        expect(list.body.items[0]).toMatchObject({ subtitle: 'NADA Miami 2026', cover: '/media/cover.jpg' });
+        expect((await b.req('GET', `/rooms/${room.token}`)).body.gate).toEqual({ title: 'Subtitled Room', subtitle: 'NADA Miami 2026' });
+        await b.req('POST', `/rooms/${room.token}/enter`, { name: 'Sub Viewer', email: 'sub@example.com' });
+        expect((await b.req('GET', `/rooms/${room.token}`)).body.room.subtitle).toBe('NADA Miami 2026');
+        // An empty subtitle clears it.
+        const cleared = await call('PATCH', `/admin/rooms/${room.id}`, { updatedAt: patched.body.updatedAt, subtitle: '' });
+        expect(cleared.body.subtitle).toBeNull();
+    });
+
+    it('generates the PDF only when an admin asks; admins and visitors download the stored one (tracked)', async () => {
+        const { room } = await setupRoom('PDF Room', { subtitle: 'Fair 2026', status: 'live' });
+        expect((await call('GET', `/admin/rooms/${room.id}/pdf`)).body).toBeNull();
+        expect((await call('GET', `/admin/rooms/${room.id}/room.pdf`)).status).toBe(404);
+        const b = browser({ ip: '203.0.113.60' });
+        expect((await b.req('GET', `/rooms/${room.token}/room.pdf`)).status).toBe(401);
+        const entered = await b.req('POST', `/rooms/${room.token}/enter`, { name: 'Pdf Reader', email: 'pdf-reader@example.com' });
+        expect(entered.body.room.hasPdf).toBe(false);
+        expect((await b.req('GET', `/rooms/${room.token}/room.pdf`)).status).toBe(404);
+
+        const generated = await call('POST', `/admin/rooms/${room.id}/pdf`);
+        expect(generated.status).toBe(201);
+        expect(generated.body).toMatchObject({ filename: 'pdf-room-artist-fair-2026.pdf', outdated: false });
+        expect(generated.body.bytes).toBeGreaterThan(1000);
+        const admin = await call('GET', `/admin/rooms/${room.id}/room.pdf`);
+        expect(admin.status).toBe(200);
+        expect(admin.headers.get('content-disposition')).toBe('attachment; filename="pdf-room-artist-fair-2026.pdf"');
+        expect(admin.bytes!.subarray(0, 5).toString()).toBe('%PDF-');
+
+        expect((await b.req('GET', `/rooms/${room.token}`)).body.room.hasPdf).toBe(true);
+        const res = await b.req('GET', `/rooms/${room.token}/room.pdf`);
+        expect(res.status).toBe(200);
+        expect(res.headers.get('content-type')).toBe('application/pdf');
+        const events = await db
+            .selectFrom('viewing_room_events as e')
+            .innerJoin('viewing_room_visits as v', 'v.id', 'e.visit_id')
+            .innerJoin('viewing_room_visitors as r', 'r.id', 'v.visitor_id')
+            .select('e.type')
+            .where('r.room_id', '=', room.id)
+            .execute();
+        expect(events.map((e) => e.type)).toContain('room_pdf');
+
+        // Changing the room flags the PDF as out of date; downloads keep serving the stored one until regenerated.
+        const fresh = (await call('GET', `/admin/rooms/${room.id}`)).body;
+        await call('PATCH', `/admin/rooms/${room.id}`, { updatedAt: fresh.updatedAt, subtitle: 'Fair 2027' });
+        expect((await call('GET', `/admin/rooms/${room.id}/pdf`)).body).toMatchObject({ outdated: true, filename: 'pdf-room-artist-fair-2026.pdf' });
+        expect((await call('GET', `/admin/rooms/${room.id}/room.pdf`)).headers.get('content-disposition')).toContain('fair-2026');
+        await call('POST', `/admin/rooms/${room.id}/pdf`);
+        expect((await call('GET', `/admin/rooms/${room.id}/pdf`)).body).toMatchObject({ outdated: false, filename: 'pdf-room-artist-fair-2027.pdf' });
+
+        // A bio background is a per-artist room setting; it changes the PDF too.
+        const artistId = fresh.artists[0].artistId;
+        const withBg = await call('PUT', `/admin/rooms/${room.id}/artists`, { artists: [{ artistId, showBio: true, showCv: true, showPress: true, bioBackground: '/media/bio-bg.jpg' }] });
+        expect(withBg.body.artists[0].bioBackground).toBe('/media/bio-bg.jpg');
+        expect((await call('GET', `/admin/rooms/${room.id}/pdf`)).body.outdated).toBe(true);
+        const colored = await call('PUT', `/admin/rooms/${room.id}/artists`, { artists: [{ artistId, showBio: true, showCv: true, showPress: true, bioBackground: '', bioBackgroundColor: '#1A2B3C' }] });
+        expect(colored.body.artists[0]).toMatchObject({ bioBackground: null, bioBackgroundColor: '#1a2b3c' });
+        expect((await call('PUT', `/admin/rooms/${room.id}/artists`, { artists: [{ artistId, showBio: true, showCv: true, showPress: true, bioBackgroundColor: 'red' }] })).status).toBe(400);
+    });
+
+    it('can hide the PDF from visitors, or withdraw it entirely', async () => {
+        const { room } = await setupRoom('Hidden PDF Room', { status: 'live' });
+        await call('POST', `/admin/rooms/${room.id}/pdf`);
+        const b = browser({ ip: '203.0.113.62' });
+        await b.req('POST', `/rooms/${room.token}/enter`, { name: 'Hide Reader', email: 'hide-reader@example.com' });
+        expect((await b.req('GET', `/rooms/${room.token}`)).body.room.hasPdf).toBe(true);
+
+        // Hidden: kept for admins, not offered to visitors.
+        const hidden = await call('PATCH', `/admin/rooms/${room.id}`, { updatedAt: room.updatedAt, pdfHidden: true });
+        expect(hidden.body.pdfHidden).toBe(true);
+        expect((await b.req('GET', `/rooms/${room.token}`)).body.room.hasPdf).toBe(false);
+        expect((await b.req('GET', `/rooms/${room.token}/room.pdf`)).status).toBe(404);
+        expect((await call('GET', `/admin/rooms/${room.id}/room.pdf`)).status).toBe(200);
+        await call('PATCH', `/admin/rooms/${room.id}`, { updatedAt: hidden.body.updatedAt, pdfHidden: false });
+        expect((await b.req('GET', `/rooms/${room.token}/room.pdf`)).status).toBe(200);
+
+        // Withdrawn: offered to nobody until a new one is generated; the file is kept for the retention period.
+        expect((await call('DELETE', `/admin/rooms/${room.id}/pdf`)).status).toBe(204);
+        expect((await call('DELETE', `/admin/rooms/${room.id}/pdf`)).status).toBe(404);
+        expect((await call('GET', `/admin/rooms/${room.id}/pdf`)).body).toBeNull();
+        expect((await call('GET', `/admin/rooms/${room.id}/room.pdf`)).status).toBe(404);
+        expect((await b.req('GET', `/rooms/${room.token}`)).body.room.hasPdf).toBe(false);
+        expect((await b.req('GET', `/rooms/${room.token}/room.pdf`)).status).toBe(404);
+        const [row] = await db.selectFrom('viewing_room_pdfs').select(['s3_key', 'withdrawn_at']).where('room_id', '=', room.id).execute();
+        expect(row!.withdrawn_at).not.toBeNull();
+        expect(await storage.client.send(new HeadObjectCommand({ Bucket: storage.bucket, Key: row!.s3_key })).then(() => true)).toBe(true);
+
+        await call('POST', `/admin/rooms/${room.id}/pdf`);
+        expect((await b.req('GET', `/rooms/${room.token}/room.pdf`)).status).toBe(200);
+    });
+
+    it('keeps replaced PDFs for 30 days and the newest until it is replaced', async () => {
+        const { room } = await setupRoom('Kept PDF Room');
+        const keys = async () => (await db.selectFrom('viewing_room_pdfs').select(['s3_key', 'created_at']).where('room_id', '=', room.id).orderBy('created_at').execute()).map((r) => r.s3_key);
+        const stored = async (key: string) =>
+            storage.client.send(new HeadObjectCommand({ Bucket: storage.bucket, Key: key })).then(
+                () => true,
+                () => false,
+            );
+        await call('POST', `/admin/rooms/${room.id}/pdf`);
+        await call('POST', `/admin/rooms/${room.id}/pdf`);
+        const [oldest, middle] = await keys();
+        expect(oldest).toMatch(new RegExp(`^exports/rooms/${room.id}/[0-9a-f-]{36}\\.pdf$`));
+        // The oldest was made 31 days ago, the other 29: only the oldest goes on the next generation.
+        await db.updateTable('viewing_room_pdfs').set({ created_at: new Date(Date.now() - 31 * 86_400_000).toISOString() } as never).where('s3_key', '=', oldest!).execute();
+        await db.updateTable('viewing_room_pdfs').set({ created_at: new Date(Date.now() - 29 * 86_400_000).toISOString() } as never).where('s3_key', '=', middle!).execute();
+        await call('POST', `/admin/rooms/${room.id}/pdf`);
+        const after = await keys();
+        expect(after).toHaveLength(2);
+        expect(after).not.toContain(oldest);
+        expect(await stored(oldest!)).toBe(false);
+        expect(await stored(middle!)).toBe(true);
+
+        // In AWS the download is a short-lived signed link to the stored file.
+        const c = { var: { db }, redirect: (url: string, status: 302) => new Response(null, { status, headers: { location: url } }), body: () => new Response() };
+        const res = await roomPdfDownload(c as never, storage, room.id, { direct: false });
+        expect(res.status).toBe(302);
+        const location = new URL(res.headers.get('location')!);
+        expect(location.pathname).toContain(after[1]!);
+        expect(location.searchParams.get('response-content-disposition')).toBe('attachment; filename="kept-pdf-room-artist.pdf"');
+        expect(location.searchParams.get('X-Amz-Expires')).toBe('600');
+    });
+
+    it('sizes PDF images to 250 dpi where they are drawn, using the zoom copy or original when the display copy is too small', async () => {
+        const put = async (key: string, width: number, height: number, background = '#778899') => {
+            const body = await sharp({ create: { width, height, channels: 3, background } }).jpeg().toBuffer();
+            await storage.client.send(new PutObjectCommand({ Bucket: storage.bucket, Key: key, Body: body, ContentType: 'image/jpeg' }));
+        };
+        // Portrait work with a 2400px display copy and a 6000px zoom copy; landscape work with only a huge original.
+        await put('media/dpi/portrait.jpg', 4500, 6000);
+        await put('media/derived/dpi/portrait.jpg/w2400.webp', 1800, 2400, '#ff0000');
+        await put('media/derived/dpi/portrait.jpg/zoom.jpg', 4500, 6000, '#0000ff');
+        await put('media/dpi/wide.jpg', 8000, 5000);
+        const work = (image: string) => ({ artistName: 'A', title: 'T', dateText: '2026', medium: null, dimensions: null, edition: null, price: null, statusLabel: null, image });
+        const model: RoomPdfModel = {
+            heading: 'A',
+            subtitle: null,
+            gallery: { name: 'Twelve Ten', email: '', phone: '' },
+            cover: '/media/dpi/portrait.jpg',
+            works: [work('/media/dpi/portrait.jpg'), work('/media/dpi/wide.jpg')],
+            bios: [],
+        };
+        const images = await prepareRoomImages(storage, model);
+        const expectDpi = (key: string, w: number, h: number) => {
+            const p = workImagePlacement(model.works[0]!, w, h);
+            const img = images.get(key)!;
+            expect(img.width).toBeLessThanOrEqual(pixelsFor(p.width));
+            expect(img.height).toBeLessThanOrEqual(pixelsFor(p.height));
+            // At least as sharp as 250 dpi, give or take rounding.
+            expect(img.width).toBeGreaterThanOrEqual(pixelsFor(p.width) - 2);
+        };
+        expectDpi('/media/dpi/portrait.jpg', 4500, 6000);
+        expectDpi('/media/dpi/wide.jpg', 8000, 5000);
+        // The portrait work fills the page height (2067px at 250 dpi): the 2400px display copy (red) is enough.
+        const color = async (key: string) => (await sharp(images.get(key)!.data).stats()).dominant;
+        expect(images.get('/media/dpi/portrait.jpg')!.height).toBe(pixelsFor(PAGE_H));
+        expect((await color('/media/dpi/portrait.jpg')).r).toBeGreaterThan(200);
+        // The cover fills the page (2924px wide): too much for the display copy, so the zoom copy (blue) is used.
+        expect(images.get(pageKey('/media/dpi/portrait.jpg'))).toMatchObject({ width: pixelsFor(PAGE_W), height: pixelsFor(PAGE_H) });
+        expect((await color(pageKey('/media/dpi/portrait.jpg'))).b).toBeGreaterThan(200);
     });
 
     it('lets admins preview any room without tracking', async () => {

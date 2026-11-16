@@ -55,6 +55,7 @@ const EVENT_LABELS: Record<RoomEvent['type'], string> = {
     artist_open: 'Opened the artist',
     cv_open: 'Read the CV of',
     cv_pdf: 'Downloaded the CV of',
+    room_pdf: 'Downloaded the room PDF',
     press_click: 'Opened press about',
 };
 function eventText(e: RoomEvent): string {

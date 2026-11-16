@@ -2,11 +2,12 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import Sortable from 'sortablejs';
-import { formatPrice, ROOM_STATUSES, type RichDoc, type RoomArtistSettings, type RoomStatus, type RoomWorkSettings, type ViewingRoom, type WorkSummary } from '@twelveten/shared';
+import { formatPrice, ROOM_STATUSES, type RoomPdfStatus, type RichDoc, type RoomArtistSettings, type RoomStatus, type RoomWorkSettings, type ViewingRoom, type WorkSummary } from '@twelveten/shared';
 import Field from '@/admin/ui/Field.vue';
 import SelectField from '@/admin/ui/SelectField.vue';
 import Switch from '@/admin/ui/Switch.vue';
 import Dialog from '@/admin/ui/Dialog.vue';
+import MediaButton from '@/admin/MediaButton.vue';
 import RichEditor from '@/admin/RichEditor.vue';
 import HistoryDialog from '@/admin/HistoryDialog.vue';
 import { ApiError } from '@/api/client';
@@ -14,6 +15,7 @@ import { errorMessage, isConflict } from '@/admin/api';
 import { askConflict, toast } from '@/admin/state';
 import { btnDanger, btnGhost, btnOutline, btnPrimary } from '@/admin/ui/buttons';
 import { boApi, roomUrl } from '../api';
+import { when } from './time';
 import { useUnsavedGuard } from '../guard';
 import WorkPicker from '../WorkPicker.vue';
 import StatusBadge from '../StatusBadge.vue';
@@ -32,12 +34,15 @@ const emptyDoc = (): RichDoc => ({ type: 'doc', content: [] });
 
 const form = reactive({
     title: '' as string | null,
+    subtitle: null as string | null,
+    coverImage: null as string | null,
     intro: emptyDoc(),
     status: 'draft' as RoomStatus,
     opensAt: null as string | null,
     closesAt: null as string | null,
     showPrices: false,
     hideUnavailable: false,
+    pdfHidden: false,
 });
 const works = ref<RoomWorkSettings[]>([]);
 const artists = ref<RoomArtistSettings[]>([]);
@@ -51,9 +56,9 @@ const toLocal = (iso: string | null) => {
 const fromLocal = (v: string | null) => (v ? new Date(v).toISOString() : null);
 
 const fieldsJson = () =>
-    JSON.stringify({ ...form, title: form.title?.trim() ?? '', opensAt: fromLocal(form.opensAt), closesAt: fromLocal(form.closesAt) });
+    JSON.stringify({ ...form, title: form.title?.trim() ?? '', subtitle: form.subtitle?.trim() || null, opensAt: fromLocal(form.opensAt), closesAt: fromLocal(form.closesAt) });
 const worksJson = () => JSON.stringify(works.value.map((w) => [w.workId, w.showPrice, w.hidden]));
-const artistsJson = () => JSON.stringify(artists.value.map((a) => [a.artistId, a.showBio, a.showCv, a.showPress, [...a.hiddenPressIds].sort()]));
+const artistsJson = () => JSON.stringify(artists.value.map((a) => [a.artistId, a.showBio, a.showCv, a.showPress, [...a.hiddenPressIds].sort(), a.bioBackground, a.bioBackgroundColor]));
 const base = reactive({ fields: '', works: '', artists: '' });
 const fieldsDirty = computed(() => fieldsJson() !== base.fields);
 const worksDirty = computed(() => worksJson() !== base.works);
@@ -64,12 +69,15 @@ useUnsavedGuard(computed(() => !saving.value && (fieldsDirty.value || worksDirty
 function reset(r: ViewingRoom | null) {
     room.value = r;
     form.title = r?.title ?? '';
+    form.subtitle = r?.subtitle ?? null;
+    form.coverImage = r?.coverImage ?? null;
     form.intro = r?.intro ?? emptyDoc();
     form.status = r?.status ?? 'draft';
     form.opensAt = toLocal(r?.opensAt ?? null);
     form.closesAt = toLocal(r?.closesAt ?? null);
     form.showPrices = r?.showPrices ?? false;
     form.hideUnavailable = r?.hideUnavailable ?? false;
+    form.pdfHidden = r?.pdfHidden ?? false;
     works.value = (r?.works ?? []).map((w) => ({ ...w }));
     artists.value = (r?.artists ?? []).map((a) => ({ ...a, hiddenPressIds: [...a.hiddenPressIds] }));
     base.fields = fieldsJson();
@@ -88,6 +96,45 @@ async function load() {
     }
 }
 watch(id, () => void load(), { immediate: true });
+
+// ---- PDF (generated on request; visitors download the newest) ----
+const pdf = ref<RoomPdfStatus | null>(null);
+const generating = ref(false);
+async function loadPdf() {
+    if (!room.value) return void (pdf.value = null);
+    try {
+        pdf.value = await boApi.roomPdf(room.value.id);
+    } catch {
+        pdf.value = null;
+    }
+}
+// Saving changes the room's version; the PDF may be out of date then.
+watch(() => room.value?.updatedAt, () => void loadPdf());
+async function generatePdf() {
+    if (!room.value) return;
+    generating.value = true;
+    try {
+        pdf.value = await boApi.generateRoomPdf(room.value.id);
+        toast('PDF generated', 'success', 1500);
+    } catch (e) {
+        toast(errorMessage(e), 'error');
+    } finally {
+        generating.value = false;
+    }
+}
+const confirmRemovePdf = ref(false);
+async function removePdf() {
+    if (!room.value) return;
+    confirmRemovePdf.value = false;
+    try {
+        await boApi.removeRoomPdf(room.value.id);
+        pdf.value = null;
+        toast('PDF removed', 'success', 1500);
+    } catch (e) {
+        toast(errorMessage(e), 'error');
+    }
+}
+const megabytes = (bytes: number) => `${(bytes / 1_048_576).toFixed(1)} MB`;
 
 // ---- Works ----
 const picking = ref(false);
@@ -147,12 +194,15 @@ const saving = ref(false);
 function fields() {
     return {
         title: form.title?.trim() ?? '',
+        subtitle: form.subtitle?.trim() || null,
+        coverImage: form.coverImage,
         intro: form.intro,
         status: form.status,
         opensAt: fromLocal(form.opensAt),
         closesAt: fromLocal(form.closesAt),
         showPrices: form.showPrices,
         hideUnavailable: form.hideUnavailable,
+        pdfHidden: form.pdfHidden,
     };
 }
 const worksPayload = () => ({ works: works.value.map((w) => ({ workId: w.workId, showPrice: w.showPrice, hidden: w.hidden })) });
@@ -179,7 +229,7 @@ async function save(overwrite = false): Promise<void> {
             r = await boApi.putRoomArtists(r.id, {
                 artists: ordered.map((s) => {
                     const a = mine.get(s.artistId)?.a ?? s;
-                    return { artistId: s.artistId, showBio: a.showBio, showCv: a.showCv, showPress: a.showPress, hiddenPressIds: a.hiddenPressIds };
+                    return { artistId: s.artistId, showBio: a.showBio, showCv: a.showCv, showPress: a.showPress, hiddenPressIds: a.hiddenPressIds, bioBackground: a.bioBackground, bioBackgroundColor: a.bioBackgroundColor };
                 }),
             });
         }
@@ -291,11 +341,52 @@ const setPriceMode = (w: RoomWorkSettings, v: string) => (w.showPrice = v === 'i
             </p>
         </section>
 
+        <!-- PDF -->
+        <section v-if="room" aria-labelledby="pdf-h" class="rounded-md border border-slate-200 bg-white p-4">
+            <h2 id="pdf-h" class="mb-2 text-sm font-semibold">PDF</h2>
+            <div class="flex flex-wrap items-center gap-4">
+                <div class="flex items-center gap-3">
+                    <img v-if="form.coverImage" :src="form.coverImage" alt="" class="h-14 w-20 rounded border border-slate-200 object-cover" data-testid="room-cover" />
+                    <div v-else class="flex h-14 w-20 items-center justify-center rounded border border-dashed border-slate-300 text-[10px] text-slate-400">First work</div>
+                    <div class="flex flex-col items-start gap-0.5">
+                        <span class="text-xs font-medium text-slate-600">Cover image</span>
+                        <div class="flex items-center gap-2">
+                            <MediaButton kind="image" :label="form.coverImage ? 'Replace' : 'Choose…'" class="!text-xs !shadow-none" @uploaded="(url) => (form.coverImage = url)" />
+                            <button v-if="form.coverImage" type="button" class="text-[11px] text-red-700 hover:underline" @click="form.coverImage = null">Remove</button>
+                        </div>
+                    </div>
+                </div>
+                <span class="flex-1" />
+                <div class="flex flex-col items-end gap-1 text-right">
+                    <div class="flex items-center gap-2">
+                        <a v-if="pdf" :href="boApi.roomPdfUrl(room.id)" download :class="btnOutline" data-testid="room-pdf">Download PDF</a>
+                        <button v-if="pdf" type="button" :class="btnGhost" data-testid="remove-room-pdf" @click="confirmRemovePdf = true">Remove…</button>
+                        <button type="button" :class="pdf && !pdf.outdated ? btnGhost : btnPrimary" :disabled="generating || dirty" :title="dirty ? 'Save first: the PDF is made from the saved room' : ''" data-testid="generate-room-pdf" @click="generatePdf">
+                            {{ generating ? 'Generating…' : pdf ? 'Regenerate PDF' : 'Generate PDF' }}
+                        </button>
+                    </div>
+                    <span class="text-xs" :class="pdf?.outdated ? 'text-amber-700' : 'text-slate-500'" data-testid="room-pdf-status">
+                        <template v-if="dirty">Save to include your changes</template>
+                        <template v-else-if="!pdf">Not generated yet; visitors don’t see a download</template>
+                        <template v-else-if="form.pdfHidden">Hidden from visitors · generated {{ when(pdf.generatedAt) }} · {{ megabytes(pdf.bytes) }}</template>
+                        <template v-else>
+                            {{ pdf.outdated ? 'Out of date: the room has changed since ' : 'Generated ' }}{{ when(pdf.generatedAt) }} · {{ megabytes(pdf.bytes) }}
+                        </template>
+                    </span>
+                </div>
+            </div>
+            <div v-if="pdf" class="mt-2 max-w-md">
+                <Switch :model-value="!form.pdfHidden" label="Offer to visitors" hint="Off keeps the PDF for you but takes “Download PDF” out of the room. Save to apply." @update:model-value="(v: boolean) => (form.pdfHidden = !v)" />
+            </div>
+            <p class="mt-1 text-xs text-slate-500">A presentation of the works the room shows, with its price settings and artist bios, offered to visitors as “Download PDF”. Without a cover image, the cover uses the first work; each artist’s bio page can be white, a colour or a photo (below). Earlier versions are kept for 30 days.</p>
+        </section>
+
         <!-- Details -->
         <section aria-labelledby="details-h" class="grid gap-x-6 rounded-md border border-slate-200 bg-white p-4 md:grid-cols-2">
             <div>
                 <h2 id="details-h" class="mb-1 text-sm font-semibold">Details</h2>
                 <Field v-model="form.title" label="Title" placeholder="e.g. Autumn preview for Pat" />
+                <Field v-model="form.subtitle" label="Subtitle (optional)" placeholder="e.g. NADA Miami 2026" hint="Shown under the title in the room and on the PDF cover." />
                 <SelectField v-model="form.status" label="Status" :options="statusOptions" hint="Draft and closed rooms can’t be opened with the link." />
                 <div class="grid grid-cols-2 gap-x-3">
                     <Field v-model="form.opensAt" label="Opens (optional)" type="datetime-local" />
@@ -400,6 +491,29 @@ const setPriceMode = (w: RoomWorkSettings, v: string) => (w.showPrice = v === 'i
                             </li>
                         </ul>
                     </details>
+                    <fieldset v-if="a.hasBio && a.showBio" class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs" data-testid="bio-background">
+                        <legend class="sr-only">PDF bio page background for {{ a.name }}</legend>
+                        <span class="text-slate-600" aria-hidden="true">PDF bio page:</span>
+                        <label class="artist-opt">
+                            <input type="radio" class="h-3.5 w-3.5" :name="`bio-bg-${a.artistId}`" :checked="!a.bioBackground && !a.bioBackgroundColor" @change="(a.bioBackground = null), (a.bioBackgroundColor = null)" />
+                            White
+                        </label>
+                        <label class="artist-opt">
+                            <input type="radio" class="h-3.5 w-3.5" :name="`bio-bg-${a.artistId}`" :checked="!a.bioBackground && Boolean(a.bioBackgroundColor)" @change="(a.bioBackground = null), (a.bioBackgroundColor = a.bioBackgroundColor ?? '#1f2937')" />
+                            Colour
+                        </label>
+                        <input
+                            v-if="!a.bioBackground && a.bioBackgroundColor"
+                            v-model="a.bioBackgroundColor"
+                            type="color"
+                            class="h-6 w-9 cursor-pointer rounded border border-slate-300 p-0"
+                            :aria-label="`Bio page colour for ${a.name}`"
+                        />
+                        <span class="text-slate-400" aria-hidden="true">or</span>
+                        <img v-if="a.bioBackground" :src="a.bioBackground" alt="" class="h-8 w-12 rounded border border-slate-200 object-cover" />
+                        <MediaButton kind="image" :label="a.bioBackground ? 'Replace photo' : 'Full-bleed photo…'" class="!text-xs !shadow-none" @uploaded="(url) => ((a.bioBackground = url), (a.bioBackgroundColor = null))" />
+                        <button v-if="a.bioBackground" type="button" class="text-[11px] text-red-700 hover:underline" @click="a.bioBackground = null">Remove photo</button>
+                    </fieldset>
                     <p v-if="!a.hasBio || !a.hasCv" class="mt-1.5 text-xs">
                         <RouterLink :to="{ name: 'bo-person', params: { id: a.artistId, profile: 'artist' } }" class="text-sky-800 hover:underline">Add {{ !a.hasBio && !a.hasCv ? 'a bio and CV' : !a.hasBio ? 'a bio' : 'a CV' }} on their profile</RouterLink>
                     </p>
@@ -417,6 +531,12 @@ const setPriceMode = (w: RoomWorkSettings, v: string) => (w.showPrice = v === 'i
             <WorkPicker :selected-ids="selectedIds" testid="room-work-results" @toggle="toggleWork" />
             <template #footer>
                 <button type="button" :class="btnPrimary" @click="picking = false">Done ({{ works.length }})</button>
+            </template>
+        </Dialog>
+        <Dialog v-model:open="confirmRemovePdf" title="Remove the PDF?" description="Visitors and admins can’t download it any more, and the room shows no Download PDF until you generate a new one.">
+            <template #footer>
+                <button type="button" :class="btnOutline" @click="confirmRemovePdf = false">Cancel</button>
+                <button type="button" :class="btnDanger" data-testid="confirm-remove-pdf" @click="removePdf">Remove PDF</button>
             </template>
         </Dialog>
         <Dialog v-model:open="confirmNewLink" title="Make a new link?" description="The current link stops working, and everyone who entered the room will need the new link (and to enter their name and email again).">

@@ -53,7 +53,7 @@ export function adminRoutes(deps: AdminDeps) {
     app.route('/', peopleRoutes());
     app.route('/', inventoryRoutes());
     app.route('/', invoiceRoutes({ storage: deps.storage }));
-    app.route('/', roomRoutes());
+    app.route('/', roomRoutes({ storage: deps.storage }));
     app.route('/', inquiryRoutes());
 
     // ---------- Uploads & publishing ----------

@@ -11,6 +11,8 @@ import { liveRoomByToken, publicRoom, visibleArtistIds, visibleWorkIds } from '.
 import { refreshEngagement } from '../rooms/engagement.ts';
 import { getArtistProfile } from '../people/queries.ts';
 import { renderCvPdf } from '../people/cvPdf.ts';
+import { latestRoomPdf, roomPdfDownload } from '../rooms/pdfExport.ts';
+import type { Storage } from '../storage/uploads.ts';
 import { HttpError, validationError } from './admin/errors.ts';
 import { isUuid, pdfResponse } from './admin/util.ts';
 
@@ -27,7 +29,7 @@ const cookiePath = (token: string) => `/api/rooms/${token}`;
  * Public viewing room routes. Anyone with the link sees the gate; after entering a name and email,
  * a per-room HttpOnly cookie remembers the visitor in this browser. Nothing here is cached.
  */
-export function roomPublicRoutes(opts: { siteUrl: string; trustedOrigins?: string[] }) {
+export function roomPublicRoutes(opts: { siteUrl: string; trustedOrigins?: string[]; storage?: Storage }) {
     const app = new Hono<AppEnv>();
     const checkOrigin = originGuard(opts.siteUrl, opts.trustedOrigins);
     const secure = opts.siteUrl.startsWith('https://');
@@ -102,7 +104,7 @@ export function roomPublicRoutes(opts: { siteUrl: string; trustedOrigins?: strin
         }
         const { room } = await roomFor(c);
         const visitor = await visitorFor(c, room);
-        if (!visitor) return c.json({ gate: { title: room.title } });
+        if (!visitor) return c.json({ gate: { title: room.title, subtitle: room.subtitle } });
         const visitId = await db.transaction().execute((trx) => currentVisit(trx, visitor.id, c.req.header('user-agent')));
         return c.json({ room: await publicRoom(db, room, { name: visitor.entered_name }, visitId) satisfies PublicRoom });
     });
@@ -312,6 +314,19 @@ ON CONFLICT (visitor_id, artist_id) DO UPDATE SET cv_opens = t.cv_opens + 1`.exe
         });
         const pdf = await renderCvPdf({ name: person.name, birthDate: person.birth_date, birthPlace: person.birth_place, website: person.website }, profile.cv);
         return pdfResponse(c, pdf, `${profile.slug}-cv.pdf`);
+    });
+
+    app.get('/rooms/:token/room.pdf', async (c) => {
+        const { room } = await roomFor(c);
+        const visitor = await visitorFor(c, room);
+        if (!visitor) throw new HttpError(401, 'Enter the room first');
+        if (room.pdf_hidden || !(await latestRoomPdf(c.var.db, room.id))) throw new HttpError(404, 'Not found');
+        await c.var.db.transaction().execute(async (trx) => {
+            const visitId = await currentVisit(trx, visitor.id, c.req.header('user-agent'));
+            await trx.insertInto('viewing_room_events').values({ visit_id: visitId, type: 'room_pdf' }).execute();
+            await refreshEngagement(trx, visitor.id);
+        });
+        return roomPdfDownload(c, opts.storage, room.id);
     });
 
     return app;
