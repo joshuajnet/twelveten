@@ -323,7 +323,7 @@ Stored dates are ISO `YYYY-MM-DD` strings for whole days and ISO timestamps for 
 - Domain:
   - `twelvetengallery.com` is registered at A2 Hosting, and its DNS is the Route 53 zone in stack `twelveten-dns` (`apps/api/dns.yml`).
   - Email is Google Workspace (MX `smtp.google.com`, plus site-verification and DMARC TXT records).
-  - `SiteTarget=legacy` points the web records at the old A2 server; `SiteTarget=cloudfront` makes the apex and `www` alias records for prod's distribution.
+  - The web records change in place between targets. `SiteTarget=legacy` points them at the old A2 server. `SiteTarget=cloudfront` (live since 2026-11-16) makes the apex an A/AAAA alias to prod's distribution and `www` a CNAME to it.
   - The site certificate is ACM `8c90db30-…` in us-east-1, covering `www` and the apex. Its validation CNAMEs stay in the zone for renewal.
   - In prod's GitHub variables, `DOMAIN` is `www.twelvetengallery.com` and `REDIRECT_DOMAINS` is `twelvetengallery.com`.
 - Releasing:
