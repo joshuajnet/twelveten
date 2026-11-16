@@ -4,17 +4,18 @@ import { migrateToLatest } from '../src/db/migrate.ts';
 import { seed } from '../src/db/seed.ts';
 import { upsertAdmin } from '../src/auth/users.ts';
 import type { Publisher } from '../src/publish/publisher.ts';
+import type { Storage } from '../src/storage/uploads.ts';
 import { resetSchema, testDb } from './db.ts';
 
 /** Fresh seeded database plus admin / user / anonymous request helpers for one test file. */
-export function adminHarness() {
+export function adminHarness(opts: { storage?: Storage } = {}) {
     const db = testDb();
     const state = { adminId: '' };
     const rendered: string[][] = [];
     const publisher: Publisher = { render: async (paths) => void rendered.push(paths), rebuildAll: async () => ({ pages: 0 }) };
 
     const apps = {
-        admin: () => createApp({ db: () => db, publisher, resolveUser: async () => ({ id: state.adminId, role: 'admin' }) }),
+        admin: () => createApp({ db: () => db, publisher, storage: opts.storage, resolveUser: async () => ({ id: state.adminId, role: 'admin' }) }),
         user: () => createApp({ db: () => db, resolveUser: async () => ({ id: state.adminId, role: 'user' }) }),
         anon: () => createApp({ db: () => db }),
     };

@@ -14,6 +14,7 @@ const VIEWER = 'Vera Viewer';
 const VIEWER_EMAIL = 'vera.viewer@example.com';
 const DUPE_EMAIL = 'vera.v@elsewhere.example';
 const TITLE = 'E2E viewing room';
+const SUBTITLE = 'Test Fair 2026';
 
 const errors: string[] = [];
 test.beforeEach(async ({ page }) => {
@@ -101,6 +102,7 @@ test('an admin creates a room from the inventory', async ({ page }) => {
     await page.goto('/admin/rooms');
     await page.getByRole('link', { name: '+ New room' }).click();
     await page.getByLabel('Title', { exact: true }).fill(TITLE);
+    await page.getByLabel('Subtitle (optional)').fill(SUBTITLE);
     await page.getByLabel('Status', { exact: true }).selectOption('live');
     await page.getByTestId('add-room-works').click();
     await page.getByLabel('Search works').fill('Roomtest');
@@ -120,6 +122,34 @@ test('an admin creates a room from the inventory', async ({ page }) => {
     await settings.getByLabel(/Not for this room/).uncheck();
     await page.getByTestId('save-room').click();
     await expect(page.getByText('● Unsaved changes')).toHaveCount(0);
+
+    // The PDF is made on request from the saved room, then offered for download.
+    const status = page.getByTestId('room-pdf-status');
+    await expect(status).toContainText('Not generated yet');
+    await expect(page.getByRole('link', { name: 'Download PDF' })).toHaveCount(0);
+    await page.getByLabel('Subtitle (optional)').fill(`${SUBTITLE} (draft)`);
+    await expect(page.getByTestId('generate-room-pdf')).toBeDisabled();
+    await page.getByLabel('Subtitle (optional)').fill(SUBTITLE);
+    await page.getByTestId('generate-room-pdf').click();
+    await expect(status).toContainText('Generated');
+    await expect(page.getByTestId('generate-room-pdf')).toHaveText('Regenerate PDF');
+    const pdfLink = page.getByRole('link', { name: 'Download PDF' });
+    await expect(pdfLink).toHaveAttribute('href', `/api/admin/rooms/${state.roomId}/room.pdf`);
+    const pdf = await page.request.get(`/api/admin/rooms/${state.roomId}/room.pdf`);
+    expect(pdf.status()).toBe(200);
+    expect((await pdf.body()).subarray(0, 5).toString()).toBe('%PDF-');
+
+    // A solid colour behind the artist's bio page: saved with the room, and the PDF is then out of date.
+    const bioBg = page.getByTestId('bio-background');
+    await bioBg.getByLabel('Colour').check();
+    await bioBg.getByLabel(`Bio page colour for ${ARTIST}`).fill('#203040');
+    await page.getByTestId('save-room').click();
+    await expect(page.getByText('● Unsaved changes')).toHaveCount(0);
+    await expect(status).toContainText('Out of date');
+    await page.reload();
+    await expect(page.getByTestId('bio-background').getByLabel(`Bio page colour for ${ARTIST}`)).toHaveValue('#203040');
+    await page.getByTestId('generate-room-pdf').click();
+    await expect(page.getByTestId('room-pdf-status')).toContainText('Generated');
 });
 
 test('a visitor enters through the gate and the browser is remembered', async ({ browser }) => {
@@ -128,11 +158,14 @@ test('a visitor enters through the gate and the browser is remembered', async ({
     await page.goto(path);
     const gate = page.getByTestId('room-gate');
     await expect(gate.getByRole('heading', { name: TITLE })).toBeVisible();
+    await expect(gate).toContainText(SUBTITLE);
     await expect(gate).toContainText('We record how you browse this room');
     await gate.getByLabel('Name').fill(VIEWER);
     await gate.getByLabel('Email').fill(VIEWER_EMAIL);
     await gate.getByRole('button', { name: 'View the room' }).click();
     await expect(page.getByText(`Welcome, ${VIEWER}.`)).toBeVisible();
+    await expect(page.getByTestId('room-subtitle')).toHaveText(SUBTITLE);
+    await expect(page.getByRole('link', { name: 'Download PDF' })).toHaveAttribute('href', /\/api\/rooms\/[A-Za-z0-9_-]{43}\/room\.pdf$/);
     await page.reload();
     await expect(page.getByTestId('room-gate')).toHaveCount(0);
     await expect(page.getByText(`Welcome, ${VIEWER}.`)).toBeVisible();

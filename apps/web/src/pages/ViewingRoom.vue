@@ -14,6 +14,7 @@ const preview = route.query.preview === '1';
 
 const state = ref<'loading' | 'gate' | 'room' | 'missing' | 'error'>('loading');
 const gateTitle = ref('');
+const gateSubtitle = ref<string | null>(null);
 const room = ref<PublicRoom | null>(null);
 
 async function load() {
@@ -22,6 +23,7 @@ async function load() {
         const r = await api.room(token, preview);
         if ('gate' in r) {
             gateTitle.value = r.gate.title;
+            gateSubtitle.value = r.gate.subtitle ?? null;
             state.value = 'gate';
         } else {
             room.value = r.room;
@@ -66,7 +68,7 @@ useHead({
                 <span class="sr-only">Loading…</span>
                 <div class="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-sky-900" aria-hidden="true" />
             </div>
-            <RoomGate v-else-if="state === 'gate'" :token="token" :title="gateTitle" @entered="entered" />
+            <RoomGate v-else-if="state === 'gate'" :token="token" :title="gateTitle" :subtitle="gateSubtitle" @entered="entered" />
             <RoomViewer v-else-if="state === 'room' && room" :room="room" :token="token" :preview="preview" />
             <div v-else class="container mx-auto max-w-xl px-3 py-24 text-center">
                 <h1 class="mb-3 text-2xl">{{ state === 'missing' ? 'This viewing room isn’t available' : 'Something went wrong' }}</h1>

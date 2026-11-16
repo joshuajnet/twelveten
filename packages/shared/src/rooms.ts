@@ -29,7 +29,11 @@ export const UNAVAILABLE_LABELS: Record<Exclude<WorkStatus, 'available'>, string
 
 const roomFields = {
     title: text.min(1, 'Title is required').max(200),
+    /** Shown under the title in the room and on the PDF cover, e.g. "NADA Miami 2026". */
+    subtitle: text.max(200).transform((s) => s || null).nullable(),
     intro: richDocSchema,
+    /** Full-bleed photo for the PDF cover and bio pages; the first work's image when empty. */
+    coverImage: text.max(1000).transform((s) => s || null).nullable(),
     showPrices: z.boolean(),
     hideUnavailable: z.boolean(),
     status: roomStatus,
@@ -70,6 +74,15 @@ export const roomArtistsPutSchema = z.object({
                 showCv: z.boolean(),
                 showPress: z.boolean(),
                 hiddenPressIds: z.array(uuid).max(500).default([]),
+                /** Full-bleed photo behind this artist's bio page in the PDF (takes precedence over the colour). */
+                bioBackground: text.max(1000).transform((s) => s || null).nullable().default(null),
+                /** Solid background colour for the bio page, `#rrggbb`. */
+                bioBackgroundColor: z
+                    .string()
+                    .regex(/^#[0-9a-fA-F]{6}$/, 'Use a colour like #1a2b3c')
+                    .transform((s) => s.toLowerCase())
+                    .nullable()
+                    .default(null),
             }),
         )
         .max(200),
@@ -93,6 +106,8 @@ export interface RoomArtistSettings {
     showCv: boolean;
     showPress: boolean;
     hiddenPressIds: string[];
+    bioBackground: string | null;
+    bioBackgroundColor: string | null;
     hasBio: boolean;
     hasCv: boolean;
     press: ArtistPress[];
@@ -102,7 +117,9 @@ export interface ViewingRoom {
     id: string;
     token: string;
     title: string;
+    subtitle: string | null;
     intro: RichDoc;
+    coverImage: string | null;
     showPrices: boolean;
     hideUnavailable: boolean;
     status: RoomStatus;
@@ -115,10 +132,20 @@ export interface ViewingRoom {
     updatedAt: string;
 }
 
+/** The room PDF an admin generated last (the one visitors download). */
+export interface RoomPdfStatus {
+    generatedAt: string;
+    bytes: number;
+    filename: string;
+    /** The room shows something different now (works, prices, bios, cover, subtitle, …). */
+    outdated: boolean;
+}
+
 export interface RoomSummary {
     id: string;
     token: string;
     title: string;
+    subtitle: string | null;
     status: RoomStatus;
     opensAt: string | null;
     closesAt: string | null;
@@ -177,6 +204,9 @@ export interface PublicRoomArtist {
 
 export interface PublicRoom {
     title: string;
+    subtitle: string | null;
+    /** A PDF has been generated, so visitors can download it. */
+    hasPdf: boolean;
     introHtml: string | null;
     works: PublicRoomWork[];
     artists: PublicRoomArtist[];
@@ -186,7 +216,7 @@ export interface PublicRoom {
     visitId: string | null;
 }
 
-export type RoomResponse = { gate: { title: string } } | { room: PublicRoom };
+export type RoomResponse = { gate: { title: string; subtitle: string | null } } | { room: PublicRoom };
 
 // ---------- Tracking ----------
 
@@ -435,7 +465,7 @@ export interface RoomEvent {
     id: number;
     visitId: string;
     at: string;
-    type: TrackEventType | 'enter' | 'cv_pdf';
+    type: TrackEventType | 'enter' | 'cv_pdf' | 'room_pdf';
     workId: string | null;
     workTitle: string | null;
     artistId: string | null;

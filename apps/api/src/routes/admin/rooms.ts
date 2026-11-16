@@ -17,6 +17,8 @@ import type { DB } from '../../db/index.ts';
 import type { Database } from '../../db/types.ts';
 import { getRoom, listRooms, roomDashboard, visitorDashboard } from '../../rooms/queries.ts';
 import { refreshEngagement } from '../../rooms/engagement.ts';
+import { generateRoomPdf, roomPdfDownload, roomPdfStatus } from '../../rooms/pdfExport.ts';
+import type { Storage } from '../../storage/uploads.ts';
 import { body, HttpError } from './errors.ts';
 import { ensureBaseline, recordRevision } from './revisions.ts';
 import { columns, conflictOr404, findOr404, idParam, isUuid, pageParams, sameVersion, touch } from './util.ts';
@@ -25,6 +27,8 @@ type Trx = Transaction<Database>;
 
 const ROOM_COLUMNS = {
     title: 'title',
+    subtitle: 'subtitle',
+    coverImage: 'cover_image',
     showPrices: 'show_prices',
     hideUnavailable: 'hide_unavailable',
     status: 'status',
@@ -42,7 +46,7 @@ export async function roomSnapshot(trx: Trx | DB, id: string) {
     const works = await trx.selectFrom('viewing_room_works').select(['work_id', 'position', 'show_price', 'hidden']).where('room_id', '=', id).orderBy('position').execute();
     const artists = await trx
         .selectFrom('viewing_room_artists')
-        .select(['artist_id', 'position', 'show_bio', 'show_cv', 'show_press', 'hidden_press_ids'])
+        .select(['artist_id', 'position', 'show_bio', 'show_cv', 'show_press', 'hidden_press_ids', 'bio_background', 'bio_background_color'])
         .where('room_id', '=', id)
         .orderBy('position')
         .execute();
@@ -97,7 +101,7 @@ async function replaceWorks(trx: Trx, roomId: string, works: { workId: string; s
     await syncRoomArtists(trx, roomId);
 }
 
-export function roomRoutes() {
+export function roomRoutes(deps: { storage?: Storage } = {}) {
     const app = new Hono<AppEnv>();
     const roomOr404 = (db: DB, id: string) => findOr404((x) => getRoom(db, x), id);
 
@@ -127,6 +131,28 @@ export function roomRoutes() {
     });
 
     app.get('/rooms/:id', async (c) => c.json(await roomOr404(c.var.db, idParam(c))));
+
+    // ---------- PDF (generated on request, then stored) ----------
+
+    const roomRowOr404 = async (db: DB, id: string) => {
+        const room = await db.selectFrom('viewing_rooms').selectAll().where('id', '=', id).executeTakeFirst();
+        if (!room) throw new HttpError(404, 'Not found');
+        return room;
+    };
+
+    /** The newest generated PDF and whether it is out of date, or null. */
+    app.get('/rooms/:id/pdf', async (c) => c.json(await roomPdfStatus(c.var.db, await roomRowOr404(c.var.db, idParam(c)))));
+
+    /** Generate the PDF from the room as saved; it becomes the one admins and visitors download. */
+    app.post('/rooms/:id/pdf', async (c) => {
+        const db = c.var.db;
+        return c.json(await generateRoomPdf(db, deps.storage, await roomRowOr404(db, idParam(c)), c.var.userId), 201);
+    });
+
+    app.get('/rooms/:id/room.pdf', async (c) => {
+        const room = await roomRowOr404(c.var.db, idParam(c));
+        return roomPdfDownload(c, deps.storage, room.id);
+    });
 
     app.patch('/rooms/:id', async (c) => {
         const id = idParam(c);
@@ -194,7 +220,7 @@ export function roomRoutes() {
             for (const [position, a] of artists.entries()) {
                 await trx
                     .updateTable('viewing_room_artists')
-                    .set({ position, show_bio: a.showBio, show_cv: a.showCv, show_press: a.showPress, hidden_press_ids: a.hiddenPressIds ?? [] })
+                    .set({ position, show_bio: a.showBio, show_cv: a.showCv, show_press: a.showPress, hidden_press_ids: a.hiddenPressIds ?? [], bio_background: a.bioBackground ?? null, bio_background_color: a.bioBackgroundColor ?? null })
                     .where('room_id', '=', id)
                     .where('artist_id', '=', a.artistId)
                     .execute();

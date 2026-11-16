@@ -358,7 +358,9 @@ export interface ViewingRoomTable {
     id: Generated<string>;
     token: string;
     title: string;
+    subtitle: string | null;
     intro: JsonWithDefault<RichDoc>;
+    cover_image: string | null;
     show_prices: Generated<boolean>;
     hide_unavailable: Generated<boolean>;
     status: Generated<'draft' | 'live' | 'closed'>;
@@ -367,6 +369,17 @@ export interface ViewingRoomTable {
     created_by: string | null;
     created_at: CreatedAt;
     updated_at: Timestamp;
+}
+
+export interface ViewingRoomPdfTable {
+    id: Generated<string>;
+    room_id: string;
+    s3_key: string;
+    filename: string;
+    bytes: number;
+    content_hash: string;
+    created_by: string | null;
+    created_at: CreatedAt;
 }
 
 export interface ViewingRoomWorkTable {
@@ -385,6 +398,8 @@ export interface ViewingRoomArtistTable {
     show_cv: Generated<boolean>;
     show_press: Generated<boolean>;
     hidden_press_ids: ColumnType<string[], string[] | undefined, string[]>;
+    bio_background: string | null;
+    bio_background_color: string | null;
 }
 
 export interface ViewingRoomVisitorTable {
@@ -441,7 +456,7 @@ export interface ViewingRoomArtistStatTable {
     press_clicks: Generated<number>;
 }
 
-export type RoomEventType = 'enter' | 'view_mode' | 'focus' | 'zoom' | 'click' | 'inquire' | 'artist_open' | 'cv_open' | 'cv_pdf' | 'press_click';
+export type RoomEventType = 'enter' | 'view_mode' | 'focus' | 'zoom' | 'click' | 'inquire' | 'artist_open' | 'cv_open' | 'cv_pdf' | 'press_click' | 'room_pdf';
 
 export interface ViewingRoomEventTable {
     id: Generated<number>;
@@ -532,6 +547,7 @@ export interface Database {
     person_emails: PersonEmailTable;
     person_duplicate_dismissals: PersonDuplicateDismissalTable;
     viewing_rooms: ViewingRoomTable;
+    viewing_room_pdfs: ViewingRoomPdfTable;
     viewing_room_works: ViewingRoomWorkTable;
     viewing_room_artists: ViewingRoomArtistTable;
     viewing_room_visitors: ViewingRoomVisitorTable;

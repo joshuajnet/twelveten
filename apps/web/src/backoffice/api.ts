@@ -42,6 +42,7 @@ import type {
     RoomSummary,
     RoomWorksPut,
     ViewingRoom,
+    RoomPdfStatus,
     VisitorDashboard,
     InquirySummary,
 } from '@twelveten/shared';
@@ -145,6 +146,9 @@ export const boApi = {
     deleteRoom: (id: string) => send<void>('DELETE', `/rooms/${id}`),
     putRoomWorks: (id: string, input: RoomWorksPut) => send<ViewingRoom>('PUT', `/rooms/${id}/works`, input),
     putRoomArtists: (id: string, input: RoomArtistsPut) => send<ViewingRoom>('PUT', `/rooms/${id}/artists`, input),
+    roomPdfUrl: (id: string) => `/api/admin/rooms/${id}/room.pdf`,
+    roomPdf: (id: string) => send<RoomPdfStatus | null>('GET', `/rooms/${id}/pdf`),
+    generateRoomPdf: (id: string) => send<RoomPdfStatus>('POST', `/rooms/${id}/pdf`),
     newRoomLink: (id: string) => send<ViewingRoom>('POST', `/rooms/${id}/token`),
     roomDashboard: (id: string) => send<RoomDashboard>('GET', `/rooms/${id}/dashboard`),
     visitorDashboard: (roomId: string, visitorId: string) => send<VisitorDashboard>('GET', `/rooms/${roomId}/visitors/${visitorId}`),

@@ -71,7 +71,10 @@ async function copy(r: RoomSummary) {
                                 <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded bg-slate-100">
                                     <ArtImage sizes="48px" fit="cover" v-if="r.cover" :src="r.cover" alt="" class="h-full w-full object-cover" />
                                 </span>
-                                {{ r.title }}
+                                <span>
+                                    {{ r.title }}
+                                    <span v-if="r.subtitle" class="block text-xs font-normal text-slate-500">{{ r.subtitle }}</span>
+                                </span>
                             </RouterLink>
                         </td>
                         <td class="px-3 py-2"><RoomStatusBadge :room="r" /></td>
