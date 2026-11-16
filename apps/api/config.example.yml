@@ -3,4 +3,6 @@
 siteUrl: https://www.twelvetengallery.com
 # Optional custom domain on CloudFront; the certificate must be in us-east-1.
 domain: www.twelvetengallery.com
+# Optional extra hostnames that redirect to `domain` (comma-separated); the certificate must cover them.
+redirectDomains: twelvetengallery.com
 certificateArn: arn:aws:acm:us-east-1:123456789012:certificate/00000000-0000-0000-0000-000000000000
