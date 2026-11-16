@@ -144,7 +144,7 @@ const caption = computed(() => {
                 </template>
                 <label class="block">
                     <span class="mb-1 block font-roboto text-sm font-light text-slate-600">Note <span class="text-slate-400">(optional)</span></span>
-                    <textarea ref="noteEl" v-model="form.note" name="note" rows="4" :maxlength="INQUIRY_NOTE_MAX" class="inq-input resize-y" placeholder="Questions about the work, shipping, framing…" />
+                    <textarea ref="noteEl" v-model="form.note" name="note" rows="4" :maxlength="INQUIRY_NOTE_MAX" class="inq-input resize-y" placeholder="Add a message (optional)" />
                     <span class="mt-0.5 block text-right font-roboto text-xs font-light tabular-nums text-slate-400" aria-live="polite">{{ remaining }} characters left</span>
                 </label>
                 <!-- Honeypot: hidden from people and screen readers. -->

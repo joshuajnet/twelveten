@@ -2,7 +2,8 @@
 // - requests for a host in REDIRECT_HOSTS (the bare domain) redirect to the same URL on CANONICAL_HOST
 // - legacy URLs redirect permanently
 // - extensionless paths map to their prerendered page: /exhibitions/foo -> /exhibitions/foo/index.html
-// - /admin and /admin/* (sign-in and back office) and /rooms/* (private viewing rooms) serve the SPA shell
+// - /admin and /admin/* (sign-in and back office) serve the SPA as _admin.html, and /rooms/* (private
+//   viewing rooms) as _room.html: non-indexed shells with generic meta, never the home page's
 // Keep REDIRECTS in sync with packages/shared/src/routes.ts.
 // Filled in at deploy time by function-code.cjs from the stage's domain and redirectDomains.
 var CANONICAL_HOST = '';
@@ -47,9 +48,14 @@ function handler(event) {
         };
     }
 
-    // The admin pages (login and back office) and viewing rooms are the SPA shell, never prerendered.
-    if (clean === '/admin' || clean.indexOf('/admin/') === 0 || clean.indexOf('/rooms/') === 0) {
-        request.uri = '/index.html';
+    // The admin pages (login and back office) and viewing rooms are the SPA in their own private
+    // shells (written by the web build), never prerendered.
+    if (clean === '/admin' || clean.indexOf('/admin/') === 0) {
+        request.uri = '/_admin.html';
+        return request;
+    }
+    if (clean.indexOf('/rooms/') === 0) {
+        request.uri = '/_room.html';
         return request;
     }
 

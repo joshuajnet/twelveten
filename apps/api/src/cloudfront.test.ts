@@ -21,12 +21,12 @@ describe('CloudFront viewer-request function', () => {
         ['/news/7-1-2026', '/news/7-1-2026/index.html'],
         ['/assets/index-abc.js', '/assets/index-abc.js'],
         ['/sitemap.xml', '/sitemap.xml'],
-        ['/admin/login', '/index.html'],
-        ['/admin', '/index.html'],
-        ['/admin/people', '/index.html'],
-        ['/admin/people/0190a1b2-0000-7000-8000-000000000000/artist', '/index.html'],
-        ['/admin/works/new', '/index.html'],
-        ['/rooms/AbCdEfGhIjKlMnOpQrStUvWxYz0123456789-_abcde', '/index.html'],
+        ['/admin/login', '/_admin.html'],
+        ['/admin', '/_admin.html'],
+        ['/admin/people', '/_admin.html'],
+        ['/admin/people/0190a1b2-0000-7000-8000-000000000000/artist', '/_admin.html'],
+        ['/admin/works/new', '/_admin.html'],
+        ['/rooms/AbCdEfGhIjKlMnOpQrStUvWxYz0123456789-_abcde', '/_room.html'],
     ])('%s → %s', (uri, expected) => expect(run(uri).uri).toBe(expected));
 
     it('redirects legacy URLs permanently, matching the shared route table', () => {
