@@ -27,6 +27,17 @@ export const UNAVAILABLE_LABELS: Record<Exclude<WorkStatus, 'available'>, string
 
 // ---------- Admin input ----------
 
+/** The room PDF's page in points (A4 landscape). */
+export const PDF_PAGE = { width: 841.89, height: 595.28 } as const;
+/** The page's shape (width ÷ height); full-page photos are cropped to it. */
+export const PDF_PAGE_ASPECT = PDF_PAGE.width / PDF_PAGE.height;
+
+/** The area of an image to use, as fractions of the image as displayed (EXIF-oriented). */
+export const imageCropSchema = z
+    .object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1), w: z.number().gt(0).max(1), h: z.number().gt(0).max(1) })
+    .refine((c) => c.x + c.w <= 1.000001 && c.y + c.h <= 1.000001, 'The crop must lie inside the image');
+export type ImageCrop = z.infer<typeof imageCropSchema>;
+
 const roomFields = {
     title: text.min(1, 'Title is required').max(200),
     /** Shown under the title in the room and on the PDF cover, e.g. "NADA Miami 2026". */
@@ -34,6 +45,8 @@ const roomFields = {
     intro: richDocSchema,
     /** Full-bleed photo for the PDF cover and bio pages; the first work's image when empty. */
     coverImage: text.max(1000).transform((s) => s || null).nullable(),
+    /** The part of the cover image to show; null: centred. */
+    coverCrop: imageCropSchema.nullable(),
     showPrices: z.boolean(),
     hideUnavailable: z.boolean(),
     /** Keep the generated PDF but don't offer it to visitors. */
@@ -78,6 +91,8 @@ export const roomArtistsPutSchema = z.object({
                 hiddenPressIds: z.array(uuid).max(500).default([]),
                 /** Full-bleed photo behind this artist's bio page in the PDF (takes precedence over the colour). */
                 bioBackground: text.max(1000).transform((s) => s || null).nullable().default(null),
+                /** The part of the bio photo to show; null: centred. */
+                bioBackgroundCrop: imageCropSchema.nullable().default(null),
                 /** Solid background colour for the bio page, `#rrggbb`. */
                 bioBackgroundColor: z
                     .string()
@@ -98,6 +113,8 @@ export interface RoomWorkSettings {
     showPrice: boolean | null;
     hidden: boolean;
     work: WorkSummary;
+    /** Every view of the work, in order. */
+    images: string[];
 }
 
 export interface RoomArtistSettings {
@@ -109,6 +126,7 @@ export interface RoomArtistSettings {
     showPress: boolean;
     hiddenPressIds: string[];
     bioBackground: string | null;
+    bioBackgroundCrop: ImageCrop | null;
     bioBackgroundColor: string | null;
     hasBio: boolean;
     hasCv: boolean;
@@ -122,6 +140,7 @@ export interface ViewingRoom {
     subtitle: string | null;
     intro: RichDoc;
     coverImage: string | null;
+    coverCrop: ImageCrop | null;
     showPrices: boolean;
     hideUnavailable: boolean;
     pdfHidden: boolean;
@@ -156,6 +175,8 @@ export interface RoomSummary {
     visitors: number;
     lastVisitAt: string | null;
     cover: string | null;
+    /** The crop of `cover` when it is the room's chosen cover image. */
+    coverCrop: ImageCrop | null;
     createdAt: string;
     updatedAt: string;
 }

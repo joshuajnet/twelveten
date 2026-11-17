@@ -224,7 +224,11 @@ describe('invoices', () => {
         expect(found.items.map((i: { id: string }) => i.id)).toEqual([inv.id]);
         expect(found.items[0]).toMatchObject({ personName: 'Listed Buyer', titles: 'Listed 1' });
         expect((await call('GET', `/admin/invoices?person=${buyer.id}&status=paid`)).body.total).toBe(0);
+        // Several statuses at once.
+        expect((await call('GET', `/admin/invoices?person=${buyer.id}&status=open,partial`)).body.total).toBe(1);
+        expect((await call('GET', `/admin/invoices?person=${buyer.id}&status=paid,cancelled`)).body.total).toBe(0);
         expect((await call('GET', '/admin/invoices?status=void')).status).toBe(400);
+        expect((await call('GET', '/admin/invoices?status=open,void')).status).toBe(400);
 
         const pdf = await call('GET', `/admin/invoices/${inv.id}/invoice.pdf?download=1`);
         expect(pdf.status).toBe(200);

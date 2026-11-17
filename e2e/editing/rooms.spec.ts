@@ -141,7 +141,8 @@ test('an admin creates a room from the inventory', async ({ page }) => {
 
     // A solid colour behind the artist's bio page: saved with the room, and the PDF is then out of date.
     const bioBg = page.getByTestId('bio-background');
-    await bioBg.getByLabel('Colour').check();
+    // White until a colour is picked.
+    await expect(bioBg.getByLabel(`Bio page colour for ${ARTIST}`)).toHaveValue('#ffffff');
     await bioBg.getByLabel(`Bio page colour for ${ARTIST}`).fill('#203040');
     await page.getByTestId('save-room').click();
     await expect(page.getByText('● Unsaved changes')).toHaveCount(0);
@@ -287,6 +288,15 @@ test('the PDF can be hidden from visitors, then removed', async ({ page, browser
     const status = page.getByTestId('room-pdf-status');
     // Generated in the first test (out of date by now: works were sold and hidden since).
     await expect(status).toContainText(/\d MB/);
+
+    // Admin preview offers the download too, without recording it.
+    const roomPath = new URL(state.link).pathname;
+    await page.goto(`${roomPath}?preview=1`);
+    const previewLink = page.getByRole('link', { name: 'Download PDF' });
+    await expect(previewLink).toHaveAttribute('href', /\/room\.pdf\?preview=1$/);
+    expect((await page.request.get((await previewLink.getAttribute('href'))!)).status()).toBe(200);
+    await page.goto(`/admin/rooms/${state.roomId}`);
+
     await page.getByRole('switch', { name: 'Offer to visitors' }).click();
     await page.getByTestId('save-room').click();
     await expect(page.getByText('● Unsaved changes')).toHaveCount(0);
@@ -308,4 +318,100 @@ test('the PDF can be hidden from visitors, then removed', async ({ page, browser
     await expect(status).toContainText('Not generated yet');
     await expect(page.getByRole('link', { name: 'Download PDF' })).toHaveCount(0);
     expect((await page.request.get(`/api/admin/rooms/${state.roomId}/room.pdf`)).status()).toBe(404);
+});
+
+test('a room is duplicated as a draft, and closed rooms are hidden from the list until asked for', async ({ page }) => {
+    await page.goto(`/admin/rooms/${state.roomId}`);
+    await page.getByRole('button', { name: 'Room settings' }).click();
+    await page.getByRole('menuitem', { name: 'Duplicate' }).click();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(`${TITLE} (copy)`);
+    const copyId = page.url().split('/').pop()!;
+    expect(copyId).not.toBe(state.roomId);
+    await expect(page.getByTestId('room-works').locator('li')).toHaveCount(2);
+    await expect(page.getByTestId('room-link')).not.toHaveValue(state.link);
+
+    // Close the original: it leaves the default list, and ticking Closed brings it back.
+    await page.goto(`/admin/rooms/${state.roomId}`);
+    await page.getByLabel('Status', { exact: true }).selectOption('closed');
+    await page.getByTestId('save-room').click();
+    await expect(page.getByText('● Unsaved changes')).toHaveCount(0);
+
+    await page.goto(`/admin/rooms?q=${encodeURIComponent(TITLE)}`);
+    const rows = page.getByTestId('room-row');
+    await expect(rows).toHaveCount(1);
+    await expect(rows.first()).toContainText(`${TITLE} (copy)`);
+    // The status dropdown: Draft and Live by default.
+    const filter = page.getByTestId('room-status-filter');
+    await expect(filter).toHaveText('Draft, Live');
+    await filter.click();
+    const option = (name: string) => page.getByRole('menuitemcheckbox', { name });
+    await option('Closed').click();
+    await expect(rows).toHaveCount(2);
+    await expect(filter).toHaveText('All');
+    await expect(page).toHaveURL(/status=draft%2Clive%2Cclosed|status=draft,live,closed/);
+    await page.keyboard.press('Escape');
+    await page.reload();
+    await expect(rows).toHaveCount(2);
+
+    // Only Closed; the last ticked status can't be unticked.
+    await filter.click();
+    await option('Draft').click();
+    await option('Live').click();
+    await expect(rows).toHaveCount(1);
+    await expect(rows.first()).not.toContainText('(copy)');
+    await expect(option('Closed')).toHaveAttribute('data-disabled', '');
+    await page.keyboard.press('Escape');
+    await expect(filter).toHaveText('Closed');
+
+    // A room that has gone live opens on its dashboard, with Edit beside it; a draft opens in the editor.
+    await expect(rows.first().getByRole('link', { name: 'Edit' })).toBeVisible();
+    await rows.first().getByRole('link', { name: new RegExp(TITLE) }).click();
+    await expect(page).toHaveURL(new RegExp(`/admin/rooms/${state.roomId}/dashboard$`));
+    await page.goto(`/admin/rooms?q=${encodeURIComponent(TITLE)}`);
+    await rows.first().getByRole('link', { name: /\(copy\)/ }).click();
+    await expect(page).toHaveURL(/\/admin\/rooms\/[0-9a-f-]{36}$/);
+});
+
+test('the PDF cover and bio photo are chosen from the room’s images and cropped', async ({ page }) => {
+    await page.goto(`/admin/rooms/${state.roomId}`);
+    const cover = page.getByTestId('room-cover');
+    // No cover chosen: the picker opens on the first work, already framed.
+    await cover.getByRole('button', { name: 'Choose…' }).click();
+    const dialog = page.getByRole('dialog', { name: 'PDF cover image' });
+    await expect(dialog.getByRole('button', { name: 'Roomtest Harbour', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    const frame = dialog.getByTestId('crop-frame');
+    await expect(frame).toBeVisible();
+    // Shrink from a corner, then drag the frame.
+    const handle = await dialog.getByTestId('crop-se').boundingBox();
+    await page.mouse.move(handle!.x + 6, handle!.y + 6);
+    await page.mouse.down();
+    await page.mouse.move(handle!.x - 80, handle!.y - 80, { steps: 5 });
+    await page.mouse.up();
+    const box = await frame.boundingBox();
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box!.x + box!.width / 2 + 30, box!.y + box!.height / 2 + 20, { steps: 5 });
+    await page.mouse.up();
+    await dialog.getByTestId('use-image').click();
+    await expect(dialog).toBeHidden();
+    await expect(cover.getByRole('button', { name: 'Change…' })).toBeVisible();
+    await page.getByTestId('save-room').click();
+    await expect(page.getByText('● Unsaved changes')).toHaveCount(0);
+
+    const saved = await (await page.request.get(`/api/admin/rooms/${state.roomId}`)).json();
+    expect(saved.coverCrop.w).toBeLessThan(1);
+    expect(saved.coverCrop.x).toBeGreaterThan(0);
+
+    // A bio photo from the same images; the colour input gives way to it.
+    const bioBg = page.getByTestId('bio-background');
+    await bioBg.getByRole('button', { name: 'Choose…' }).click();
+    const bioDialog = page.getByRole('dialog', { name: `PDF bio page photo for ${ARTIST}` });
+    await expect(bioDialog.getByTestId('crop-frame')).toBeVisible();
+    await bioDialog.getByTestId('use-image').click();
+    await expect(bioBg.getByLabel(`Bio page colour for ${ARTIST}`)).toHaveCount(0);
+    await page.getByTestId('save-room').click();
+    await expect(page.getByText('● Unsaved changes')).toHaveCount(0);
+    await page.getByTestId('generate-room-pdf').click();
+    // (Hidden from visitors since an earlier test.)
+    await expect(page.getByTestId('room-pdf-status')).toContainText(/generated .* MB/i);
 });

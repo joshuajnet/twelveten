@@ -24,6 +24,22 @@ export function useListQuery() {
             return parsed.success ? parsed.data : null;
         });
 
+    /**
+     * Several values of `all` kept in `?key=` as a comma list (`MultiSelect`'s v-model). Without the
+     * parameter it is `defaults`; choosing the defaults again removes the parameter. In `all` order.
+     */
+    const listParam = <T extends string>(key: string, all: readonly T[], defaults: readonly T[]) => {
+        const join = (vs: readonly T[]) => all.filter((v) => vs.includes(v)).join(',');
+        return computed<T[]>({
+            get: () => {
+                const picked = String(route.query[key] ?? '').split(',');
+                const valid = all.filter((v) => picked.includes(v));
+                return valid.length ? valid : [...defaults];
+            },
+            set: (vs) => setQuery({ [key]: join(vs) === join(defaults) ? null : join(vs) }),
+        });
+    };
+
     /** Change filters (back to page 1 unless the patch sets the page). */
     function setQuery(patch: Record<string, string | null>) {
         const query: LocationQueryRaw = { ...route.query, page: null, ...patch };
@@ -48,7 +64,7 @@ export function useListQuery() {
         if (v !== search.value.trim()) search.value = v;
     });
 
-    return { route, q, page, param, enumParam, setQuery, goToPage, search };
+    return { route, q, page, param, enumParam, listParam, setQuery, goToPage, search };
 }
 
 /**

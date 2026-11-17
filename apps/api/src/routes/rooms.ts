@@ -317,6 +317,12 @@ ON CONFLICT (visitor_id, artist_id) DO UPDATE SET cv_opens = t.cv_opens + 1`.exe
     });
 
     app.get('/rooms/:token/room.pdf', async (c) => {
+        // Admin preview: the PDF the room offers, in any status, without a visitor or tracking.
+        if (c.req.query('preview') === '1' && c.var.isAdmin) {
+            const room = await c.var.db.selectFrom('viewing_rooms').selectAll().where('token', '=', c.req.param('token')).executeTakeFirst();
+            if (!room || room.pdf_hidden || !(await latestRoomPdf(c.var.db, room.id))) throw new HttpError(404, 'Not found');
+            return roomPdfDownload(c, opts.storage, room.id);
+        }
         const { room } = await roomFor(c);
         const visitor = await visitorFor(c, room);
         if (!visitor) throw new HttpError(401, 'Enter the room first');

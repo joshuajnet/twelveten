@@ -1,5 +1,5 @@
 import type { ColumnType, Generated, Insertable, Selectable, Updateable } from 'kysely';
-import type { HeaderLink, RichDoc } from '@twelveten/shared';
+import type { HeaderLink, ImageCrop, RichDoc } from '@twelveten/shared';
 
 /** ISO 'YYYY-MM-DD' (pg DATE is parsed as a string). */
 type IsoDate = string;
@@ -9,6 +9,8 @@ type CreatedAt = ColumnType<string, string | Date | undefined, never>;
 type Json<T> = ColumnType<T, string | T, string | T>;
 /** JSON column with a database default (optional on insert). */
 type JsonWithDefault<T> = ColumnType<T, string | T | undefined, string | T>;
+/** A nullable jsonb column (written as a JSON string). */
+type NullableJson<T> = ColumnType<T | null, string | null | undefined, string | null>;
 
 export interface UserTable {
     id: Generated<string>;
@@ -361,6 +363,7 @@ export interface ViewingRoomTable {
     subtitle: string | null;
     intro: JsonWithDefault<RichDoc>;
     cover_image: string | null;
+    cover_crop: NullableJson<ImageCrop>;
     pdf_hidden: Generated<boolean>;
     show_prices: Generated<boolean>;
     hide_unavailable: Generated<boolean>;
@@ -401,6 +404,7 @@ export interface ViewingRoomArtistTable {
     show_press: Generated<boolean>;
     hidden_press_ids: ColumnType<string[], string[] | undefined, string[]>;
     bio_background: string | null;
+    bio_background_crop: NullableJson<ImageCrop>;
     bio_background_color: string | null;
 }
 

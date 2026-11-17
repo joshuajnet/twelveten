@@ -1,4 +1,5 @@
 import type { Content, ContentText, TDocumentDefinitions } from 'pdfmake/interfaces';
+import { PDF_PAGE, type ImageCrop } from '@twelveten/shared';
 import { pdfmake, useGalleryFonts } from '../lib/pdf.ts';
 
 /**
@@ -9,10 +10,10 @@ import { pdfmake, useGalleryFonts } from '../lib/pdf.ts';
  */
 
 /** Bump when the layout changes, so cached exports are regenerated. */
-export const ROOM_PDF_LAYOUT_VERSION = 4;
+export const ROOM_PDF_LAYOUT_VERSION = 6;
 
-export const PAGE_W = 841.89;
-export const PAGE_H = 595.28;
+export const PAGE_W = PDF_PAGE.width;
+export const PAGE_H = PDF_PAGE.height;
 /** Works at least this much wider than tall get the full-width layout. */
 export const LANDSCAPE_RATIO = 1.15;
 
@@ -36,19 +37,20 @@ export interface RoomPdfModel {
     heading: string;
     subtitle: string | null;
     gallery: { name: string; email: string; phone: string };
-    /** Cover photo URL. */
+    /** Cover photo URL, and the part of it to show (null: centred). */
     cover: string | null;
+    coverCrop: ImageCrop | null;
     works: RoomPdfWork[];
-    /** Bio pages: on a full-bleed photo (`background` URL), else a solid `color` (`#rrggbb`), else white. */
-    bios: { name: string; paragraphs: string[]; background: string | null; color: string | null }[];
+    /** Bio pages: on a full-bleed photo (`background` URL, cropped to `crop`), else a solid `color` (`#rrggbb`), else white. */
+    bios: { name: string; paragraphs: string[]; background: string | null; crop: ImageCrop | null; color: string | null }[];
 }
 
 /**
  * Prepared JPEG bytes and pixel size: work images under their URL, full-page photos (cover, bio
- * backgrounds; already cropped to the page) under `pageKey(url)`.
+ * backgrounds; already cropped to the page) under `pageKey(url, crop)`.
  */
 export type RoomPdfImages = Map<string, { data: Buffer; width: number; height: number }>;
-export const pageKey = (url: string) => `page:${url}`;
+export const pageKey = (url: string, crop?: ImageCrop | null) => (crop ? `page:${url}#${[crop.x, crop.y, crop.w, crop.h].join(',')}` : `page:${url}`);
 
 const WHITE = '#ffffff';
 const BLACK = '#000000';
@@ -135,7 +137,7 @@ export function fit(w: number, h: number, box: { x: number; y: number; w: number
 }
 
 function coverPage(m: RoomPdfModel, images: RoomPdfImages): Content[] {
-    const photo = m.cover ? images.get(pageKey(m.cover)) : undefined;
+    const photo = m.cover ? images.get(pageKey(m.cover, m.coverCrop)) : undefined;
     const color = photo ? WHITE : BLACK;
     const size = headingSize(m.heading);
     const out: Content[] = [];
@@ -240,7 +242,7 @@ function workPage(m: RoomPdfModel, w: RoomPdfWork, images: RoomPdfImages): Conte
 }
 
 function bioPage(m: RoomPdfModel, bio: RoomPdfModel['bios'][number], images: RoomPdfImages): Content[] {
-    const photo = bio.background ? images.get(pageKey(bio.background)) : undefined;
+    const photo = bio.background ? images.get(pageKey(bio.background, bio.crop)) : undefined;
     const fill = !photo && bio.color ? bio.color : null;
     const color = photo || (fill && isDark(fill)) ? WHITE : BLACK;
     const chars = bio.paragraphs.reduce((n, p) => n + p.length, 0);
@@ -252,7 +254,7 @@ function bioPage(m: RoomPdfModel, bio: RoomPdfModel['bios'][number], images: Roo
     // Centered on the page by measured height (the inset keeps long bios off the edges).
     out.push(
         vbox({ x: (PAGE_W - width) / 2, y: TEXT_INSET, w: width, h: PAGE_H - 2 * TEXT_INSET }, 'middle', {
-            stack: [{ text: bio.name, fontSize: size + 4, margin: [0, 0, 0, size * 0.6] }, ...bio.paragraphs.map((p) => ({ text: p, margin: [0, 0, 0, size * 0.5] }) as Content)],
+            stack: [{ text: bio.name, fontSize: size + 4, margin: [0, 0, 0, size * 0.6] }, ...bio.paragraphs.map((p) => ({ text: p, alignment: 'justify', margin: [0, 0, 0, size * 0.5] }) as Content)],
             fontSize: size,
             lineHeight: 1.2,
             color,

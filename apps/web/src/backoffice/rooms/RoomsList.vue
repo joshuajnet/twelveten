@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { RouterLink } from 'vue-router';
-import { ROOM_STATUSES, ROOMS_PAGE_SIZE, roomStatus, type RoomSummary } from '@twelveten/shared';
+import { computed } from 'vue';
+import { RouterLink, useRouter } from 'vue-router';
+import { PDF_PAGE_ASPECT, ROOM_STATUSES, ROOMS_PAGE_SIZE, roomStatus, type RoomStatus, type RoomSummary } from '@twelveten/shared';
+import { errorMessage } from '@/admin/api';
 import { toast } from '@/admin/state';
 import { btnGhost, btnPrimary } from '@/admin/ui/buttons';
 import { boApi, roomUrl } from '../api';
@@ -8,16 +10,41 @@ import Pagination from '../Pagination.vue';
 import { useListQuery, usePagedList } from '../useListQuery';
 import RoomStatusBadge from './RoomStatusBadge.vue';
 import { when } from './time';
-import ArtImage from '@/components/ArtImage.vue';
+import CroppedImage from './CroppedImage.vue';
+import MultiSelect from '@/admin/ui/MultiSelect.vue';
 
-/** Every viewing room, newest first, with search and a status filter. */
-const { q, page, enumParam, setQuery, goToPage, search } = useListQuery();
-const status = enumParam('status', roomStatus);
+/** Viewing rooms, newest first, with search and a status filter (Draft and Live unless the admin picks others). */
+const { q, page, listParam, goToPage, search } = useListQuery();
+const router = useRouter();
+
+const ALL_STATUSES = roomStatus.options;
+const DEFAULT_STATUSES: RoomStatus[] = ['draft', 'live'];
+const statuses = listParam('status', ALL_STATUSES, DEFAULT_STATUSES);
+const isDefaultStatuses = computed(() => statuses.value.join() === DEFAULT_STATUSES.join());
+const statusOptions = ALL_STATUSES.map((value) => ({ value, label: ROOM_STATUSES[value] }));
+
 const { result, loading, error } = usePagedList(
-    [q, status, page],
-    () => boApi.rooms({ q: q.value, status: status.value, page: page.value, limit: ROOMS_PAGE_SIZE }),
+    [q, statuses, page],
+    () => boApi.rooms({ q: q.value, statuses: statuses.value, page: page.value, limit: ROOMS_PAGE_SIZE }),
     goToPage,
 );
+
+/** A room that has gone live opens on its dashboard; a draft opens in the editor. The other view is a button. */
+function view(r: RoomSummary) {
+    const edit = { name: 'bo-room', params: { id: r.id } };
+    const dashboard = { name: 'bo-room-dashboard', params: { id: r.id } };
+    return r.status === 'draft' ? { main: edit, other: { to: dashboard, label: 'Dashboard' } } : { main: dashboard, other: { to: edit, label: 'Edit' } };
+}
+
+async function duplicate(r: RoomSummary) {
+    try {
+        const copy = await boApi.duplicateRoom(r.id);
+        toast('Room duplicated', 'success');
+        await router.push({ name: 'bo-room', params: { id: copy.id } });
+    } catch (e) {
+        toast(errorMessage(e), 'error');
+    }
+}
 
 async function copy(r: RoomSummary) {
     try {
@@ -42,13 +69,7 @@ async function copy(r: RoomSummary) {
                 <span class="block text-xs font-medium text-slate-600">Search</span>
                 <input v-model="search" type="search" aria-label="Search rooms" placeholder="Title…" class="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm focus:border-sky-700 focus:outline-none" />
             </label>
-            <label class="block">
-                <span class="block text-xs font-medium text-slate-600">Status</span>
-                <select :value="status ?? ''" aria-label="Status" class="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm" @change="setQuery({ status: ($event.target as HTMLSelectElement).value || null })">
-                    <option value="">Any status</option>
-                    <option v-for="(label, key) in ROOM_STATUSES" :key="key" :value="key">{{ label }}</option>
-                </select>
-            </label>
+            <MultiSelect v-model="statuses" label="Status" :options="statusOptions" testid="room-status-filter" />
         </div>
 
         <p v-if="error" class="mb-3 rounded bg-red-50 px-3 py-2 text-sm text-red-800">{{ error }}</p>
@@ -67,9 +88,10 @@ async function copy(r: RoomSummary) {
                 <tbody class="divide-y divide-slate-100">
                     <tr v-for="r in result?.items ?? []" :key="r.id" class="hover:bg-slate-50" data-testid="room-row">
                         <td class="px-3 py-2">
-                            <RouterLink :to="{ name: 'bo-room', params: { id: r.id } }" class="flex items-center gap-3 font-medium text-sky-900 hover:underline">
-                                <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded bg-slate-100">
-                                    <ArtImage sizes="48px" fit="cover" v-if="r.cover" :src="r.cover" alt="" class="h-full w-full object-cover" />
+                            <RouterLink :to="view(r).main" class="flex items-center gap-3 font-medium text-sky-900 hover:underline">
+                                <span class="w-14 shrink-0 overflow-hidden rounded bg-slate-100">
+                                    <CroppedImage v-if="r.cover" :url="r.cover" :crop="r.coverCrop" :aspect="PDF_PAGE_ASPECT" />
+                                    <span v-else class="block" :style="{ aspectRatio: String(PDF_PAGE_ASPECT) }" />
                                 </span>
                                 <span>
                                     {{ r.title }}
@@ -83,13 +105,15 @@ async function copy(r: RoomSummary) {
                         <td class="px-3 py-2 text-slate-600">{{ when(r.lastVisitAt) }}</td>
                         <td class="whitespace-nowrap px-3 py-2 text-right">
                             <button type="button" :class="btnGhost" @click="copy(r)">Copy link</button>
-                            <RouterLink :to="{ name: 'bo-room-dashboard', params: { id: r.id } }" :class="btnGhost">Dashboard</RouterLink>
+                            <button type="button" :class="btnGhost" :data-testid="`duplicate-${r.id}`" @click="duplicate(r)">Duplicate</button>
+                            <RouterLink :to="view(r).other.to" :class="btnGhost">{{ view(r).other.label }}</RouterLink>
                         </td>
                     </tr>
                 </tbody>
             </table>
             <p v-if="result && !result.items.length" class="py-10 text-center text-sm text-slate-500">
-                {{ q || status ? 'No rooms match.' : 'No viewing rooms yet. Create one to share a private selection of works.' }}
+                <template v-if="q || !isDefaultStatuses">No rooms match.</template>
+                <template v-else>No draft or live rooms. Closed rooms are hidden — tick Closed to see them, or create a new room.</template>
             </p>
         </div>
         <Pagination v-if="result" class="mt-4" :page="result.page" :page-size="result.pageSize" :total="result.total" label="rooms" @page="goToPage" />

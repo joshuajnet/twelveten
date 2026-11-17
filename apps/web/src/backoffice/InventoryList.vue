@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router';
-import { WORK_LOCATIONS, WORK_STATUSES, workLocation, workStatus, type PersonSummary } from '@twelveten/shared';
+import { WORK_LOCATIONS, WORK_STATUSES, workLocation, workStatus, type PersonSummary, type WorkStatus } from '@twelveten/shared';
+import MultiSelect from '@/admin/ui/MultiSelect.vue';
 import { btnPrimary } from '@/admin/ui/buttons';
 import PersonPicker from './PersonPicker.vue';
 import InventoryTable from './InventoryTable.vue';
 import { useListQuery } from './useListQuery';
 
-/** Every work across artists, filterable by artist, status and location. */
-const { q, page, param, enumParam, setQuery, goToPage, search } = useListQuery();
+/** Works across artists, filterable by artist, status (Available and On hold unless chosen otherwise) and location. */
+const { q, page, param, enumParam, listParam, setQuery, goToPage, search } = useListQuery();
 const artist = param('artist');
 const artistName = param('artistName');
-const status = enumParam('status', workStatus);
+const DEFAULT_STATUSES: WorkStatus[] = ['available', 'on_hold'];
+const statuses = listParam('status', workStatus.options, DEFAULT_STATUSES);
+const statusOptions = workStatus.options.map((value) => ({ value, label: WORK_STATUSES[value] }));
 const location = enumParam('location', workLocation);
 
 function chooseArtist(p: PersonSummary) {
@@ -39,13 +42,7 @@ function chooseArtist(p: PersonSummary) {
                 </span>
             </div>
             <PersonPicker v-else label="Artist" profile="artist" strict :allow-create="false" placeholder="Any artist" @select="chooseArtist" />
-            <label class="block">
-                <span class="block text-xs font-medium text-slate-600">Status</span>
-                <select :value="status ?? ''" aria-label="Status" class="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm" @change="setQuery({ status: ($event.target as HTMLSelectElement).value || null })">
-                    <option value="">Any status</option>
-                    <option v-for="(label, key) in WORK_STATUSES" :key="key" :value="key">{{ label }}</option>
-                </select>
-            </label>
+            <MultiSelect v-model="statuses" label="Status" :options="statusOptions" testid="work-status-filter" />
             <label class="block">
                 <span class="block text-xs font-medium text-slate-600">Location</span>
                 <select :value="location ?? ''" aria-label="Location" class="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm" @change="setQuery({ location: ($event.target as HTMLSelectElement).value || null })">
@@ -55,6 +52,6 @@ function chooseArtist(p: PersonSummary) {
             </label>
         </div>
 
-        <InventoryTable :q="q" :artist="artist" :status="status" :location="location" :page="page" @page="goToPage" />
+        <InventoryTable :q="q" :artist="artist" :statuses="statuses" :location="location" :page="page" @page="goToPage" />
     </div>
 </template>

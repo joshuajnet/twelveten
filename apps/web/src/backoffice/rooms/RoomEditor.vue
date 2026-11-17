@@ -2,12 +2,12 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import Sortable from 'sortablejs';
-import { formatPrice, ROOM_STATUSES, type RoomPdfStatus, type RichDoc, type RoomArtistSettings, type RoomStatus, type RoomWorkSettings, type ViewingRoom, type WorkSummary } from '@twelveten/shared';
+import { formatPrice, ROOM_STATUSES, type ImageCrop, type RoomPdfStatus, type RichDoc, type RoomArtistSettings, type RoomStatus, type RoomWorkSettings, type ViewingRoom, type WorkSummary } from '@twelveten/shared';
 import Field from '@/admin/ui/Field.vue';
 import SelectField from '@/admin/ui/SelectField.vue';
 import Switch from '@/admin/ui/Switch.vue';
 import Dialog from '@/admin/ui/Dialog.vue';
-import MediaButton from '@/admin/MediaButton.vue';
+import Menu, { type MenuItem } from '@/admin/ui/Menu.vue';
 import RichEditor from '@/admin/RichEditor.vue';
 import HistoryDialog from '@/admin/HistoryDialog.vue';
 import { ApiError } from '@/api/client';
@@ -20,6 +20,8 @@ import { useUnsavedGuard } from '../guard';
 import WorkPicker from '../WorkPicker.vue';
 import StatusBadge from '../StatusBadge.vue';
 import RoomStatusBadge from './RoomStatusBadge.vue';
+import PageImageField from './PageImageField.vue';
+import type { CroppedChoice, ImageOption } from './crop';
 import ArtImage from '@/components/ArtImage.vue';
 
 /** Create or edit a viewing room: details, works (from the inventory), artist details, the link. */
@@ -36,6 +38,7 @@ const form = reactive({
     title: '' as string | null,
     subtitle: null as string | null,
     coverImage: null as string | null,
+    coverCrop: null as ImageCrop | null,
     intro: emptyDoc(),
     status: 'draft' as RoomStatus,
     opensAt: null as string | null,
@@ -58,7 +61,7 @@ const fromLocal = (v: string | null) => (v ? new Date(v).toISOString() : null);
 const fieldsJson = () =>
     JSON.stringify({ ...form, title: form.title?.trim() ?? '', subtitle: form.subtitle?.trim() || null, opensAt: fromLocal(form.opensAt), closesAt: fromLocal(form.closesAt) });
 const worksJson = () => JSON.stringify(works.value.map((w) => [w.workId, w.showPrice, w.hidden]));
-const artistsJson = () => JSON.stringify(artists.value.map((a) => [a.artistId, a.showBio, a.showCv, a.showPress, [...a.hiddenPressIds].sort(), a.bioBackground, a.bioBackgroundColor]));
+const artistsJson = () => JSON.stringify(artists.value.map((a) => [a.artistId, a.showBio, a.showCv, a.showPress, [...a.hiddenPressIds].sort(), a.bioBackground, a.bioBackgroundCrop, a.bioBackgroundColor]));
 const base = reactive({ fields: '', works: '', artists: '' });
 const fieldsDirty = computed(() => fieldsJson() !== base.fields);
 const worksDirty = computed(() => worksJson() !== base.works);
@@ -71,6 +74,7 @@ function reset(r: ViewingRoom | null) {
     form.title = r?.title ?? '';
     form.subtitle = r?.subtitle ?? null;
     form.coverImage = r?.coverImage ?? null;
+    form.coverCrop = r?.coverCrop ?? null;
     form.intro = r?.intro ?? emptyDoc();
     form.status = r?.status ?? 'draft';
     form.opensAt = toLocal(r?.opensAt ?? null);
@@ -141,9 +145,28 @@ const picking = ref(false);
 const selectedIds = computed(() => works.value.map((w) => w.workId));
 function toggleWork(w: WorkSummary) {
     if (selectedIds.value.includes(w.id)) works.value = works.value.filter((x) => x.workId !== w.id);
-    else works.value = [...works.value, { workId: w.id, showPrice: null, hidden: false, work: w }];
+    else works.value = [...works.value, { workId: w.id, showPrice: null, hidden: false, work: w, images: w.image ? [w.image.url] : [] }];
 }
 const removeWork = (workId: string) => (works.value = works.value.filter((w) => w.workId !== workId));
+
+// ---- PDF page photos (cover, bio backgrounds): picked from the room's images ----
+const viewsOf = (w: RoomWorkSettings) => (w.images.length ? w.images : w.work.image ? [w.work.image.url] : []);
+const imageOptions = computed<ImageOption[]>(() => [
+    ...works.value.flatMap((w) => viewsOf(w).map((url, i, all) => ({ url, label: `${w.work.title}${all.length > 1 ? ` (${i + 1})` : ''}` }))),
+    ...artists.value.filter((a) => a.portrait).map((a) => ({ url: a.portrait!, label: `${a.name} (portrait)` })),
+]);
+const firstImage = (artistId?: string) => works.value.filter((w) => !artistId || w.work.artistId === artistId).map(viewsOf).find((v) => v.length)?.[0] ?? null;
+const cover = computed<CroppedChoice | null>({
+    get: () => (form.coverImage ? { url: form.coverImage, crop: form.coverCrop } : null),
+    set: (c) => ((form.coverImage = c?.url ?? null), (form.coverCrop = c?.crop ?? null)),
+});
+const bioPhoto = (a: RoomArtistSettings): CroppedChoice | null => (a.bioBackground ? { url: a.bioBackground, crop: a.bioBackgroundCrop } : null);
+function setBioPhoto(a: RoomArtistSettings, c: CroppedChoice | null) {
+    a.bioBackground = c?.url ?? null;
+    a.bioBackgroundCrop = c?.crop ?? null;
+}
+/** White is the default: stored as no colour. */
+const setBioColor = (a: RoomArtistSettings, hex: string) => (a.bioBackgroundColor = hex.toLowerCase() === '#ffffff' ? null : hex);
 const priceShown = (w: RoomWorkSettings) => w.work.status === 'available' && (w.showPrice ?? form.showPrices) && w.work.priceCents !== null;
 /** What viewers will see for a work. */
 function viewerNote(w: RoomWorkSettings): string {
@@ -196,6 +219,7 @@ function fields() {
         title: form.title?.trim() ?? '',
         subtitle: form.subtitle?.trim() || null,
         coverImage: form.coverImage,
+        coverCrop: form.coverImage ? form.coverCrop : null,
         intro: form.intro,
         status: form.status,
         opensAt: fromLocal(form.opensAt),
@@ -229,7 +253,7 @@ async function save(overwrite = false): Promise<void> {
             r = await boApi.putRoomArtists(r.id, {
                 artists: ordered.map((s) => {
                     const a = mine.get(s.artistId)?.a ?? s;
-                    return { artistId: s.artistId, showBio: a.showBio, showCv: a.showCv, showPress: a.showPress, hiddenPressIds: a.hiddenPressIds, bioBackground: a.bioBackground, bioBackgroundColor: a.bioBackgroundColor };
+                    return { artistId: s.artistId, showBio: a.showBio, showCv: a.showCv, showPress: a.showPress, hiddenPressIds: a.hiddenPressIds, bioBackground: a.bioBackground, bioBackgroundCrop: a.bioBackgroundCrop, bioBackgroundColor: a.bioBackgroundColor };
                 }),
             });
         }
@@ -276,6 +300,27 @@ async function newLink() {
     }
 }
 
+// ---- Duplicate ----
+const duplicating = ref(false);
+async function duplicate() {
+    duplicating.value = true;
+    try {
+        const copy = await boApi.duplicateRoom(id.value);
+        toast('Room duplicated', 'success');
+        await router.push({ name: 'bo-room', params: { id: copy.id } });
+    } catch (e) {
+        toast(errorMessage(e), 'error');
+    } finally {
+        duplicating.value = false;
+    }
+}
+
+// ---- Settings menu ----
+const settingsItems = computed<MenuItem[]>(() => [
+    { label: 'Duplicate', select: () => void duplicate(), disabled: duplicating.value || dirty.value, hint: dirty.value ? 'Save first: the copy is made from the saved room' : undefined, testid: 'duplicate-room' },
+    { label: 'History', select: () => (historyOpen.value = true), testid: 'room-history' },
+]);
+
 // ---- Delete / history ----
 const historyOpen = ref(false);
 const confirmDelete = ref(false);
@@ -319,11 +364,13 @@ const setPriceMode = (w: RoomWorkSettings, v: string) => (w.showPrice = v === 'i
             <span v-if="dirty && !isNew" class="text-xs text-amber-700">● Unsaved changes</span>
             <template v-if="room">
                 <RouterLink :to="{ name: 'bo-room-dashboard', params: { id: room.id } }" :class="btnOutline">Dashboard</RouterLink>
-                <button type="button" :class="btnGhost" @click="historyOpen = true">History</button>
             </template>
             <button type="button" :class="btnPrimary" :disabled="saving || !dirty" title="Save (Ctrl+S)" data-testid="save-room" @click="save()">
                 {{ saving ? 'Saving…' : isNew ? 'Create room' : 'Save' }}
             </button>
+            <Menu v-if="room" :items="settingsItems" label="Room settings" :trigger-class="btnGhost">
+                <template #trigger><i class="las la-cog text-xl leading-none" aria-hidden="true" /></template>
+            </Menu>
         </div>
 
         <!-- Link -->
@@ -345,25 +392,18 @@ const setPriceMode = (w: RoomWorkSettings, v: string) => (w.showPrice = v === 'i
         <section v-if="room" aria-labelledby="pdf-h" class="rounded-md border border-slate-200 bg-white p-4">
             <h2 id="pdf-h" class="mb-2 text-sm font-semibold">PDF</h2>
             <div class="flex flex-wrap items-center gap-4">
-                <div class="flex items-center gap-3">
-                    <img v-if="form.coverImage" :src="form.coverImage" alt="" class="h-14 w-20 rounded border border-slate-200 object-cover" data-testid="room-cover" />
-                    <div v-else class="flex h-14 w-20 items-center justify-center rounded border border-dashed border-slate-300 text-[10px] text-slate-400">First work</div>
-                    <div class="flex flex-col items-start gap-0.5">
-                        <span class="text-xs font-medium text-slate-600">Cover image</span>
-                        <div class="flex items-center gap-2">
-                            <MediaButton kind="image" :label="form.coverImage ? 'Replace' : 'Choose…'" class="!text-xs !shadow-none" @uploaded="(url) => (form.coverImage = url)" />
-                            <button v-if="form.coverImage" type="button" class="text-[11px] text-red-700 hover:underline" @click="form.coverImage = null">Remove</button>
-                        </div>
-                    </div>
+                <div class="flex flex-col items-start gap-0.5" data-testid="room-cover">
+                    <span class="text-xs font-medium text-slate-600">Cover image</span>
+                    <PageImageField v-model="cover" :options="imageOptions" :fallback="firstImage()" title="PDF cover image" />
                 </div>
                 <span class="flex-1" />
                 <div class="flex flex-col items-end gap-1 text-right">
                     <div class="flex items-center gap-2">
                         <a v-if="pdf" :href="boApi.roomPdfUrl(room.id)" download :class="btnOutline" data-testid="room-pdf">Download PDF</a>
-                        <button v-if="pdf" type="button" :class="btnGhost" data-testid="remove-room-pdf" @click="confirmRemovePdf = true">Remove…</button>
                         <button type="button" :class="pdf && !pdf.outdated ? btnGhost : btnPrimary" :disabled="generating || dirty" :title="dirty ? 'Save first: the PDF is made from the saved room' : ''" data-testid="generate-room-pdf" @click="generatePdf">
                             {{ generating ? 'Generating…' : pdf ? 'Regenerate PDF' : 'Generate PDF' }}
                         </button>
+                        <button v-if="pdf" type="button" :class="btnGhost" data-testid="remove-room-pdf" @click="confirmRemovePdf = true">Remove…</button>
                     </div>
                     <span class="text-xs" :class="pdf?.outdated ? 'text-amber-700' : 'text-slate-500'" data-testid="room-pdf-status">
                         <template v-if="dirty">Save to include your changes</template>
@@ -438,8 +478,8 @@ const setPriceMode = (w: RoomWorkSettings, v: string) => (w.showPrice = v === 'i
                         </select>
                     </label>
                     <label class="flex items-center gap-1 text-xs" :class="w.work.status !== 'available' ? 'font-medium text-amber-900' : 'text-slate-600'">
-                        <input v-model="w.hidden" type="checkbox" class="h-3.5 w-3.5" />
-                        Hide from viewers
+                        <input v-model="w.hidden" type="checkbox" class="h-3.5 w-3.5" :aria-label="`Hide ${w.work.title} from viewers`" />
+                        Hide
                     </label>
                     <button type="button" class="text-xs text-red-700 hover:underline" :aria-label="`Remove ${w.work.title}`" @click="removeWork(w.workId)">Remove</button>
                     </div>
@@ -494,25 +534,23 @@ const setPriceMode = (w: RoomWorkSettings, v: string) => (w.showPrice = v === 'i
                     <fieldset v-if="a.hasBio && a.showBio" class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs" data-testid="bio-background">
                         <legend class="sr-only">PDF bio page background for {{ a.name }}</legend>
                         <span class="text-slate-600" aria-hidden="true">PDF bio page:</span>
-                        <label class="artist-opt">
-                            <input type="radio" class="h-3.5 w-3.5" :name="`bio-bg-${a.artistId}`" :checked="!a.bioBackground && !a.bioBackgroundColor" @change="(a.bioBackground = null), (a.bioBackgroundColor = null)" />
-                            White
-                        </label>
-                        <label class="artist-opt">
-                            <input type="radio" class="h-3.5 w-3.5" :name="`bio-bg-${a.artistId}`" :checked="!a.bioBackground && Boolean(a.bioBackgroundColor)" @change="(a.bioBackground = null), (a.bioBackgroundColor = a.bioBackgroundColor ?? '#1f2937')" />
-                            Colour
-                        </label>
                         <input
-                            v-if="!a.bioBackground && a.bioBackgroundColor"
-                            v-model="a.bioBackgroundColor"
+                            v-if="!a.bioBackground"
+                            :value="a.bioBackgroundColor ?? '#ffffff'"
                             type="color"
                             class="h-6 w-9 cursor-pointer rounded border border-slate-300 p-0"
                             :aria-label="`Bio page colour for ${a.name}`"
+                            @input="setBioColor(a, ($event.target as HTMLInputElement).value)"
                         />
-                        <span class="text-slate-400" aria-hidden="true">or</span>
-                        <img v-if="a.bioBackground" :src="a.bioBackground" alt="" class="h-8 w-12 rounded border border-slate-200 object-cover" />
-                        <MediaButton kind="image" :label="a.bioBackground ? 'Replace photo' : 'Full-bleed photo…'" class="!text-xs !shadow-none" @uploaded="(url) => ((a.bioBackground = url), (a.bioBackgroundColor = null))" />
-                        <button v-if="a.bioBackground" type="button" class="text-[11px] text-red-700 hover:underline" @click="a.bioBackground = null">Remove photo</button>
+                        <span v-if="!a.bioBackground" class="text-slate-400" aria-hidden="true">or photo</span>
+                        <PageImageField
+                            :model-value="bioPhoto(a)"
+                            :options="imageOptions"
+                            :initial="firstImage(a.artistId)"
+                            :title="`PDF bio page photo for ${a.name}`"
+                            remove-label="Remove photo"
+                            @update:model-value="(c) => setBioPhoto(a, c)"
+                        />
                     </fieldset>
                     <p v-if="!a.hasBio || !a.hasCv" class="mt-1.5 text-xs">
                         <RouterLink :to="{ name: 'bo-person', params: { id: a.artistId, profile: 'artist' } }" class="text-sky-800 hover:underline">Add {{ !a.hasBio && !a.hasCv ? 'a bio and CV' : !a.hasBio ? 'a bio' : 'a CV' }} on their profile</RouterLink>

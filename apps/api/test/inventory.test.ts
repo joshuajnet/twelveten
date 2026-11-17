@@ -124,6 +124,9 @@ describe('works', () => {
         expect(mine.body.items.map((w: { title: string }) => w.title)).toEqual(['List 3', 'List 2', 'List 1', 'List 0']);
         const nfs = await call('GET', `/admin/works?artist=${artist.id}&status=nfs`);
         expect(nfs.body.items.map((w: { title: string }) => w.title)).toEqual(['List 3', 'List 1']);
+        // Several statuses at once.
+        expect((await call('GET', `/admin/works?artist=${artist.id}&status=available,on_hold`)).body.total).toBe(2);
+        expect((await call('GET', `/admin/works?artist=${artist.id}&status=available,nfs`)).body.total).toBe(4);
         const p1 = await call('GET', `/admin/works?artist=${artist.id}&limit=3`);
         const p2 = await call('GET', `/admin/works?artist=${artist.id}&limit=3&page=2`);
         expect([p1.body.total, p1.body.page, p2.body.page]).toEqual([4, 1, 2]);

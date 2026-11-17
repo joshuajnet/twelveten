@@ -9,6 +9,7 @@ import {
     roomStatus,
     roomWorksPutSchema,
     ROOMS_PAGE_SIZE,
+    type ImageCrop,
     type PointerData,
 } from '@twelveten/shared';
 import { sanitizeRichDoc } from '@twelveten/shared/rich/server';
@@ -21,7 +22,7 @@ import { generateRoomPdf, roomPdfDownload, roomPdfStatus, withdrawRoomPdf } from
 import type { Storage } from '../../storage/uploads.ts';
 import { body, HttpError } from './errors.ts';
 import { ensureBaseline, recordRevision } from './revisions.ts';
-import { columns, conflictOr404, findOr404, idParam, isUuid, pageParams, sameVersion, touch } from './util.ts';
+import { columns, conflictOr404, listParam, findOr404, idParam, isUuid, pageParams, sameVersion, touch } from './util.ts';
 
 type Trx = Transaction<Database>;
 
@@ -29,6 +30,7 @@ const ROOM_COLUMNS = {
     title: 'title',
     subtitle: 'subtitle',
     coverImage: 'cover_image',
+    coverCrop: 'cover_crop',
     showPrices: 'show_prices',
     hideUnavailable: 'hide_unavailable',
     pdfHidden: 'pdf_hidden',
@@ -36,6 +38,17 @@ const ROOM_COLUMNS = {
     opensAt: 'opens_at',
     closesAt: 'closes_at',
 } as const;
+
+/** A crop for a jsonb column (null when there is none). */
+export const cropJson = (crop: ImageCrop | null | undefined) => (crop ? JSON.stringify(crop) : null);
+
+/** Column values from room input: the crop as JSON, and cleared along with its image. */
+function roomValues(input: Record<string, unknown> & { coverImage?: string | null; coverCrop?: ImageCrop | null }): Record<string, unknown> {
+    const values = columns(input, ROOM_COLUMNS);
+    if ('cover_crop' in values) values.cover_crop = cropJson(input.coverCrop);
+    if (input.coverImage === null) values.cover_crop = null;
+    return values;
+}
 
 /** A new link token: 32 random bytes, base64url (43 characters). */
 export const newRoomToken = () => randomBytes(32).toString('base64url');
@@ -47,7 +60,7 @@ export async function roomSnapshot(trx: Trx | DB, id: string) {
     const works = await trx.selectFrom('viewing_room_works').select(['work_id', 'position', 'show_price', 'hidden']).where('room_id', '=', id).orderBy('position').execute();
     const artists = await trx
         .selectFrom('viewing_room_artists')
-        .select(['artist_id', 'position', 'show_bio', 'show_cv', 'show_press', 'hidden_press_ids', 'bio_background', 'bio_background_color'])
+        .select(['artist_id', 'position', 'show_bio', 'show_cv', 'show_press', 'hidden_press_ids', 'bio_background', 'bio_background_crop', 'bio_background_color'])
         .where('room_id', '=', id)
         .orderBy('position')
         .execute();
@@ -110,18 +123,16 @@ export function roomRoutes(deps: { storage?: Storage } = {}) {
         recordRevision(trx, { entity: 'viewing_room', entityId: id, action, snapshot: await roomSnapshot(trx, id), userId });
 
     app.get('/rooms', async (c) => {
-        const status = c.req.query('status');
-        const parsed = status ? roomStatus.safeParse(status) : null;
-        if (parsed && !parsed.success) throw new HttpError(400, 'Unknown status');
+        const statuses = listParam(c, 'status', roomStatus);
         const { page, pageSize } = pageParams(c, ROOMS_PAGE_SIZE);
-        return c.json(await listRooms(c.var.db, { q: c.req.query('q')?.trim() || undefined, status: parsed?.data }, page, pageSize));
+        return c.json(await listRooms(c.var.db, { q: c.req.query('q')?.trim() || undefined, statuses }, page, pageSize));
     });
 
     app.post('/rooms', async (c) => {
         const input = await body(c, roomCreateSchema);
         const db = c.var.db;
         const id = await db.transaction().execute(async (trx) => {
-            const values: Record<string, unknown> = { ...columns(input, ROOM_COLUMNS), token: newRoomToken(), created_by: c.var.userId };
+            const values: Record<string, unknown> = { ...roomValues(input), token: newRoomToken(), created_by: c.var.userId };
             if (input.intro) values.intro = JSON.stringify(sanitizeRichDoc(input.intro));
             const row = await trx.insertInto('viewing_rooms').values(values as never).returning('id').executeTakeFirstOrThrow();
             if (input.works?.length) await replaceWorks(trx, row.id, input.works.map((workId) => ({ workId, showPrice: null, hidden: false })));
@@ -132,6 +143,50 @@ export function roomRoutes(deps: { storage?: Storage } = {}) {
     });
 
     app.get('/rooms/:id', async (c) => c.json(await roomOr404(c.var.db, idParam(c))));
+
+    /** A new Draft room with the same setup (works, artist settings, texts); no link, dates, visitors or PDFs carried over. */
+    app.post('/rooms/:id/duplicate', async (c) => {
+        const sourceId = idParam(c);
+        const db = c.var.db;
+        await roomOr404(db, sourceId);
+        const id = await db.transaction().execute(async (trx) => {
+            const src = await trx.selectFrom('viewing_rooms').selectAll().where('id', '=', sourceId).executeTakeFirstOrThrow();
+            const row = await trx
+                .insertInto('viewing_rooms')
+                .values({
+                    token: newRoomToken(),
+                    title: `${src.title} (copy)`,
+                    subtitle: src.subtitle,
+                    intro: JSON.stringify(src.intro),
+                    cover_image: src.cover_image,
+                    cover_crop: cropJson(src.cover_crop),
+                    show_prices: src.show_prices,
+                    hide_unavailable: src.hide_unavailable,
+                    pdf_hidden: src.pdf_hidden,
+                    status: 'draft',
+                    created_by: c.var.userId,
+                } as never)
+                .returning('id')
+                .executeTakeFirstOrThrow();
+            const works = await trx.selectFrom('viewing_room_works').select(['work_id', 'position', 'show_price', 'hidden']).where('room_id', '=', sourceId).orderBy('position').execute();
+            for (const w of works) {
+                await trx.insertInto('viewing_room_works').values({ room_id: row.id, work_id: w.work_id, position: w.position, show_price: w.show_price, hidden: w.hidden }).execute();
+            }
+            await syncRoomArtists(trx, row.id);
+            const artists = await trx.selectFrom('viewing_room_artists').selectAll().where('room_id', '=', sourceId).execute();
+            for (const a of artists) {
+                await trx
+                    .updateTable('viewing_room_artists')
+                    .set({ position: a.position, show_bio: a.show_bio, show_cv: a.show_cv, show_press: a.show_press, hidden_press_ids: a.hidden_press_ids, bio_background: a.bio_background, bio_background_crop: cropJson(a.bio_background_crop), bio_background_color: a.bio_background_color })
+                    .where('room_id', '=', row.id)
+                    .where('artist_id', '=', a.artist_id)
+                    .execute();
+            }
+            await record(trx, row.id, 'create', c.var.userId);
+            return row.id;
+        });
+        return c.json(await getRoom(db, id), 201);
+    });
 
     // ---------- PDF (generated on request, then stored) ----------
 
@@ -167,7 +222,7 @@ export function roomRoutes(deps: { storage?: Storage } = {}) {
         const patch = await body(c, roomPatchSchema);
         const db = c.var.db;
         await roomOr404(db, id);
-        const values: Record<string, unknown> = columns(patch, ROOM_COLUMNS);
+        const values: Record<string, unknown> = roomValues(patch);
         if (patch.intro) values.intro = JSON.stringify(sanitizeRichDoc(patch.intro));
         if (Object.keys(values).length === 0) throw new HttpError(400, 'Nothing to update');
         const ok = await db.transaction().execute(async (trx) => {
@@ -228,7 +283,7 @@ export function roomRoutes(deps: { storage?: Storage } = {}) {
             for (const [position, a] of artists.entries()) {
                 await trx
                     .updateTable('viewing_room_artists')
-                    .set({ position, show_bio: a.showBio, show_cv: a.showCv, show_press: a.showPress, hidden_press_ids: a.hiddenPressIds ?? [], bio_background: a.bioBackground ?? null, bio_background_color: a.bioBackgroundColor ?? null })
+                    .set({ position, show_bio: a.showBio, show_cv: a.showCv, show_press: a.showPress, hidden_press_ids: a.hiddenPressIds ?? [], bio_background: a.bioBackground ?? null, bio_background_crop: a.bioBackground ? cropJson(a.bioBackgroundCrop) : null, bio_background_color: a.bioBackgroundColor ?? null })
                     .where('room_id', '=', id)
                     .where('artist_id', '=', a.artistId)
                     .execute();

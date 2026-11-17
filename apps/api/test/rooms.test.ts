@@ -93,6 +93,48 @@ describe('admin rooms', () => {
         const { room } = await setupRoom('Artist List');
         expect((await call('PUT', `/admin/rooms/${room.id}/artists`, { artists: [] })).status).toBe(400);
     });
+
+    it('duplicates a room as a new draft with the same works and artist settings', async () => {
+        const { room, works, artist, press } = await setupRoom('Dup Room', { subtitle: 'Miami 2026', showPrices: true, hideUnavailable: true });
+        const live = await call('PATCH', `/admin/rooms/${room.id}`, { updatedAt: room.updatedAt, status: 'live', opensAt: '2026-01-01T00:00:00Z', closesAt: '2030-01-01T00:00:00Z', coverImage: '/media/cover.jpg', pdfHidden: true });
+        expect(live.status).toBe(200);
+        await call('PUT', `/admin/rooms/${room.id}/works`, { works: [works[2]!.id, works[0]!.id].map((id, i) => ({ workId: id, showPrice: i === 0 ? false : null, hidden: i === 1 })) });
+        await call('PUT', `/admin/rooms/${room.id}/artists`, { artists: [{ artistId: artist.id, showBio: false, showCv: true, showPress: true, hiddenPressIds: [press[0].id], bioBackgroundColor: '#112233' }] });
+        const source = (await call('GET', `/admin/rooms/${room.id}`)).body;
+
+        const res = await call('POST', `/admin/rooms/${room.id}/duplicate`);
+        expect(res.status).toBe(201);
+        const copy = res.body;
+        expect(copy.id).not.toBe(room.id);
+        expect(copy.token).not.toBe(room.token);
+        expect(copy).toMatchObject({ title: 'Dup Room (copy)', subtitle: 'Miami 2026', status: 'draft', opensAt: null, closesAt: null, showPrices: true, hideUnavailable: true, coverImage: '/media/cover.jpg', pdfHidden: true, visitors: 0 });
+        expect(copy.intro).toEqual(source.intro);
+        expect(copy.works.map((w: any) => [w.workId, w.showPrice, w.hidden])).toEqual([
+            [works[2]!.id, false, false],
+            [works[0]!.id, null, true],
+        ]);
+        expect(copy.artists).toHaveLength(1);
+        expect(copy.artists[0]).toMatchObject({ artistId: artist.id, showBio: false, showCv: true, showPress: true, hiddenPressIds: [press[0].id], bioBackgroundColor: '#112233' });
+        expect((await call('GET', `/admin/rooms/${copy.id}/pdf`)).body).toBeNull();
+        const revs = await db.selectFrom('content_revisions').select('action').where('entity', '=', 'viewing_room').where('entity_id', '=', copy.id).execute();
+        expect(revs.map((r) => r.action)).toEqual(['create']);
+
+        // The source is untouched.
+        expect((await call('GET', `/admin/rooms/${room.id}`)).body).toMatchObject({ title: 'Dup Room', status: 'live', token: room.token, updatedAt: source.updatedAt });
+        expect((await call('POST', `/admin/rooms/00000000-0000-4000-8000-000000000000/duplicate`)).status).toBe(404);
+    });
+
+    it('lists rooms by one or more statuses', async () => {
+        const tag = `Status ${Date.now()}`;
+        const draft = (await call('POST', '/admin/rooms', { title: `${tag} draft` })).body;
+        const live = (await call('POST', '/admin/rooms', { title: `${tag} live`, status: 'live' })).body;
+        const closed = (await call('POST', '/admin/rooms', { title: `${tag} closed`, status: 'closed' })).body;
+        const ids = async (qs: string) => (await call('GET', `/admin/rooms?q=${encodeURIComponent(tag)}${qs}`)).body.items.map((r: any) => r.id).sort();
+        expect(await ids('&status=draft,live')).toEqual([draft.id, live.id].sort());
+        expect(await ids('&status=closed')).toEqual([closed.id]);
+        expect(await ids('')).toEqual([draft.id, live.id, closed.id].sort());
+        expect((await call('GET', '/admin/rooms?status=live,gone')).status).toBe(400);
+    });
 });
 
 describe('viewing a room', () => {
@@ -423,8 +465,17 @@ describe('viewing a room', () => {
     });
 
     it('can hide the PDF from visitors, or withdraw it entirely', async () => {
-        const { room } = await setupRoom('Hidden PDF Room', { status: 'live' });
+        const { room } = await setupRoom('Hidden PDF Room');
         await call('POST', `/admin/rooms/${room.id}/pdf`);
+        // Admin preview downloads it in any status, without a visitor and without recording anything.
+        expect((await call('GET', `/rooms/${room.token}?preview=1`)).body.room.hasPdf).toBe(true);
+        const preview = await call('GET', `/rooms/${room.token}/room.pdf?preview=1`);
+        expect(preview.status).toBe(200);
+        expect(preview.bytes!.subarray(0, 5).toString()).toBe('%PDF-');
+        expect((await call('GET', `/rooms/${room.token}/room.pdf?preview=1`, undefined, 'anon')).status).toBe(404);
+        expect(await db.selectFrom('viewing_room_visitors').select('id').where('room_id', '=', room.id).execute()).toEqual([]);
+        await call('PATCH', `/admin/rooms/${room.id}`, { updatedAt: room.updatedAt, status: 'live' });
+        room.updatedAt = (await call('GET', `/admin/rooms/${room.id}`)).body.updatedAt;
         const b = browser({ ip: '203.0.113.62' });
         await b.req('POST', `/rooms/${room.token}/enter`, { name: 'Hide Reader', email: 'hide-reader@example.com' });
         expect((await b.req('GET', `/rooms/${room.token}`)).body.room.hasPdf).toBe(true);
@@ -485,6 +536,77 @@ describe('viewing a room', () => {
         expect(location.searchParams.get('X-Amz-Expires')).toBe('600');
     });
 
+    it('saves crops for the cover and bio photos, clears them with the image, and copies and restores them', async () => {
+        const { room, artist } = await setupRoom('Crop Room');
+        expect(room.coverCrop).toBeNull();
+        expect(room.works[0].images).toEqual(['/media/x0.jpg']);
+        const crop = { x: 0.1, y: 0.2, w: 0.5, h: 0.4 };
+        const withCover = await call('PATCH', `/admin/rooms/${room.id}`, { updatedAt: room.updatedAt, coverImage: '/media/x1.jpg', coverCrop: crop });
+        expect(withCover.body).toMatchObject({ coverImage: '/media/x1.jpg', coverCrop: crop });
+        expect((await call('PATCH', `/admin/rooms/${room.id}`, { updatedAt: withCover.body.updatedAt, coverCrop: { x: 0.6, y: 0, w: 0.5, h: 0.5 } })).status).toBe(400);
+        const list = await call('GET', '/admin/rooms?q=crop%20room');
+        expect(list.body.items[0]).toMatchObject({ cover: '/media/x1.jpg', coverCrop: crop });
+
+        const bioCrop = { x: 0, y: 0, w: 1, h: 0.7 };
+        const put = (bioBackground: string | null, bioBackgroundCrop: unknown) =>
+            call('PUT', `/admin/rooms/${room.id}/artists`, { artists: [{ artistId: artist.id, showBio: true, showCv: true, showPress: true, bioBackground, bioBackgroundCrop }] });
+        expect((await put('/media/x2.jpg', bioCrop)).body.artists[0]).toMatchObject({ bioBackground: '/media/x2.jpg', bioBackgroundCrop: bioCrop });
+
+        // Copied on duplicate.
+        const copy = (await call('POST', `/admin/rooms/${room.id}/duplicate`)).body;
+        expect(copy.coverCrop).toEqual(crop);
+        expect(copy.artists[0].bioBackgroundCrop).toEqual(bioCrop);
+
+        // Cleared with the image.
+        expect((await put(null, bioCrop)).body.artists[0]).toMatchObject({ bioBackground: null, bioBackgroundCrop: null });
+        const current = (await call('GET', `/admin/rooms/${room.id}`)).body;
+        const cleared = await call('PATCH', `/admin/rooms/${room.id}`, { updatedAt: current.updatedAt, coverImage: null });
+        expect(cleared.body).toMatchObject({ coverImage: null, coverCrop: null });
+
+        // Restored from history: the revision saved with the bio crop brings it back.
+        const revs = await db.selectFrom('content_revisions').select(['id', 'snapshot']).where('entity', '=', 'viewing_room').where('entity_id', '=', room.id).orderBy('id').execute();
+        const withBoth = revs.find((r) => (r.snapshot as any).artists?.[0]?.bio_background_crop && (r.snapshot as any).cover_crop)!;
+        expect((await call('POST', `/admin/revisions/${withBoth.id}/restore`)).status).toBe(200);
+        const restored = (await call('GET', `/admin/rooms/${room.id}`)).body;
+        expect(restored).toMatchObject({ coverImage: '/media/x1.jpg', coverCrop: crop });
+        expect(restored.artists[0].bioBackgroundCrop).toEqual(bioCrop);
+
+        // A new crop makes the PDF out of date.
+        await call('POST', `/admin/rooms/${room.id}/pdf`);
+        expect((await call('GET', `/admin/rooms/${room.id}/pdf`)).body.outdated).toBe(false);
+        await call('PATCH', `/admin/rooms/${room.id}`, { updatedAt: restored.updatedAt, coverCrop: { x: 0, y: 0, w: 0.5, h: 0.5 } });
+        expect((await call('GET', `/admin/rooms/${room.id}/pdf`)).body.outdated).toBe(true);
+    });
+
+    it('crops page photos to the chosen area', async () => {
+        // Left half red, right half blue.
+        const half = await sharp({ create: { width: 1000, height: 707, channels: 3, background: '#0000ff' } })
+            .composite([{ input: await sharp({ create: { width: 500, height: 707, channels: 3, background: '#ff0000' } }).png().toBuffer(), left: 0, top: 0 }])
+            .jpeg()
+            .toBuffer();
+        await storage.client.send(new PutObjectCommand({ Bucket: storage.bucket, Key: 'media/crop/two.jpg', Body: half, ContentType: 'image/jpeg' }));
+        const left = { x: 0, y: 0.25, w: 0.45, h: 0.45 };
+        const model: RoomPdfModel = {
+            heading: 'A',
+            subtitle: null,
+            gallery: { name: 'Twelve Ten', email: '', phone: '' },
+            cover: '/media/crop/two.jpg',
+            coverCrop: left,
+            works: [],
+            bios: [{ name: 'B', paragraphs: ['Bio.'], background: '/media/crop/two.jpg', crop: { x: 0.55, y: 0.25, w: 0.45, h: 0.45 }, color: null }],
+        };
+        const images = await prepareRoomImages(storage, model);
+        const stats = async (key: string) => (await sharp(images.get(key)!.data).stats()).channels.map((c) => c.mean);
+        const cover = images.get(pageKey('/media/crop/two.jpg', left))!;
+        expect(cover).toMatchObject({ width: pixelsFor(PAGE_W), height: pixelsFor(PAGE_H) });
+        const [r1, , b1] = await stats(pageKey('/media/crop/two.jpg', left));
+        expect(r1).toBeGreaterThan(200);
+        expect(b1).toBeLessThan(40);
+        const [r2, , b2] = await stats(pageKey('/media/crop/two.jpg', model.bios[0]!.crop));
+        expect(r2).toBeLessThan(40);
+        expect(b2).toBeGreaterThan(200);
+    });
+
     it('sizes PDF images to 250 dpi where they are drawn, using the zoom copy or original when the display copy is too small', async () => {
         const put = async (key: string, width: number, height: number, background = '#778899') => {
             const body = await sharp({ create: { width, height, channels: 3, background } }).jpeg().toBuffer();
@@ -501,6 +623,7 @@ describe('viewing a room', () => {
             subtitle: null,
             gallery: { name: 'Twelve Ten', email: '', phone: '' },
             cover: '/media/dpi/portrait.jpg',
+            coverCrop: null,
             works: [work('/media/dpi/portrait.jpg'), work('/media/dpi/wide.jpg')],
             bios: [],
         };

@@ -167,8 +167,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
             <p v-if="room.subtitle" class="mb-2 text-xl text-slate-600" data-testid="room-subtitle">{{ room.subtitle }}</p>
             <p class="font-roboto text-sm font-light text-slate-500">
                 <template v-if="room.viewer">Welcome, {{ room.viewer.name }}.</template>
-                <!-- Admin previews have no visitor to download as; the editor has its own Download PDF. -->
-                <a v-if="room.hasPdf && !preview" :href="api.roomPdfUrl(token)" download class="text-sky-900 underline-offset-2 hover:underline" :class="{ 'ml-2': room.viewer }" data-testid="room-pdf">Download PDF</a>
+                <!-- In admin preview the download is not recorded. -->
+                <a v-if="room.hasPdf" :href="api.roomPdfUrl(token, preview)" download class="text-sky-900 underline-offset-2 hover:underline" :class="{ 'ml-2': room.viewer }" data-testid="room-pdf">Download PDF</a>
             </p>
             <div v-if="room.introHtml" class="room-rich mt-4 max-w-2xl" v-html="room.introHtml" />
         </section>

@@ -25,7 +25,7 @@ import type { Storage } from '../../storage/uploads.ts';
 import { readMedia } from '../../storage/mediaRead.ts';
 import { body, HttpError } from './errors.ts';
 import { recordWorkChanges } from './inventory.ts';
-import { closeGap, columns, conflictOr404, ensureCollectorProfile, findOr404, idParam, isUuid, nextPosition, pageParams, pdfResponse, sameVersion } from './util.ts';
+import { closeGap, columns, conflictOr404, ensureCollectorProfile, findOr404, idParam, isUuid, listParam, nextPosition, pageParams, pdfResponse, sameVersion } from './util.ts';
 
 type Trx = Transaction<Database>;
 
@@ -242,12 +242,11 @@ export function invoiceRoutes(deps: { storage?: Storage } = {}) {
     // ---------- Invoices ----------
 
     app.get('/invoices', async (c) => {
-        const status = c.req.query('status');
+        const statuses = listParam(c, 'status', invoiceStatus);
         const person = c.req.query('person');
-        if (status && !invoiceStatus.safeParse(status).success) throw new HttpError(400, 'Unknown status');
         if (person && !isUuid(person)) throw new HttpError(400, 'Invalid person');
         const { page, pageSize } = pageParams(c, INVOICES_PAGE_SIZE);
-        return c.json(await listInvoices(c.var.db, { status: status as InvoiceStatus | undefined, personId: person, q: c.req.query('q')?.trim() || undefined }, page, pageSize));
+        return c.json(await listInvoices(c.var.db, { statuses, personId: person, q: c.req.query('q')?.trim() || undefined }, page, pageSize));
     });
 
     app.post('/invoices', async (c) => {

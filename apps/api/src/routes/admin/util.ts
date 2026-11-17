@@ -54,6 +54,21 @@ export async function ensureCollectorProfile(trx: Transaction<Database> | DB, pe
 type Exec = Transaction<Database> | DB;
 
 /** `?page=&limit=` for numbered lists, validated (limit 1–100). */
+/**
+ * A filter given as comma-separated values (`?status=open,partial`), each checked with `schema`
+ * (400 for an unknown one). Empty when absent: no filter.
+ */
+export function listParam<T>(c: { req: { query: (k: string) => string | undefined } }, key: string, schema: { safeParse: (v: unknown) => { success: true; data: T } | { success: false } }, what = key): T[] {
+    return (c.req.query(key) ?? '')
+        .split(',')
+        .filter(Boolean)
+        .map((v) => {
+            const parsed = schema.safeParse(v);
+            if (!parsed.success) throw new HttpError(400, `Unknown ${what}`);
+            return parsed.data;
+        });
+}
+
 export function pageParams(c: { req: { query: (k: string) => string | undefined } }, defaultSize: number): { page: number; pageSize: number } {
     const page = Number(c.req.query('page') ?? 1);
     const pageSize = Number(c.req.query('limit') ?? defaultSize);

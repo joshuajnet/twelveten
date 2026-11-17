@@ -21,7 +21,7 @@ import { artworkLinks, getWork, listWorks, trackedValues, workHistory } from '..
 import { body, HttpError } from './errors.ts';
 import { ensureBaseline, recordRevision } from './revisions.ts';
 import { createArtistProfile } from './people.ts';
-import { closeGap, columns, conflictOr404, ensureCollectorProfile, findOr404, idParam, isUuid, nextPosition, pageParams, reorder, sameVersion, touch, uniqueSlug } from './util.ts';
+import { closeGap, columns, conflictOr404, ensureCollectorProfile, findOr404, idParam, isUuid, listParam, nextPosition, pageParams, reorder, sameVersion, touch, uniqueSlug } from './util.ts';
 
 type Trx = Transaction<Database>;
 
@@ -122,13 +122,12 @@ export function inventoryRoutes() {
 
     app.get('/works', async (c) => {
         const artist = c.req.query('artist');
-        const status = c.req.query('status');
+        const statuses = listParam(c, 'status', workStatus);
         const location = c.req.query('location');
         if (artist && !isUuid(artist)) throw new HttpError(400, 'Invalid artist');
-        if (status && !workStatus.safeParse(status).success) throw new HttpError(400, 'Unknown status');
         if (location && !workLocation.safeParse(location).success) throw new HttpError(400, 'Unknown location');
         const { page, pageSize } = pageParams(c, WORKS_PAGE_SIZE);
-        return c.json(await listWorks(c.var.db, { artistId: artist, status: status as never, location, q: c.req.query('q')?.trim() || undefined }, page, pageSize));
+        return c.json(await listWorks(c.var.db, { artistId: artist, statuses, location, q: c.req.query('q')?.trim() || undefined }, page, pageSize));
     });
 
     app.post('/works', async (c) => {
