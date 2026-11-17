@@ -369,15 +369,7 @@ const setPriceMode = (w: RoomWorkSettings, v: string) => (w.showPrice = v === 'i
                 {{ saving ? 'Saving…' : isNew ? 'Create room' : 'Save' }}
             </button>
             <Menu v-if="room" :items="settingsItems" label="Room settings" :trigger-class="btnGhost">
-                <template #trigger>
-                    <svg viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5" aria-hidden="true">
-                        <path
-                            fill-rule="evenodd"
-                            d="M8.34 1.8A1 1 0 0 1 9.32 1h1.36a1 1 0 0 1 .98.8l.28 1.4c.53.2 1.02.48 1.47.83l1.35-.46a1 1 0 0 1 1.19.45l.68 1.18a1 1 0 0 1-.2 1.25l-1.07.95a6.1 6.1 0 0 1 0 1.7l1.07.95a1 1 0 0 1 .2 1.25l-.68 1.18a1 1 0 0 1-1.19.45l-1.35-.46c-.45.35-.94.63-1.47.83l-.28 1.4a1 1 0 0 1-.98.8H9.32a1 1 0 0 1-.98-.8l-.28-1.4a5.9 5.9 0 0 1-1.47-.83l-1.35.46a1 1 0 0 1-1.19-.45l-.68-1.18a1 1 0 0 1 .2-1.25l1.07-.95a6.1 6.1 0 0 1 0-1.7l-1.07-.95a1 1 0 0 1-.2-1.25l.68-1.18a1 1 0 0 1 1.19-.45l1.35.46c.45-.35.94-.63 1.47-.83l.28-1.4ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
-                            clip-rule="evenodd"
-                        />
-                    </svg>
-                </template>
+                <template #trigger><i class="las la-cog text-xl leading-none" aria-hidden="true" /></template>
             </Menu>
         </div>
 
