@@ -478,8 +478,8 @@ const setPriceMode = (w: RoomWorkSettings, v: string) => (w.showPrice = v === 'i
                         </select>
                     </label>
                     <label class="flex items-center gap-1 text-xs" :class="w.work.status !== 'available' ? 'font-medium text-amber-900' : 'text-slate-600'">
-                        <input v-model="w.hidden" type="checkbox" class="h-3.5 w-3.5" />
-                        Hide from viewers
+                        <input v-model="w.hidden" type="checkbox" class="h-3.5 w-3.5" :aria-label="`Hide ${w.work.title} from viewers`" />
+                        Hide
                     </label>
                     <button type="button" class="text-xs text-red-700 hover:underline" :aria-label="`Remove ${w.work.title}`" @click="removeWork(w.workId)">Remove</button>
                     </div>
