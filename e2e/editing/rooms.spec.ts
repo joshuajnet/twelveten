@@ -318,3 +318,37 @@ test('the PDF can be hidden from visitors, then removed', async ({ page, browser
     await expect(page.getByRole('link', { name: 'Download PDF' })).toHaveCount(0);
     expect((await page.request.get(`/api/admin/rooms/${state.roomId}/room.pdf`)).status()).toBe(404);
 });
+
+test('a room is duplicated as a draft, and closed rooms are hidden from the list until asked for', async ({ page }) => {
+    await page.goto(`/admin/rooms/${state.roomId}`);
+    await page.getByTestId('duplicate-room').click();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(`${TITLE} (copy)`);
+    const copyId = page.url().split('/').pop()!;
+    expect(copyId).not.toBe(state.roomId);
+    await expect(page.getByTestId('room-works').locator('li')).toHaveCount(2);
+    await expect(page.getByTestId('room-link')).not.toHaveValue(state.link);
+
+    // Close the original: it leaves the default list, and ticking Closed brings it back.
+    await page.goto(`/admin/rooms/${state.roomId}`);
+    await page.getByLabel('Status', { exact: true }).selectOption('closed');
+    await page.getByTestId('save-room').click();
+    await expect(page.getByText('● Unsaved changes')).toHaveCount(0);
+
+    await page.goto(`/admin/rooms?q=${encodeURIComponent(TITLE)}`);
+    const rows = page.getByTestId('room-row');
+    await expect(rows).toHaveCount(1);
+    await expect(rows.first()).toContainText(`${TITLE} (copy)`);
+    await page.getByTestId('room-status-filter').getByLabel('Closed').check();
+    await expect(rows).toHaveCount(2);
+    await expect(page).toHaveURL(/status=draft%2Clive%2Cclosed|status=draft,live,closed/);
+    await page.reload();
+    await expect(rows).toHaveCount(2);
+
+    // Only Closed; the last ticked status can't be unticked.
+    const filter = page.getByTestId('room-status-filter');
+    await filter.getByLabel('Draft').uncheck();
+    await filter.getByLabel('Live').uncheck();
+    await expect(rows).toHaveCount(1);
+    await expect(rows.first()).not.toContainText('(copy)');
+    await expect(filter.getByLabel('Closed')).toBeDisabled();
+});

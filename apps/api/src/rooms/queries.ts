@@ -142,9 +142,9 @@ function toRoomSummary(r: ViewingRoomRow & { works: number | null; visitors: num
     };
 }
 
-export async function listRooms(db: Q, f: { q?: string; status?: RoomStatus }, page: number, pageSize: number): Promise<NumberedPage<RoomSummary>> {
+export async function listRooms(db: Q, f: { q?: string; statuses?: RoomStatus[] }, page: number, pageSize: number): Promise<NumberedPage<RoomSummary>> {
     let q = summaryRoomQuery(db).orderBy('r.created_at', 'desc').orderBy('r.id', 'desc');
-    if (f.status) q = q.where('r.status', '=', f.status);
+    if (f.statuses?.length) q = q.where('r.status', 'in', f.statuses);
     if (f.q) q = q.where('r.title', 'ilike', likePattern(f.q));
     return numberedPage(q, page, pageSize, (r) => toRoomSummary(r as never));
 }

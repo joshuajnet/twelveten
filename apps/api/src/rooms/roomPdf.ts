@@ -9,7 +9,7 @@ import { pdfmake, useGalleryFonts } from '../lib/pdf.ts';
  */
 
 /** Bump when the layout changes, so cached exports are regenerated. */
-export const ROOM_PDF_LAYOUT_VERSION = 4;
+export const ROOM_PDF_LAYOUT_VERSION = 5;
 
 export const PAGE_W = 841.89;
 export const PAGE_H = 595.28;
@@ -252,7 +252,7 @@ function bioPage(m: RoomPdfModel, bio: RoomPdfModel['bios'][number], images: Roo
     // Centered on the page by measured height (the inset keeps long bios off the edges).
     out.push(
         vbox({ x: (PAGE_W - width) / 2, y: TEXT_INSET, w: width, h: PAGE_H - 2 * TEXT_INSET }, 'middle', {
-            stack: [{ text: bio.name, fontSize: size + 4, margin: [0, 0, 0, size * 0.6] }, ...bio.paragraphs.map((p) => ({ text: p, margin: [0, 0, 0, size * 0.5] }) as Content)],
+            stack: [{ text: bio.name, fontSize: size + 4, margin: [0, 0, 0, size * 0.6] }, ...bio.paragraphs.map((p) => ({ text: p, alignment: 'justify', margin: [0, 0, 0, size * 0.5] }) as Content)],
             fontSize: size,
             lineHeight: 1.2,
             color,

@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { RouterLink } from 'vue-router';
-import { ROOM_STATUSES, ROOMS_PAGE_SIZE, roomStatus, type RoomSummary } from '@twelveten/shared';
+import { computed } from 'vue';
+import { RouterLink, useRouter } from 'vue-router';
+import { ROOM_STATUSES, ROOMS_PAGE_SIZE, roomStatus, type RoomStatus, type RoomSummary } from '@twelveten/shared';
+import { errorMessage } from '@/admin/api';
 import { toast } from '@/admin/state';
 import { btnGhost, btnPrimary } from '@/admin/ui/buttons';
 import { boApi, roomUrl } from '../api';
@@ -10,14 +12,41 @@ import RoomStatusBadge from './RoomStatusBadge.vue';
 import { when } from './time';
 import ArtImage from '@/components/ArtImage.vue';
 
-/** Every viewing room, newest first, with search and a status filter. */
-const { q, page, enumParam, setQuery, goToPage, search } = useListQuery();
-const status = enumParam('status', roomStatus);
+/** Viewing rooms, newest first, with search and a status filter (Draft and Live unless the admin picks others). */
+const { q, page, param, setQuery, goToPage, search } = useListQuery();
+const router = useRouter();
+
+const ALL_STATUSES = roomStatus.options;
+const DEFAULT_STATUSES: RoomStatus[] = ['draft', 'live'];
+const statusParam = param('status');
+/** `?status=draft,live,closed`; absent (or nothing valid) means the default. */
+const statuses = computed<RoomStatus[]>(() => {
+    const picked = new Set((statusParam.value ?? '').split(',').filter((s): s is RoomStatus => roomStatus.safeParse(s).success));
+    return picked.size ? ALL_STATUSES.filter((s) => picked.has(s)) : DEFAULT_STATUSES;
+});
+const isDefaultStatuses = computed(() => statuses.value.join() === DEFAULT_STATUSES.join());
+
+function toggleStatus(s: RoomStatus, on: boolean) {
+    const next = ALL_STATUSES.filter((x) => (x === s ? on : statuses.value.includes(x)));
+    if (!next.length) return; // keep at least one
+    setQuery({ status: next.join() === DEFAULT_STATUSES.join() ? null : next.join(',') });
+}
+
 const { result, loading, error } = usePagedList(
-    [q, status, page],
-    () => boApi.rooms({ q: q.value, status: status.value, page: page.value, limit: ROOMS_PAGE_SIZE }),
+    [q, statuses, page],
+    () => boApi.rooms({ q: q.value, statuses: statuses.value.length === ALL_STATUSES.length ? [] : statuses.value, page: page.value, limit: ROOMS_PAGE_SIZE }),
     goToPage,
 );
+
+async function duplicate(r: RoomSummary) {
+    try {
+        const copy = await boApi.duplicateRoom(r.id);
+        toast('Room duplicated', 'success');
+        await router.push({ name: 'bo-room', params: { id: copy.id } });
+    } catch (e) {
+        toast(errorMessage(e), 'error');
+    }
+}
 
 async function copy(r: RoomSummary) {
     try {
@@ -42,13 +71,21 @@ async function copy(r: RoomSummary) {
                 <span class="block text-xs font-medium text-slate-600">Search</span>
                 <input v-model="search" type="search" aria-label="Search rooms" placeholder="Title…" class="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm focus:border-sky-700 focus:outline-none" />
             </label>
-            <label class="block">
-                <span class="block text-xs font-medium text-slate-600">Status</span>
-                <select :value="status ?? ''" aria-label="Status" class="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm" @change="setQuery({ status: ($event.target as HTMLSelectElement).value || null })">
-                    <option value="">Any status</option>
-                    <option v-for="(label, key) in ROOM_STATUSES" :key="key" :value="key">{{ label }}</option>
-                </select>
-            </label>
+            <fieldset class="block">
+                <legend class="block text-xs font-medium text-slate-600">Status</legend>
+                <div class="mt-1 flex flex-wrap gap-3 py-1.5 text-sm" data-testid="room-status-filter">
+                    <label v-for="s in ALL_STATUSES" :key="s" class="inline-flex items-center gap-1.5">
+                        <input
+                            type="checkbox"
+                            class="h-3.5 w-3.5"
+                            :checked="statuses.includes(s)"
+                            :disabled="statuses.length === 1 && statuses.includes(s)"
+                            @change="toggleStatus(s, ($event.target as HTMLInputElement).checked)"
+                        />
+                        {{ ROOM_STATUSES[s] }}
+                    </label>
+                </div>
+            </fieldset>
         </div>
 
         <p v-if="error" class="mb-3 rounded bg-red-50 px-3 py-2 text-sm text-red-800">{{ error }}</p>
@@ -83,13 +120,15 @@ async function copy(r: RoomSummary) {
                         <td class="px-3 py-2 text-slate-600">{{ when(r.lastVisitAt) }}</td>
                         <td class="whitespace-nowrap px-3 py-2 text-right">
                             <button type="button" :class="btnGhost" @click="copy(r)">Copy link</button>
+                            <button type="button" :class="btnGhost" :data-testid="`duplicate-${r.id}`" @click="duplicate(r)">Duplicate</button>
                             <RouterLink :to="{ name: 'bo-room-dashboard', params: { id: r.id } }" :class="btnGhost">Dashboard</RouterLink>
                         </td>
                     </tr>
                 </tbody>
             </table>
             <p v-if="result && !result.items.length" class="py-10 text-center text-sm text-slate-500">
-                {{ q || status ? 'No rooms match.' : 'No viewing rooms yet. Create one to share a private selection of works.' }}
+                <template v-if="q || !isDefaultStatuses">No rooms match.</template>
+                <template v-else>No draft or live rooms. Closed rooms are hidden — tick Closed to see them, or create a new room.</template>
             </p>
         </div>
         <Pagination v-if="result" class="mt-4" :page="result.page" :page-size="result.pageSize" :total="result.total" label="rooms" @page="goToPage" />

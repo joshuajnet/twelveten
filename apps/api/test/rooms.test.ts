@@ -93,6 +93,48 @@ describe('admin rooms', () => {
         const { room } = await setupRoom('Artist List');
         expect((await call('PUT', `/admin/rooms/${room.id}/artists`, { artists: [] })).status).toBe(400);
     });
+
+    it('duplicates a room as a new draft with the same works and artist settings', async () => {
+        const { room, works, artist, press } = await setupRoom('Dup Room', { subtitle: 'Miami 2026', showPrices: true, hideUnavailable: true });
+        const live = await call('PATCH', `/admin/rooms/${room.id}`, { updatedAt: room.updatedAt, status: 'live', opensAt: '2026-01-01T00:00:00Z', closesAt: '2030-01-01T00:00:00Z', coverImage: '/media/cover.jpg', pdfHidden: true });
+        expect(live.status).toBe(200);
+        await call('PUT', `/admin/rooms/${room.id}/works`, { works: [works[2]!.id, works[0]!.id].map((id, i) => ({ workId: id, showPrice: i === 0 ? false : null, hidden: i === 1 })) });
+        await call('PUT', `/admin/rooms/${room.id}/artists`, { artists: [{ artistId: artist.id, showBio: false, showCv: true, showPress: true, hiddenPressIds: [press[0].id], bioBackgroundColor: '#112233' }] });
+        const source = (await call('GET', `/admin/rooms/${room.id}`)).body;
+
+        const res = await call('POST', `/admin/rooms/${room.id}/duplicate`);
+        expect(res.status).toBe(201);
+        const copy = res.body;
+        expect(copy.id).not.toBe(room.id);
+        expect(copy.token).not.toBe(room.token);
+        expect(copy).toMatchObject({ title: 'Dup Room (copy)', subtitle: 'Miami 2026', status: 'draft', opensAt: null, closesAt: null, showPrices: true, hideUnavailable: true, coverImage: '/media/cover.jpg', pdfHidden: true, visitors: 0 });
+        expect(copy.intro).toEqual(source.intro);
+        expect(copy.works.map((w: any) => [w.workId, w.showPrice, w.hidden])).toEqual([
+            [works[2]!.id, false, false],
+            [works[0]!.id, null, true],
+        ]);
+        expect(copy.artists).toHaveLength(1);
+        expect(copy.artists[0]).toMatchObject({ artistId: artist.id, showBio: false, showCv: true, showPress: true, hiddenPressIds: [press[0].id], bioBackgroundColor: '#112233' });
+        expect((await call('GET', `/admin/rooms/${copy.id}/pdf`)).body).toBeNull();
+        const revs = await db.selectFrom('content_revisions').select('action').where('entity', '=', 'viewing_room').where('entity_id', '=', copy.id).execute();
+        expect(revs.map((r) => r.action)).toEqual(['create']);
+
+        // The source is untouched.
+        expect((await call('GET', `/admin/rooms/${room.id}`)).body).toMatchObject({ title: 'Dup Room', status: 'live', token: room.token, updatedAt: source.updatedAt });
+        expect((await call('POST', `/admin/rooms/00000000-0000-4000-8000-000000000000/duplicate`)).status).toBe(404);
+    });
+
+    it('lists rooms by one or more statuses', async () => {
+        const tag = `Status ${Date.now()}`;
+        const draft = (await call('POST', '/admin/rooms', { title: `${tag} draft` })).body;
+        const live = (await call('POST', '/admin/rooms', { title: `${tag} live`, status: 'live' })).body;
+        const closed = (await call('POST', '/admin/rooms', { title: `${tag} closed`, status: 'closed' })).body;
+        const ids = async (qs: string) => (await call('GET', `/admin/rooms?q=${encodeURIComponent(tag)}${qs}`)).body.items.map((r: any) => r.id).sort();
+        expect(await ids('&status=draft,live')).toEqual([draft.id, live.id].sort());
+        expect(await ids('&status=closed')).toEqual([closed.id]);
+        expect(await ids('')).toEqual([draft.id, live.id, closed.id].sort());
+        expect((await call('GET', '/admin/rooms?status=live,gone')).status).toBe(400);
+    });
 });
 
 describe('viewing a room', () => {

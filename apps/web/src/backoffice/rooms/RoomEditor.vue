@@ -276,6 +276,21 @@ async function newLink() {
     }
 }
 
+// ---- Duplicate ----
+const duplicating = ref(false);
+async function duplicate() {
+    duplicating.value = true;
+    try {
+        const copy = await boApi.duplicateRoom(id.value);
+        toast('Room duplicated', 'success');
+        await router.push({ name: 'bo-room', params: { id: copy.id } });
+    } catch (e) {
+        toast(errorMessage(e), 'error');
+    } finally {
+        duplicating.value = false;
+    }
+}
+
 // ---- Delete / history ----
 const historyOpen = ref(false);
 const confirmDelete = ref(false);
@@ -319,6 +334,7 @@ const setPriceMode = (w: RoomWorkSettings, v: string) => (w.showPrice = v === 'i
             <span v-if="dirty && !isNew" class="text-xs text-amber-700">● Unsaved changes</span>
             <template v-if="room">
                 <RouterLink :to="{ name: 'bo-room-dashboard', params: { id: room.id } }" :class="btnOutline">Dashboard</RouterLink>
+                <button type="button" :class="btnGhost" :disabled="duplicating || dirty" :title="dirty ? 'Save first: the copy is made from the saved room' : 'A new draft room with the same works and settings'" data-testid="duplicate-room" @click="duplicate">Duplicate</button>
                 <button type="button" :class="btnGhost" @click="historyOpen = true">History</button>
             </template>
             <button type="button" :class="btnPrimary" :disabled="saving || !dirty" title="Save (Ctrl+S)" data-testid="save-room" @click="save()">

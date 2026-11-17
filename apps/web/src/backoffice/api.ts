@@ -77,7 +77,8 @@ export interface InvoiceQuery {
 
 export interface RoomQuery {
     q?: string;
-    status?: RoomStatus | null;
+    /** Only these statuses; empty or absent lists every room. */
+    statuses?: RoomStatus[];
     page?: number;
     limit?: number;
 }
@@ -139,7 +140,8 @@ export const boApi = {
     mergePerson: (id: string, input: PersonMerge) => send<Person>('POST', `/persons/${id}/merge`, input),
     putPersonEmails: (id: string, emails: string[]) => send<Person>('PUT', `/persons/${id}/emails`, { emails }),
 
-    rooms: (p: RoomQuery = {}) => send<NumberedPage<RoomSummary>>('GET', `/rooms${qs({ ...p })}`),
+    rooms: ({ statuses, ...p }: RoomQuery = {}) => send<NumberedPage<RoomSummary>>('GET', `/rooms${qs({ ...p, status: statuses?.join(',') || null })}`),
+    duplicateRoom: (id: string) => send<ViewingRoom>('POST', `/rooms/${id}/duplicate`),
     room: (id: string) => send<ViewingRoom>('GET', `/rooms/${id}`),
     createRoom: (input: RoomCreate) => send<ViewingRoom>('POST', '/rooms', input),
     patchRoom: (id: string, patch: RoomPatch) => send<ViewingRoom>('PATCH', `/rooms/${id}`, patch),
