@@ -35,7 +35,7 @@ async function load() {
     const mine = ++seq;
     loading.value = true;
     try {
-        const r = await boApi.works({ q: q.value.trim(), status: status.value || null, page: page.value, limit: props.pageSize });
+        const r = await boApi.works({ q: q.value.trim(), statuses: status.value ? [status.value] : [], page: page.value, limit: props.pageSize });
         if (mine === seq) result.value = r;
     } catch (e) {
         if (mine === seq) toast(errorMessage(e), 'error');

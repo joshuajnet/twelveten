@@ -61,15 +61,20 @@ export interface PersonQuery {
 export interface WorkQuery {
     q?: string;
     artist?: string | null;
-    status?: WorkStatus | null;
+    /** Only these statuses; empty or absent lists every work. */
+    statuses?: WorkStatus[];
     location?: string | null;
     page?: number;
     limit?: number;
 }
 
+/** A list filter as the API takes it: comma-separated, or nothing. */
+const csv = (values?: readonly string[]) => (values?.length ? values.join(',') : null);
+
 export interface InvoiceQuery {
     q?: string;
-    status?: InvoiceStatus | null;
+    /** Only these statuses; empty or absent lists every invoice. */
+    statuses?: InvoiceStatus[];
     person?: string | null;
     page?: number;
     limit?: number;
@@ -103,7 +108,7 @@ export const boApi = {
     patchAddressLink: (linkId: string, patch: AddressLinkPatch) => send<{ items: AddressLink[] }>('PATCH', `/address-links/${linkId}`, patch).then((r) => r.items),
     detachAddress: (linkId: string) => send<{ items: AddressLink[] }>('DELETE', `/address-links/${linkId}`).then((r) => r.items),
 
-    works: (p: WorkQuery = {}) => send<NumberedPage<WorkSummary>>('GET', `/works${qs({ ...p })}`),
+    works: ({ statuses, ...p }: WorkQuery = {}) => send<NumberedPage<WorkSummary>>('GET', `/works${qs({ ...p, status: csv(statuses) })}`),
     work: (id: string) => send<Work>('GET', `/works/${id}`),
     createWork: (input: WorkCreate) => send<Work>('POST', '/works', input),
     patchWork: (id: string, patch: WorkPatch) => send<Work>('PATCH', `/works/${id}`, patch),
@@ -117,7 +122,7 @@ export const boApi = {
     putCollectorProfile: (id: string, input: CollectorProfilePut) => send<Person>('PUT', `/persons/${id}/collector-profile`, input),
     deleteCollectorProfile: (id: string) => send<Person>('DELETE', `/persons/${id}/collector-profile`),
 
-    invoices: (p: InvoiceQuery = {}) => send<NumberedPage<InvoiceSummary>>('GET', `/invoices${qs({ ...p })}`),
+    invoices: ({ statuses, ...p }: InvoiceQuery = {}) => send<NumberedPage<InvoiceSummary>>('GET', `/invoices${qs({ ...p, status: csv(statuses) })}`),
     invoice: (id: string) => send<Invoice>('GET', `/invoices/${id}`),
     createInvoice: (input: InvoiceCreate) => send<Invoice>('POST', '/invoices', input),
     patchInvoice: (id: string, patch: InvoicePatch) => send<Invoice>('PATCH', `/invoices/${id}`, patch),
@@ -140,7 +145,7 @@ export const boApi = {
     mergePerson: (id: string, input: PersonMerge) => send<Person>('POST', `/persons/${id}/merge`, input),
     putPersonEmails: (id: string, emails: string[]) => send<Person>('PUT', `/persons/${id}/emails`, { emails }),
 
-    rooms: ({ statuses, ...p }: RoomQuery = {}) => send<NumberedPage<RoomSummary>>('GET', `/rooms${qs({ ...p, status: statuses?.join(',') || null })}`),
+    rooms: ({ statuses, ...p }: RoomQuery = {}) => send<NumberedPage<RoomSummary>>('GET', `/rooms${qs({ ...p, status: csv(statuses) })}`),
     duplicateRoom: (id: string) => send<ViewingRoom>('POST', `/rooms/${id}/duplicate`),
     room: (id: string) => send<ViewingRoom>('GET', `/rooms/${id}`),
     createRoom: (input: RoomCreate) => send<ViewingRoom>('POST', '/rooms', input),

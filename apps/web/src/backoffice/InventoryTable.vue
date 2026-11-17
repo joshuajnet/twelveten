@@ -16,19 +16,19 @@ import ArtImage from '@/components/ArtImage.vue';
 const props = defineProps<{
   q: string;
   artist: string | null;
-  status: WorkStatus | null;
+  statuses: WorkStatus[];
   location: string | null;
   page: number;
 }>();
 const emit = defineEmits<{ page: [page: number] }>();
 
 const { result, loading, error, reload } = usePagedList(
-  () => [props.q, props.artist, props.status, props.location, props.page],
+  () => [props.q, props.artist, props.statuses, props.location, props.page],
   () =>
     boApi.works({
       q: props.q,
       artist: props.artist,
-      status: props.status,
+      statuses: props.statuses,
       location: props.location,
       page: props.page,
       limit: WORKS_PAGE_SIZE,

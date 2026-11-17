@@ -65,7 +65,8 @@ function toSummary(r: SummaryRow): InvoiceSummary {
 }
 
 export interface InvoiceFilters {
-    status?: InvoiceStatus;
+    /** Only these statuses; empty or absent: every invoice. */
+    statuses?: InvoiceStatus[];
     personId?: string;
     q?: string;
 }
@@ -73,7 +74,7 @@ export interface InvoiceFilters {
 /** Newest first, one numbered page at a time. */
 export async function listInvoices(db: Q, f: InvoiceFilters, page: number, pageSize: number): Promise<NumberedPage<InvoiceSummary>> {
     let q = summaryQuery(db).orderBy('i.issued_on', 'desc').orderBy('i.created_at', 'desc').orderBy('i.id', 'desc');
-    if (f.status) q = q.where('i.status', '=', f.status);
+    if (f.statuses?.length) q = q.where('i.status', 'in', f.statuses);
     if (f.personId) q = q.where('i.person_id', '=', f.personId);
     if (f.q) {
         const like = likePattern(f.q);

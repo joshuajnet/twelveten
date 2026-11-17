@@ -267,10 +267,17 @@ test('inventory is paginated, with filters in the URL', async ({ page }) => {
     await expect(page).toHaveURL(/page=2/);
     await expect(page.getByText(/^Showing 26–\d+ of \d+ works$/)).toBeVisible();
     await expect(page.locator('tbody tr').first()).not.toHaveText(firstTitle!);
-    // A filter change goes back to page 1.
-    await page.getByLabel('Status').selectOption('nfs');
+    // A filter change goes back to page 1. Status is Available and On hold until changed.
+    const status = page.getByTestId('work-status-filter');
+    await expect(status).toHaveText('Available, On hold');
+    await status.click();
+    await page.getByRole('menuitemcheckbox', { name: 'Not for sale' }).click();
+    await page.getByRole('menuitemcheckbox', { name: 'Available' }).click();
+    await page.getByRole('menuitemcheckbox', { name: 'On hold' }).click();
+    await page.keyboard.press('Escape');
+    await expect(status).toHaveText('Not for sale');
     await expect(page).not.toHaveURL(/page=/);
-    await expect(page).toHaveURL(/status=nfs/);
+    await expect(page).toHaveURL(/status=nfs$/);
     await expect(page.locator('tbody tr').first()).toContainText('Not for sale');
 });
 
@@ -400,6 +407,8 @@ test('invoices screen: a new invoice for a new buyer with works by two artists',
         const b = (await (await api(page).send('POST', '/works', { artistId: two.id, title: 'E2E Pick B', priceCents: 50000 })).json()) as { id: string };
 
         await page.goto('/admin/invoices');
+        // Unpaid invoices by default.
+        await expect(page.getByTestId('invoice-status-filter')).toHaveText('Open, Partial payment');
         await page.getByRole('link', { name: '+ New invoice' }).click();
         await expect(page).toHaveURL(/\/admin\/invoices\/new$/);
 

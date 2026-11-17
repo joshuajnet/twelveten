@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router';
-import { formatDate, INVOICE_STATUSES, INVOICES_PAGE_SIZE, invoiceStatus } from '@twelveten/shared';
+import { formatDate, INVOICE_STATUSES, INVOICES_PAGE_SIZE, invoiceStatus, type InvoiceStatus } from '@twelveten/shared';
+import MultiSelect from '@/admin/ui/MultiSelect.vue';
 import { btnOutline, btnPrimary } from '@/admin/ui/buttons';
 import { boApi } from './api';
 import { money } from './format';
@@ -8,13 +9,15 @@ import StatusBadge from './StatusBadge.vue';
 import Pagination from './Pagination.vue';
 import { useListQuery, usePagedList } from './useListQuery';
 
-/** Every invoice, newest first, filterable by status and searchable by number, collector or work. */
-const { q, page, enumParam, setQuery, goToPage, search } = useListQuery();
-const status = enumParam('status', invoiceStatus);
+/** Invoices, newest first, filtered by status (Open and Partial payment unless chosen otherwise) and searchable by number, collector or work. */
+const { q, page, listParam, goToPage, search } = useListQuery();
+const DEFAULT_STATUSES: InvoiceStatus[] = ['open', 'partial'];
+const statuses = listParam('status', invoiceStatus.options, DEFAULT_STATUSES);
+const statusOptions = invoiceStatus.options.map((value) => ({ value, label: INVOICE_STATUSES[value] }));
 
 const { result, loading, error } = usePagedList(
-    [q, status, page],
-    () => boApi.invoices({ q: q.value, status: status.value, page: page.value, limit: INVOICES_PAGE_SIZE }),
+    [q, statuses, page],
+    () => boApi.invoices({ q: q.value, statuses: statuses.value, page: page.value, limit: INVOICES_PAGE_SIZE }),
     goToPage,
 );
 </script>
@@ -39,13 +42,7 @@ const { result, loading, error } = usePagedList(
                     class="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm focus:border-sky-700 focus:outline-none"
                 />
             </label>
-            <label class="block">
-                <span class="block text-xs font-medium text-slate-600">Status</span>
-                <select :value="status ?? ''" aria-label="Status" class="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm" @change="setQuery({ status: ($event.target as HTMLSelectElement).value || null })">
-                    <option value="">Any status</option>
-                    <option v-for="(label, key) in INVOICE_STATUSES" :key="key" :value="key">{{ label }}</option>
-                </select>
-            </label>
+            <MultiSelect v-model="statuses" label="Status" :options="statusOptions" testid="invoice-status-filter" />
         </div>
 
         <p v-if="error" class="mb-3 rounded bg-red-50 px-3 py-2 text-sm text-red-800">{{ error }}</p>

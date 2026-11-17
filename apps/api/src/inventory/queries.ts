@@ -115,7 +115,8 @@ export async function collectionOf(db: Q, personId: string): Promise<CollectionA
 
 export interface WorkFilters {
     artistId?: string;
-    status?: WorkStatus;
+    /** Only these statuses; empty or absent: every work. */
+    statuses?: WorkStatus[];
     location?: string;
     q?: string;
 }
@@ -124,7 +125,7 @@ export interface WorkFilters {
 export async function listWorks(db: Q, f: WorkFilters, page: number, pageSize: number): Promise<NumberedPage<WorkSummary>> {
     let q = summaryQuery(db).orderBy('w.created_at', 'desc').orderBy('w.id', 'desc');
     if (f.artistId) q = q.where('w.artist_id', '=', f.artistId);
-    if (f.status) q = q.where('w.status', '=', f.status);
+    if (f.statuses?.length) q = q.where('w.status', 'in', f.statuses);
     if (f.location) q = q.where('w.location', '=', f.location as WorkLocationName);
     if (f.q) {
         const like = likePattern(f.q);

@@ -11,7 +11,6 @@ import {
     ROOMS_PAGE_SIZE,
     type ImageCrop,
     type PointerData,
-    type RoomStatus,
 } from '@twelveten/shared';
 import { sanitizeRichDoc } from '@twelveten/shared/rich/server';
 import type { AppEnv } from '../../env.ts';
@@ -23,7 +22,7 @@ import { generateRoomPdf, roomPdfDownload, roomPdfStatus, withdrawRoomPdf } from
 import type { Storage } from '../../storage/uploads.ts';
 import { body, HttpError } from './errors.ts';
 import { ensureBaseline, recordRevision } from './revisions.ts';
-import { columns, conflictOr404, findOr404, idParam, isUuid, pageParams, sameVersion, touch } from './util.ts';
+import { columns, conflictOr404, listParam, findOr404, idParam, isUuid, pageParams, sameVersion, touch } from './util.ts';
 
 type Trx = Transaction<Database>;
 
@@ -124,13 +123,7 @@ export function roomRoutes(deps: { storage?: Storage } = {}) {
         recordRevision(trx, { entity: 'viewing_room', entityId: id, action, snapshot: await roomSnapshot(trx, id), userId });
 
     app.get('/rooms', async (c) => {
-        // status: one or more comma-separated statuses; absent means every room.
-        const statuses: RoomStatus[] = [];
-        for (const s of (c.req.query('status') ?? '').split(',').filter(Boolean)) {
-            const parsed = roomStatus.safeParse(s);
-            if (!parsed.success) throw new HttpError(400, 'Unknown status');
-            statuses.push(parsed.data);
-        }
+        const statuses = listParam(c, 'status', roomStatus);
         const { page, pageSize } = pageParams(c, ROOMS_PAGE_SIZE);
         return c.json(await listRooms(c.var.db, { q: c.req.query('q')?.trim() || undefined, statuses }, page, pageSize));
     });

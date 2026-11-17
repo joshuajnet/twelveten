@@ -14,26 +14,18 @@ import CroppedImage from './CroppedImage.vue';
 import MultiSelect from '@/admin/ui/MultiSelect.vue';
 
 /** Viewing rooms, newest first, with search and a status filter (Draft and Live unless the admin picks others). */
-const { q, page, param, setQuery, goToPage, search } = useListQuery();
+const { q, page, listParam, goToPage, search } = useListQuery();
 const router = useRouter();
 
 const ALL_STATUSES = roomStatus.options;
 const DEFAULT_STATUSES: RoomStatus[] = ['draft', 'live'];
-const statusParam = param('status');
-/** `?status=draft,live,closed`; absent (or nothing valid) means the default. */
-const statuses = computed<RoomStatus[]>({
-    get: () => {
-        const picked = new Set((statusParam.value ?? '').split(',').filter((s): s is RoomStatus => roomStatus.safeParse(s).success));
-        return picked.size ? ALL_STATUSES.filter((s) => picked.has(s)) : DEFAULT_STATUSES;
-    },
-    set: (next) => setQuery({ status: next.join() === DEFAULT_STATUSES.join() ? null : next.join(',') }),
-});
+const statuses = listParam('status', ALL_STATUSES, DEFAULT_STATUSES);
 const isDefaultStatuses = computed(() => statuses.value.join() === DEFAULT_STATUSES.join());
 const statusOptions = ALL_STATUSES.map((value) => ({ value, label: ROOM_STATUSES[value] }));
 
 const { result, loading, error } = usePagedList(
     [q, statuses, page],
-    () => boApi.rooms({ q: q.value, statuses: statuses.value.length === ALL_STATUSES.length ? [] : statuses.value, page: page.value, limit: ROOMS_PAGE_SIZE }),
+    () => boApi.rooms({ q: q.value, statuses: statuses.value, page: page.value, limit: ROOMS_PAGE_SIZE }),
     goToPage,
 );
 
