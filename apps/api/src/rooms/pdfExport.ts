@@ -3,7 +3,7 @@ import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand } from '@aws-sd
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { sql } from 'kysely';
 import sharp from 'sharp';
-import { derivedUrl, htmlToText, isDerivable, slugify, type RoomPdfStatus } from '@twelveten/shared';
+import { derivedUrl, htmlToText, isDerivable, slugify, type ImageCrop, type RoomPdfStatus } from '@twelveten/shared';
 import type { DB } from '../db/index.ts';
 import type { ViewingRoomRow } from '../db/types.ts';
 import { config } from '../config.ts';
@@ -46,7 +46,7 @@ export async function roomPdfModel(db: DB, room: ViewingRoomRow): Promise<RoomPd
     const [view, settings, backgrounds] = await Promise.all([
         publicRoom(db, room, null, null),
         getSettings(db),
-        db.selectFrom('viewing_room_artists').select(['artist_id', 'bio_background', 'bio_background_color']).where('room_id', '=', room.id).execute(),
+        db.selectFrom('viewing_room_artists').select(['artist_id', 'bio_background', 'bio_background_crop', 'bio_background_color']).where('room_id', '=', room.id).execute(),
     ]);
     const background = new Map(backgrounds.map((b) => [b.artist_id, b]));
     const artistNames = [...new Set(view.works.map((w) => w.artistName))];
@@ -56,6 +56,7 @@ export async function roomPdfModel(db: DB, room: ViewingRoomRow): Promise<RoomPd
         subtitle: room.subtitle,
         gallery: { name: settings.galleryName, email: settings.email, phone: settings.phone },
         cover: room.cover_image ?? firstImage,
+        coverCrop: room.cover_image ? room.cover_crop : null,
         works: view.works.map((w) => ({
             artistName: w.artistName,
             title: w.title,
@@ -69,6 +70,7 @@ export async function roomPdfModel(db: DB, room: ViewingRoomRow): Promise<RoomPd
         })),
         bios: view.artists.filter((a) => a.bioHtml).map((a) => ({ name: a.name, paragraphs: paragraphs(a.bioHtml!),
             background: background.get(a.id)?.bio_background ?? null,
+            crop: background.get(a.id)?.bio_background ? (background.get(a.id)?.bio_background_crop ?? null) : null,
             color: background.get(a.id)?.bio_background_color ?? null,
         })),
     };
@@ -116,9 +118,24 @@ async function readImage(storage: Storage | undefined, url: string, need: (size:
     return best;
 }
 
-async function toJpeg(input: Buffer, size: { width: number; height: number; fit: 'inside' | 'cover' }) {
-    const { data, info } = await sharp(input, { limitInputPixels: 200_000_000 })
-        .rotate()
+/** The crop in pixels of an image of this (oriented) size, kept inside it. */
+function cropPixels(crop: ImageCrop, size: { width: number; height: number }) {
+    const left = Math.min(size.width - 1, Math.max(0, Math.round(crop.x * size.width)));
+    const top = Math.min(size.height - 1, Math.max(0, Math.round(crop.y * size.height)));
+    return {
+        left,
+        top,
+        width: Math.max(1, Math.min(size.width - left, Math.round(crop.w * size.width))),
+        height: Math.max(1, Math.min(size.height - top, Math.round(crop.h * size.height))),
+    };
+}
+
+async function toJpeg(input: Buffer, size: { width: number; height: number; fit: 'inside' | 'cover' }, crop?: { crop: ImageCrop; source: { width: number; height: number } }) {
+    let img = sharp(input, { limitInputPixels: 200_000_000 });
+    // Orient first so the crop applies to the image as displayed.
+    if (crop) img = sharp(await img.rotate().toBuffer(), { limitInputPixels: 200_000_000 }).extract(cropPixels(crop.crop, crop.source));
+    else img = img.rotate();
+    const { data, info } = await img
         .flatten({ background: '#ffffff' })
         .resize({ ...size, withoutEnlargement: size.fit === 'inside' })
         .toColourspace('srgb')
@@ -138,7 +155,7 @@ export async function prepareRoomImages(storage: Storage | undefined, m: RoomPdf
     for (const w of m.works) if (w.image && !firstUse.has(w.image)) firstUse.set(w.image, w);
     const page = { width: pixelsFor(PAGE_W), height: pixelsFor(PAGE_H) };
 
-    type Job = { key: string; url: string; need: (s: { width: number; height: number }) => { width: number; height: number }; fit: 'inside' | 'cover' };
+    type Job = { key: string; url: string; need: (s: { width: number; height: number }) => { width: number; height: number }; fit: 'inside' | 'cover'; crop?: ImageCrop };
     const jobs: Job[] = [...firstUse].map(([url, w]) => ({
         key: url,
         url,
@@ -148,17 +165,23 @@ export async function prepareRoomImages(storage: Storage | undefined, m: RoomPdf
         },
         fit: 'inside',
     }));
-    // Full-page photos (cover, bio backgrounds): enough pixels for the image scaled to cover the page.
-    const pagePhotos = new Set([m.cover, ...m.bios.map((b) => b.background)].filter((u): u is string => Boolean(u)));
-    for (const url of pagePhotos) {
+    // Full-page photos (cover, bio backgrounds): enough pixels for the chosen area (else the whole
+    // image) scaled to cover the page.
+    const pagePhotos = new Map<string, { url: string; crop: ImageCrop | null }>();
+    for (const p of [{ url: m.cover, crop: m.coverCrop }, ...m.bios.map((b) => ({ url: b.background, crop: b.crop }))]) {
+        if (p.url) pagePhotos.set(pageKey(p.url, p.crop), { url: p.url, crop: p.crop });
+    }
+    for (const [key, { url, crop }] of pagePhotos) {
         jobs.push({
-            key: pageKey(url),
+            key,
             url,
             need: (size) => {
-                const scale = Math.max(page.width / size.width, page.height / size.height);
+                const area = crop ? { width: size.width * crop.w, height: size.height * crop.h } : size;
+                const scale = Math.max(page.width / area.width, page.height / area.height);
                 return { width: Math.ceil(size.width * scale), height: Math.ceil(size.height * scale) };
             },
             fit: 'cover',
+            crop: crop ?? undefined,
         });
     }
     // A few at a time keeps memory bounded.
@@ -169,7 +192,7 @@ export async function prepareRoomImages(storage: Storage | undefined, m: RoomPdf
                 if (!found) continue;
                 const target = job.fit === 'cover' ? page : job.need(found.size);
                 try {
-                    out.set(job.key, await toJpeg(found.buf, { ...target, fit: job.fit }));
+                    out.set(job.key, await toJpeg(found.buf, { ...target, fit: job.fit }, job.crop ? { crop: job.crop, source: found.size } : undefined));
                 } catch {
                     // Not an image sharp can read; the page is laid out without it.
                 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
-import { ROOM_STATUSES, ROOMS_PAGE_SIZE, roomStatus, type RoomStatus, type RoomSummary } from '@twelveten/shared';
+import { PDF_PAGE_ASPECT, ROOM_STATUSES, ROOMS_PAGE_SIZE, roomStatus, type RoomStatus, type RoomSummary } from '@twelveten/shared';
 import { errorMessage } from '@/admin/api';
 import { toast } from '@/admin/state';
 import { btnGhost, btnPrimary } from '@/admin/ui/buttons';
@@ -10,7 +10,7 @@ import Pagination from '../Pagination.vue';
 import { useListQuery, usePagedList } from '../useListQuery';
 import RoomStatusBadge from './RoomStatusBadge.vue';
 import { when } from './time';
-import ArtImage from '@/components/ArtImage.vue';
+import CroppedImage from './CroppedImage.vue';
 
 /** Viewing rooms, newest first, with search and a status filter (Draft and Live unless the admin picks others). */
 const { q, page, param, setQuery, goToPage, search } = useListQuery();
@@ -37,6 +37,13 @@ const { result, loading, error } = usePagedList(
     () => boApi.rooms({ q: q.value, statuses: statuses.value.length === ALL_STATUSES.length ? [] : statuses.value, page: page.value, limit: ROOMS_PAGE_SIZE }),
     goToPage,
 );
+
+/** A room that has gone live opens on its dashboard; a draft opens in the editor. The other view is a button. */
+function view(r: RoomSummary) {
+    const edit = { name: 'bo-room', params: { id: r.id } };
+    const dashboard = { name: 'bo-room-dashboard', params: { id: r.id } };
+    return r.status === 'draft' ? { main: edit, other: { to: dashboard, label: 'Dashboard' } } : { main: dashboard, other: { to: edit, label: 'Edit' } };
+}
 
 async function duplicate(r: RoomSummary) {
     try {
@@ -104,9 +111,10 @@ async function copy(r: RoomSummary) {
                 <tbody class="divide-y divide-slate-100">
                     <tr v-for="r in result?.items ?? []" :key="r.id" class="hover:bg-slate-50" data-testid="room-row">
                         <td class="px-3 py-2">
-                            <RouterLink :to="{ name: 'bo-room', params: { id: r.id } }" class="flex items-center gap-3 font-medium text-sky-900 hover:underline">
-                                <span class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded bg-slate-100">
-                                    <ArtImage sizes="48px" fit="cover" v-if="r.cover" :src="r.cover" alt="" class="h-full w-full object-cover" />
+                            <RouterLink :to="view(r).main" class="flex items-center gap-3 font-medium text-sky-900 hover:underline">
+                                <span class="w-14 shrink-0 overflow-hidden rounded bg-slate-100">
+                                    <CroppedImage v-if="r.cover" :url="r.cover" :crop="r.coverCrop" :aspect="PDF_PAGE_ASPECT" />
+                                    <span v-else class="block" :style="{ aspectRatio: String(PDF_PAGE_ASPECT) }" />
                                 </span>
                                 <span>
                                     {{ r.title }}
@@ -121,7 +129,7 @@ async function copy(r: RoomSummary) {
                         <td class="whitespace-nowrap px-3 py-2 text-right">
                             <button type="button" :class="btnGhost" @click="copy(r)">Copy link</button>
                             <button type="button" :class="btnGhost" :data-testid="`duplicate-${r.id}`" @click="duplicate(r)">Duplicate</button>
-                            <RouterLink :to="{ name: 'bo-room-dashboard', params: { id: r.id } }" :class="btnGhost">Dashboard</RouterLink>
+                            <RouterLink :to="view(r).other.to" :class="btnGhost">{{ view(r).other.label }}</RouterLink>
                         </td>
                     </tr>
                 </tbody>

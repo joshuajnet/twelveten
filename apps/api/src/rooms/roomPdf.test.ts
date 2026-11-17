@@ -22,8 +22,9 @@ const model = (o: Partial<RoomPdfModel> = {}): RoomPdfModel => ({
     subtitle: 'NADA Miami 2026',
     gallery: { name: 'Twelve Ten', email: 'gallery@example.com', phone: '+1 555-555-0100' },
     cover: '/media/p.jpg',
+    coverCrop: null,
     works: [work()],
-    bios: [{ name: 'Noelle Africh', paragraphs: ['Lives and works in Chicago.'], background: null, color: null }],
+    bios: [{ name: 'Noelle Africh', paragraphs: ['Lives and works in Chicago.'], background: null, crop: null, color: null }],
     ...o,
 });
 
@@ -90,7 +91,7 @@ describe('room PDF document', () => {
         const photo = await sharp({ create: { width: 40, height: 28, channels: 3, background: '#888' } }).jpeg().toBuffer();
         const images: RoomPdfImages = new Map([[pageKey('/media/bio.jpg'), { data: photo, width: 40, height: 28 }]]);
         const bioPage = (background: string | null, color: string | null = null) =>
-            pages(roomPdfDocument(model({ bios: [{ name: 'N', paragraphs: ['Bio.'], background, color }] }), images).content as Content[])[2]!;
+            pages(roomPdfDocument(model({ bios: [{ name: 'N', paragraphs: ['Bio.'], background, crop: null, color }] }), images).content as Content[])[2]!;
         const withPhoto = bioPage('/media/bio.jpg');
         expect(withPhoto.find((c) => 'image' in (c as object))).toMatchObject({ width: PAGE_W, height: PAGE_H, absolutePosition: { x: 0, y: 0 } });
         expect(JSON.stringify(withPhoto)).toContain('#ffffff');

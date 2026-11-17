@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
 import type { Transaction } from 'kysely';
-import { exhibitionPath, newsPath, revisionEntity, type RevisionSummary } from '@twelveten/shared';
+import { exhibitionPath, newsPath, revisionEntity, type ImageCrop, type RevisionSummary } from '@twelveten/shared';
 import type { AppEnv } from '../../env.ts';
 import type { Database } from '../../db/types.ts';
 import { HttpError } from './errors.ts';
-import { syncRoomArtists } from './rooms.ts';
+import { cropJson, syncRoomArtists } from './rooms.ts';
 import { recordRevision } from './revisions.ts';
 import { recordWorkChanges } from './inventory.ts';
 import { exhibitionPages } from './exhibitions.ts';
@@ -273,10 +273,10 @@ export function historyRoutes({ publish }: { publish: Publish }) {
                         await trx.insertInto('viewing_room_works').values({ room_id: roomId, work_id: w.work_id, position, show_price: w.show_price, hidden: w.hidden }).execute();
                     }
                     await syncRoomArtists(trx, roomId);
-                    for (const a of (snap.artists as { artist_id: string; position: number; show_bio: boolean; show_cv: boolean; show_press: boolean; hidden_press_ids: string[]; bio_background?: string | null; bio_background_color?: string | null }[] | undefined) ?? []) {
+                    for (const a of (snap.artists as { artist_id: string; position: number; show_bio: boolean; show_cv: boolean; show_press: boolean; hidden_press_ids: string[]; bio_background?: string | null; bio_background_crop?: ImageCrop | null; bio_background_color?: string | null }[] | undefined) ?? []) {
                         await trx
                             .updateTable('viewing_room_artists')
-                            .set({ position: a.position, show_bio: a.show_bio, show_cv: a.show_cv, show_press: a.show_press, hidden_press_ids: a.hidden_press_ids, bio_background: a.bio_background ?? null, bio_background_color: a.bio_background_color ?? null })
+                            .set({ position: a.position, show_bio: a.show_bio, show_cv: a.show_cv, show_press: a.show_press, hidden_press_ids: a.hidden_press_ids, bio_background: a.bio_background ?? null, bio_background_crop: cropJson(a.bio_background_crop), bio_background_color: a.bio_background_color ?? null })
                             .where('room_id', '=', roomId)
                             .where('artist_id', '=', a.artist_id)
                             .execute();

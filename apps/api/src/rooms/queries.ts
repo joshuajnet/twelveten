@@ -60,6 +60,7 @@ async function roomArtistSettings(db: Q, roomId: string): Promise<RoomArtistSett
                 showPress: r.show_press,
                 hiddenPressIds: r.hidden_press_ids,
                 bioBackground: r.bio_background,
+                bioBackgroundCrop: r.bio_background_crop,
                 bioBackgroundColor: r.bio_background_color,
                 hasBio: !isEmptyDoc(profile?.bio),
                 hasCv: !isEmptyDoc(profile?.cv),
@@ -72,7 +73,7 @@ async function roomArtistSettings(db: Q, roomId: string): Promise<RoomArtistSett
 export async function getRoom(db: Q, id: string): Promise<ViewingRoom | null> {
     const row = await db.selectFrom('viewing_rooms').selectAll().where('id', '=', id).executeTakeFirst();
     if (!row) return null;
-    const [works, artists, visitors] = await Promise.all([
+    const [works, artists, visitors, images] = await Promise.all([
         summaryQuery(db)
             .innerJoin('viewing_room_works as rw', 'rw.work_id', 'w.id')
             .select(['rw.show_price', 'rw.hidden', 'rw.position'])
@@ -81,7 +82,16 @@ export async function getRoom(db: Q, id: string): Promise<ViewingRoom | null> {
             .execute(),
         roomArtistSettings(db, id),
         db.selectFrom('viewing_room_visitors').select((eb) => eb.fn.countAll<number>().as('n')).where('room_id', '=', id).executeTakeFirst(),
+        db
+            .selectFrom('work_images as i')
+            .innerJoin('viewing_room_works as rw', 'rw.work_id', 'i.work_id')
+            .select(['i.work_id', 'i.url'])
+            .where('rw.room_id', '=', id)
+            .orderBy('i.position')
+            .execute(),
     ]);
+    const viewsOf = new Map<string, string[]>();
+    for (const i of images) viewsOf.set(i.work_id, [...(viewsOf.get(i.work_id) ?? []), i.url]);
     return {
         id: row.id,
         token: row.token,
@@ -89,13 +99,14 @@ export async function getRoom(db: Q, id: string): Promise<ViewingRoom | null> {
         subtitle: row.subtitle,
         intro: row.intro,
         coverImage: row.cover_image,
+        coverCrop: row.cover_crop,
         showPrices: row.show_prices,
         hideUnavailable: row.hide_unavailable,
         pdfHidden: row.pdf_hidden,
         status: row.status,
         opensAt: row.opens_at,
         closesAt: row.closes_at,
-        works: works.map((w) => ({ workId: w.id, showPrice: w.show_price, hidden: w.hidden, work: toSummary(w) })),
+        works: works.map((w) => ({ workId: w.id, showPrice: w.show_price, hidden: w.hidden, work: toSummary(w), images: viewsOf.get(w.id) ?? [] })),
         artists,
         visitors: Number(visitors?.n ?? 0),
         createdAt: row.created_at,
@@ -137,6 +148,7 @@ function toRoomSummary(r: ViewingRoomRow & { works: number | null; visitors: num
         visitors: Number(r.visitors ?? 0),
         lastVisitAt: r.last_visit ?? null,
         cover: r.cover_image ?? r.cover ?? null,
+        coverCrop: r.cover_image ? r.cover_crop : null,
         createdAt: r.created_at,
         updatedAt: r.updated_at,
     };

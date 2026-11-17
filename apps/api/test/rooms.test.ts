@@ -536,6 +536,77 @@ describe('viewing a room', () => {
         expect(location.searchParams.get('X-Amz-Expires')).toBe('600');
     });
 
+    it('saves crops for the cover and bio photos, clears them with the image, and copies and restores them', async () => {
+        const { room, artist } = await setupRoom('Crop Room');
+        expect(room.coverCrop).toBeNull();
+        expect(room.works[0].images).toEqual(['/media/x0.jpg']);
+        const crop = { x: 0.1, y: 0.2, w: 0.5, h: 0.4 };
+        const withCover = await call('PATCH', `/admin/rooms/${room.id}`, { updatedAt: room.updatedAt, coverImage: '/media/x1.jpg', coverCrop: crop });
+        expect(withCover.body).toMatchObject({ coverImage: '/media/x1.jpg', coverCrop: crop });
+        expect((await call('PATCH', `/admin/rooms/${room.id}`, { updatedAt: withCover.body.updatedAt, coverCrop: { x: 0.6, y: 0, w: 0.5, h: 0.5 } })).status).toBe(400);
+        const list = await call('GET', '/admin/rooms?q=crop%20room');
+        expect(list.body.items[0]).toMatchObject({ cover: '/media/x1.jpg', coverCrop: crop });
+
+        const bioCrop = { x: 0, y: 0, w: 1, h: 0.7 };
+        const put = (bioBackground: string | null, bioBackgroundCrop: unknown) =>
+            call('PUT', `/admin/rooms/${room.id}/artists`, { artists: [{ artistId: artist.id, showBio: true, showCv: true, showPress: true, bioBackground, bioBackgroundCrop }] });
+        expect((await put('/media/x2.jpg', bioCrop)).body.artists[0]).toMatchObject({ bioBackground: '/media/x2.jpg', bioBackgroundCrop: bioCrop });
+
+        // Copied on duplicate.
+        const copy = (await call('POST', `/admin/rooms/${room.id}/duplicate`)).body;
+        expect(copy.coverCrop).toEqual(crop);
+        expect(copy.artists[0].bioBackgroundCrop).toEqual(bioCrop);
+
+        // Cleared with the image.
+        expect((await put(null, bioCrop)).body.artists[0]).toMatchObject({ bioBackground: null, bioBackgroundCrop: null });
+        const current = (await call('GET', `/admin/rooms/${room.id}`)).body;
+        const cleared = await call('PATCH', `/admin/rooms/${room.id}`, { updatedAt: current.updatedAt, coverImage: null });
+        expect(cleared.body).toMatchObject({ coverImage: null, coverCrop: null });
+
+        // Restored from history: the revision saved with the bio crop brings it back.
+        const revs = await db.selectFrom('content_revisions').select(['id', 'snapshot']).where('entity', '=', 'viewing_room').where('entity_id', '=', room.id).orderBy('id').execute();
+        const withBoth = revs.find((r) => (r.snapshot as any).artists?.[0]?.bio_background_crop && (r.snapshot as any).cover_crop)!;
+        expect((await call('POST', `/admin/revisions/${withBoth.id}/restore`)).status).toBe(200);
+        const restored = (await call('GET', `/admin/rooms/${room.id}`)).body;
+        expect(restored).toMatchObject({ coverImage: '/media/x1.jpg', coverCrop: crop });
+        expect(restored.artists[0].bioBackgroundCrop).toEqual(bioCrop);
+
+        // A new crop makes the PDF out of date.
+        await call('POST', `/admin/rooms/${room.id}/pdf`);
+        expect((await call('GET', `/admin/rooms/${room.id}/pdf`)).body.outdated).toBe(false);
+        await call('PATCH', `/admin/rooms/${room.id}`, { updatedAt: restored.updatedAt, coverCrop: { x: 0, y: 0, w: 0.5, h: 0.5 } });
+        expect((await call('GET', `/admin/rooms/${room.id}/pdf`)).body.outdated).toBe(true);
+    });
+
+    it('crops page photos to the chosen area', async () => {
+        // Left half red, right half blue.
+        const half = await sharp({ create: { width: 1000, height: 707, channels: 3, background: '#0000ff' } })
+            .composite([{ input: await sharp({ create: { width: 500, height: 707, channels: 3, background: '#ff0000' } }).png().toBuffer(), left: 0, top: 0 }])
+            .jpeg()
+            .toBuffer();
+        await storage.client.send(new PutObjectCommand({ Bucket: storage.bucket, Key: 'media/crop/two.jpg', Body: half, ContentType: 'image/jpeg' }));
+        const left = { x: 0, y: 0.25, w: 0.45, h: 0.45 };
+        const model: RoomPdfModel = {
+            heading: 'A',
+            subtitle: null,
+            gallery: { name: 'Twelve Ten', email: '', phone: '' },
+            cover: '/media/crop/two.jpg',
+            coverCrop: left,
+            works: [],
+            bios: [{ name: 'B', paragraphs: ['Bio.'], background: '/media/crop/two.jpg', crop: { x: 0.55, y: 0.25, w: 0.45, h: 0.45 }, color: null }],
+        };
+        const images = await prepareRoomImages(storage, model);
+        const stats = async (key: string) => (await sharp(images.get(key)!.data).stats()).channels.map((c) => c.mean);
+        const cover = images.get(pageKey('/media/crop/two.jpg', left))!;
+        expect(cover).toMatchObject({ width: pixelsFor(PAGE_W), height: pixelsFor(PAGE_H) });
+        const [r1, , b1] = await stats(pageKey('/media/crop/two.jpg', left));
+        expect(r1).toBeGreaterThan(200);
+        expect(b1).toBeLessThan(40);
+        const [r2, , b2] = await stats(pageKey('/media/crop/two.jpg', model.bios[0]!.crop));
+        expect(r2).toBeLessThan(40);
+        expect(b2).toBeGreaterThan(200);
+    });
+
     it('sizes PDF images to 250 dpi where they are drawn, using the zoom copy or original when the display copy is too small', async () => {
         const put = async (key: string, width: number, height: number, background = '#778899') => {
             const body = await sharp({ create: { width, height, channels: 3, background } }).jpeg().toBuffer();
@@ -552,6 +623,7 @@ describe('viewing a room', () => {
             subtitle: null,
             gallery: { name: 'Twelve Ten', email: '', phone: '' },
             cover: '/media/dpi/portrait.jpg',
+            coverCrop: null,
             works: [work('/media/dpi/portrait.jpg'), work('/media/dpi/wide.jpg')],
             bios: [],
         };
