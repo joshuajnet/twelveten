@@ -11,6 +11,7 @@ import { useListQuery, usePagedList } from '../useListQuery';
 import RoomStatusBadge from './RoomStatusBadge.vue';
 import { when } from './time';
 import CroppedImage from './CroppedImage.vue';
+import MultiSelect from '@/admin/ui/MultiSelect.vue';
 
 /** Viewing rooms, newest first, with search and a status filter (Draft and Live unless the admin picks others). */
 const { q, page, param, setQuery, goToPage, search } = useListQuery();
@@ -20,17 +21,15 @@ const ALL_STATUSES = roomStatus.options;
 const DEFAULT_STATUSES: RoomStatus[] = ['draft', 'live'];
 const statusParam = param('status');
 /** `?status=draft,live,closed`; absent (or nothing valid) means the default. */
-const statuses = computed<RoomStatus[]>(() => {
-    const picked = new Set((statusParam.value ?? '').split(',').filter((s): s is RoomStatus => roomStatus.safeParse(s).success));
-    return picked.size ? ALL_STATUSES.filter((s) => picked.has(s)) : DEFAULT_STATUSES;
+const statuses = computed<RoomStatus[]>({
+    get: () => {
+        const picked = new Set((statusParam.value ?? '').split(',').filter((s): s is RoomStatus => roomStatus.safeParse(s).success));
+        return picked.size ? ALL_STATUSES.filter((s) => picked.has(s)) : DEFAULT_STATUSES;
+    },
+    set: (next) => setQuery({ status: next.join() === DEFAULT_STATUSES.join() ? null : next.join(',') }),
 });
 const isDefaultStatuses = computed(() => statuses.value.join() === DEFAULT_STATUSES.join());
-
-function toggleStatus(s: RoomStatus, on: boolean) {
-    const next = ALL_STATUSES.filter((x) => (x === s ? on : statuses.value.includes(x)));
-    if (!next.length) return; // keep at least one
-    setQuery({ status: next.join() === DEFAULT_STATUSES.join() ? null : next.join(',') });
-}
+const statusOptions = ALL_STATUSES.map((value) => ({ value, label: ROOM_STATUSES[value] }));
 
 const { result, loading, error } = usePagedList(
     [q, statuses, page],
@@ -78,21 +77,7 @@ async function copy(r: RoomSummary) {
                 <span class="block text-xs font-medium text-slate-600">Search</span>
                 <input v-model="search" type="search" aria-label="Search rooms" placeholder="Title…" class="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm focus:border-sky-700 focus:outline-none" />
             </label>
-            <fieldset class="block">
-                <legend class="block text-xs font-medium text-slate-600">Status</legend>
-                <div class="mt-1 flex flex-wrap gap-3 py-1.5 text-sm" data-testid="room-status-filter">
-                    <label v-for="s in ALL_STATUSES" :key="s" class="inline-flex items-center gap-1.5">
-                        <input
-                            type="checkbox"
-                            class="h-3.5 w-3.5"
-                            :checked="statuses.includes(s)"
-                            :disabled="statuses.length === 1 && statuses.includes(s)"
-                            @change="toggleStatus(s, ($event.target as HTMLInputElement).checked)"
-                        />
-                        {{ ROOM_STATUSES[s] }}
-                    </label>
-                </div>
-            </fieldset>
+            <MultiSelect v-model="statuses" label="Status" :options="statusOptions" testid="room-status-filter" />
         </div>
 
         <p v-if="error" class="mb-3 rounded bg-red-50 px-3 py-2 text-sm text-red-800">{{ error }}</p>

@@ -340,19 +340,28 @@ test('a room is duplicated as a draft, and closed rooms are hidden from the list
     const rows = page.getByTestId('room-row');
     await expect(rows).toHaveCount(1);
     await expect(rows.first()).toContainText(`${TITLE} (copy)`);
-    await page.getByTestId('room-status-filter').getByLabel('Closed').check();
+    // The status dropdown: Draft and Live by default.
+    const filter = page.getByTestId('room-status-filter');
+    await expect(filter).toHaveText('Draft, Live');
+    await filter.click();
+    const option = (name: string) => page.getByRole('menuitemcheckbox', { name });
+    await option('Closed').click();
     await expect(rows).toHaveCount(2);
+    await expect(filter).toHaveText('All');
     await expect(page).toHaveURL(/status=draft%2Clive%2Cclosed|status=draft,live,closed/);
+    await page.keyboard.press('Escape');
     await page.reload();
     await expect(rows).toHaveCount(2);
 
     // Only Closed; the last ticked status can't be unticked.
-    const filter = page.getByTestId('room-status-filter');
-    await filter.getByLabel('Draft').uncheck();
-    await filter.getByLabel('Live').uncheck();
+    await filter.click();
+    await option('Draft').click();
+    await option('Live').click();
     await expect(rows).toHaveCount(1);
     await expect(rows.first()).not.toContainText('(copy)');
-    await expect(filter.getByLabel('Closed')).toBeDisabled();
+    await expect(option('Closed')).toHaveAttribute('data-disabled', '');
+    await page.keyboard.press('Escape');
+    await expect(filter).toHaveText('Closed');
 
     // A room that has gone live opens on its dashboard, with Edit beside it; a draft opens in the editor.
     await expect(rows.first().getByRole('link', { name: 'Edit' })).toBeVisible();
