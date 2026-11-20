@@ -2,7 +2,7 @@ import { test, expect, type APIRequestContext, type Browser, type Page } from '@
 
 /**
  * Viewing rooms end to end: an admin builds a room from the inventory, a visitor goes through the
- * gate and browses (grid, slideshow, zoom, artist details, Inquire), the collector profile shows the
+ * gate and browses (grid, zoom, artist details, Inquire), the collector profile shows the
  * room with an engagement rating and the visitor dashboard, unavailable works, and merging a duplicate
  * sign-up. Everything created here is removed again.
  */
@@ -171,9 +171,33 @@ test('a visitor enters through the gate and the browser is remembered', async ({
     await expect(page.getByTestId('room-gate')).toHaveCount(0);
     await expect(page.getByText(`Welcome, ${VIEWER}.`)).toBeVisible();
 
-    // Prices are off: no price. Inquire opens a form that already knows the viewer.
+    // The room opens on the grid with every work's details; prices are off: no price.
+    await expect(page.getByTestId('room-tile')).toHaveCount(2);
     await expect(page.getByTestId('room-price')).toHaveCount(0);
-    await page.getByTestId('room-inquire').click();
+
+    // An image opens zoom on that work; closing it returns to the grid.
+    const viewer = page.getByTestId('zoom-viewer');
+    await page.getByRole('button', { name: `Zoom ${ARTIST}, Roomtest Dusk, 2025` }).click();
+    await expect(viewer.getByTestId('zoom-details')).toContainText('Roomtest Dusk');
+    await viewer.getByRole('button', { name: 'Close' }).click();
+    await expect(viewer).toHaveCount(0);
+    await expect(page.getByTestId('room-tile')).toHaveCount(2);
+
+    // Zoom with the keyboard, move between works, then Inquire from zoom: a form that already knows the viewer.
+    await page.getByRole('button', { name: new RegExp(`^Zoom ${ARTIST}, Roomtest Harbour`) }).click();
+    await expect(viewer.getByTestId('zoom-details')).toContainText('Roomtest Harbour');
+    const before = await viewer.getByTestId('zoom-level').textContent();
+    await page.keyboard.press('+');
+    await expect(viewer.getByTestId('zoom-level')).not.toHaveText(before!);
+    await page.mouse.move(640, 400);
+    await page.mouse.move(660, 420, { steps: 5 });
+    await page.keyboard.press('0');
+    await page.keyboard.press('ArrowRight');
+    await expect(viewer.getByTestId('zoom-details')).toContainText('Roomtest Dusk');
+    await page.keyboard.press('ArrowLeft');
+    await expect(viewer.getByTestId('zoom-details')).toContainText('Roomtest Harbour');
+    await viewer.getByTestId('room-inquire').click();
+    await expect(viewer).toHaveCount(0);
     const inquiry = page.getByTestId('inquiry-dialog');
     await expect(inquiry.getByTestId('inquiry-item')).toContainText('Roomtest Harbour');
     await expect(inquiry.getByTestId('inquiry-known')).toContainText(VIEWER);
@@ -183,29 +207,12 @@ test('a visitor enters through the gate and the browser is remembered', async ({
     await inquiry.getByRole('button', { name: 'Close' }).last().click();
     await expect(inquiry).not.toBeVisible();
 
-    // Zoom with the keyboard, then close.
-    await page.getByRole('button', { name: 'Zoom', exact: true }).click();
-    const viewer = page.getByTestId('zoom-viewer');
-    await expect(viewer).toBeVisible();
-    const before = await viewer.getByTestId('zoom-level').textContent();
-    await page.keyboard.press('+');
-    await expect(viewer.getByTestId('zoom-level')).not.toHaveText(before!);
-    await page.mouse.move(640, 400);
-    await page.mouse.move(660, 420, { steps: 5 });
-    await page.keyboard.press('Escape');
-    await expect(viewer).toHaveCount(0);
-
-    // Grid, then the next work in the slideshow.
-    await page.getByRole('button', { name: 'Grid' }).click();
-    await expect(page.getByTestId('room-tile')).toHaveCount(2);
-    await page.getByRole('button', { name: `Open ${ARTIST}, Roomtest Dusk, 2025` }).click();
-    await expect(page.getByTestId('room-slide')).toContainText('Roomtest Dusk');
-
     // The artist: bio, CV, press minus the hidden item.
-    await page.getByRole('button', { name: 'About the artist' }).click();
+    // One artist in this room: no "About the artist" on the works, the Artist tab instead.
+    await expect(page.getByRole('button', { name: 'About the artist' })).toHaveCount(0);
+    await page.getByRole('tab', { name: 'Artist' }).click();
     const artist = page.getByTestId('room-artist');
     await expect(artist).toHaveCount(1);
-    await expect(page.getByTestId('back-to-work')).toBeVisible();
     await expect(artist).toContainText('Ezra paints harbours.');
     await artist.getByRole('button', { name: 'Read CV' }).click();
     await expect(artist.getByTestId('room-cv')).toContainText('MFA, 2010');
@@ -248,13 +255,15 @@ test('sold works show their status without Inquire, and can be hidden', async ({
     await page.getByLabel('Name').fill(VIEWER);
     await page.getByLabel('Email').fill(VIEWER_EMAIL);
     await page.getByRole('button', { name: 'View the room' }).click();
-    await expect(page.getByTestId('room-status')).toHaveText('Sold');
-    await expect(page.getByTestId('room-inquire')).toHaveCount(0);
+    const harbour = page.getByTestId('room-tile').filter({ hasText: 'Roomtest Harbour' });
+    await expect(harbour.getByTestId('room-status')).toHaveText('Sold');
+    await expect(harbour.getByTestId('room-inquire')).toHaveCount(0);
 
     const room = await a.get(`/rooms/${state.roomId}`);
     await a.send('PUT', `/rooms/${state.roomId}/works`, { works: room.works.map((x: { workId: string }) => ({ workId: x.workId, hidden: x.workId === w.id })) });
     await page.reload();
-    await expect(page.getByTestId('room-slide')).toContainText('Roomtest Dusk');
+    await expect(page.getByTestId('room-tile')).toHaveCount(1);
+    await expect(page.getByTestId('room-tile')).toContainText('Roomtest Dusk');
     await expect(page.getByText('Roomtest Harbour')).toHaveCount(0);
     await page.context().close();
 });

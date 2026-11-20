@@ -4,6 +4,8 @@ import { MAX_POINTER_POINTS, type TrackBatch, type TrackEventType } from '@twelv
 /** Seconds of no input after which time stops counting as active. */
 const IDLE_MS = 60_000;
 const TICK_MS = 1000;
+/** Works in view only count as looked at once scrolling has stopped for this long. */
+const SETTLE_MS = 1000;
 const FLUSH_MS = 10_000;
 const MIN_POINTER_GAP_MS = 250;
 
@@ -45,7 +47,9 @@ export interface RoomTracker {
 /**
  * Records how a visitor browses a viewing room and sends it in small batches (every 10 s, and with
  * `sendBeacon` when the page is hidden or left). Time only counts while the tab is visible and the
- * visitor has done something in the last minute. With no `visitId` (admin preview) nothing is sent.
+ * visitor has done something in the last minute. Works on screen collect viewing time only once
+ * scrolling has stopped for a second, and share each second between them. With no `visitId` (admin
+ * preview) nothing is sent.
  */
 export function useRoomTracker(opts: { token: string; visitId: string | null }): RoomTracker {
     const enabled = Boolean(opts.visitId);
@@ -62,6 +66,7 @@ export function useRoomTracker(opts: { token: string; visitId: string | null }):
     let zoomWork: string | null = null;
     let zoomLevel = 1;
     let lastInput = Date.now();
+    let lastScroll = 0;
     let lastPointerAt = 0;
 
     const work = (id: string) => works.get(id) ?? (works.set(id, emptyWork()), works.get(id)!);
@@ -93,7 +98,13 @@ export function useRoomTracker(opts: { token: string; visitId: string | null }):
             w.viewMs += TICK_MS;
             return;
         }
-        for (const id of new Set(inView.values())) work(id).viewMs += TICK_MS;
+        // Works only count once scrolling has stopped, and share each second: the time credited to
+        // works is the time spent looking, however many are on screen.
+        const seen = new Set(inView.values());
+        if (seen.size && Date.now() - lastScroll >= SETTLE_MS) {
+            const share = Math.floor(TICK_MS / seen.size);
+            for (const id of seen) work(id).viewMs += share;
+        }
         for (const id of new Set(artistsInView.values())) artist(id).readMs += TICK_MS;
         if (hovered) work(hovered).hoverMs += TICK_MS;
     }
@@ -148,6 +159,7 @@ export function useRoomTracker(opts: { token: string; visitId: string | null }):
     }
 
     const onInput = () => (lastInput = Date.now());
+    const onScroll = () => (lastInput = lastScroll = Date.now());
     const onHide = () => document.visibilityState === 'hidden' && flush(true);
     const onPageHide = () => flush(true);
     let tickTimer: ReturnType<typeof setInterval> | undefined;
@@ -155,7 +167,8 @@ export function useRoomTracker(opts: { token: string; visitId: string | null }):
 
     onMounted(() => {
         if (!enabled) return;
-        for (const e of ['pointermove', 'pointerdown', 'keydown', 'wheel', 'scroll', 'touchstart']) window.addEventListener(e, onInput, { passive: true });
+        for (const e of ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart']) window.addEventListener(e, onInput, { passive: true });
+        window.addEventListener('scroll', onScroll, { passive: true });
         document.addEventListener('visibilitychange', onHide);
         window.addEventListener('pagehide', onPageHide);
         tickTimer = setInterval(tick, TICK_MS);
@@ -165,7 +178,8 @@ export function useRoomTracker(opts: { token: string; visitId: string | null }):
         clearInterval(tickTimer);
         clearInterval(flushTimer);
         observer?.disconnect();
-        for (const e of ['pointermove', 'pointerdown', 'keydown', 'wheel', 'scroll', 'touchstart']) window.removeEventListener(e, onInput);
+        for (const e of ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart']) window.removeEventListener(e, onInput);
+        window.removeEventListener('scroll', onScroll);
         document.removeEventListener('visibilitychange', onHide);
         window.removeEventListener('pagehide', onPageHide);
         flush(true);
