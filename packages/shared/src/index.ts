@@ -11,3 +11,4 @@ export * from './invoices.ts';
 export * from './rooms.ts';
 export * from './media.ts';
 export * from './inquiries.ts';
+export * from './shipping.ts';

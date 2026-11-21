@@ -11,7 +11,8 @@ export class ApiError extends Error {
     }
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+/** The response to a request under `/api`; an error status throws an `ApiError` with the server's message. */
+async function fetchOk(path: string, init: RequestInit = {}): Promise<Response> {
     const res = await fetch(`/api${path}`, {
         credentials: 'same-origin',
         ...init,
@@ -29,6 +30,11 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
         }
         throw new ApiError(res.status, message, details);
     }
+    return res;
+}
+
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+    const res = await fetchOk(path, init);
     return (res.status === 204 ? undefined : await res.json()) as T;
 }
 
@@ -43,6 +49,13 @@ export const qs = (params: Record<string, string | number | null | undefined>) =
 /** A JSON request to an admin endpoint (`/api/admin…`). */
 export const adminSend = <T>(method: string, path: string, body?: unknown) =>
     request<T>(`/admin${path}`, { method, body: body === undefined ? undefined : JSON.stringify(body) });
+
+/** A JSON request to an admin endpoint that answers with a file (a PDF, …), and the file's name. */
+export async function adminSendBlob(method: string, path: string, body?: unknown): Promise<{ blob: Blob; filename: string | null }> {
+    const res = await fetchOk(`/admin${path}`, { method, headers: { Accept: '*/*' }, body: body === undefined ? undefined : JSON.stringify(body) });
+    const filename = /filename="([^"]+)"/.exec(res.headers.get('content-disposition') ?? '')?.[1] ?? null;
+    return { blob: await res.blob(), filename };
+}
 
 export const api = {
     request,

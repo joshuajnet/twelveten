@@ -14,6 +14,7 @@ import { peopleRoutes } from './people.ts';
 import { inventoryRoutes } from './inventory.ts';
 import { invoiceRoutes } from './invoices.ts';
 import { roomRoutes } from './rooms.ts';
+import { shippingRoutes } from './shipping.ts';
 import { inquiryRoutes } from './inquiries.ts';
 
 export interface AdminDeps {
@@ -49,11 +50,12 @@ export function adminRoutes(deps: AdminDeps) {
     app.route('/', exhibitionRoutes(routes));
     app.route('/', siteRoutes(routes));
     app.route('/', historyRoutes(routes));
-    // People, profiles, addresses, inventory, invoices and viewing rooms: no prerendered page changes.
+    // People, profiles, addresses, inventory, invoices, viewing rooms and shipping labels: no prerendered page changes.
     app.route('/', peopleRoutes());
     app.route('/', inventoryRoutes());
     app.route('/', invoiceRoutes({ storage: deps.storage }));
     app.route('/', roomRoutes({ storage: deps.storage }));
+    app.route('/', shippingRoutes({ storage: deps.storage }));
     app.route('/', inquiryRoutes());
 
     // ---------- Uploads & publishing ----------

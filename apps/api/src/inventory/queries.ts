@@ -123,6 +123,11 @@ export interface WorkFilters {
 
 /** Inventory list, newest first, one numbered page at a time with the total number of matches. */
 export async function listWorks(db: Q, f: WorkFilters, page: number, pageSize: number): Promise<NumberedPage<WorkSummary>> {
+    return numberedPage(filteredWorks(db, f), page, pageSize, toSummary);
+}
+
+/** Works matching the inventory filters, newest first (the inventory list's order). */
+export function filteredWorks(db: Q, f: WorkFilters) {
     let q = summaryQuery(db).orderBy('w.created_at', 'desc').orderBy('w.id', 'desc');
     if (f.artistId) q = q.where('w.artist_id', '=', f.artistId);
     if (f.statuses?.length) q = q.where('w.status', 'in', f.statuses);
@@ -131,7 +136,7 @@ export async function listWorks(db: Q, f: WorkFilters, page: number, pageSize: n
         const like = likePattern(f.q);
         q = q.where((eb) => eb.or([eb('w.title', 'ilike', like), eb('w.inventory_number', 'ilike', like), eb('p.name', 'ilike', like), eb('w.medium', 'ilike', like)]));
     }
-    return numberedPage(q, page, pageSize, toSummary);
+    return q;
 }
 
 export async function getWork(db: Q, id: string): Promise<Work | null> {

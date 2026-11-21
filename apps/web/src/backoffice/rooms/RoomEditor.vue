@@ -18,6 +18,7 @@ import { boApi, roomUrl } from '../api';
 import { when } from './time';
 import { useUnsavedGuard } from '../guard';
 import WorkPicker from '../WorkPicker.vue';
+import ShippingLabelDialog from '../ShippingLabelDialog.vue';
 import StatusBadge from '../StatusBadge.vue';
 import RoomStatusBadge from './RoomStatusBadge.vue';
 import PageImageField from './PageImageField.vue';
@@ -318,8 +319,16 @@ async function duplicate() {
 // ---- Settings menu ----
 const settingsItems = computed<MenuItem[]>(() => [
     { label: 'Duplicate', select: () => void duplicate(), disabled: duplicating.value || dirty.value, hint: dirty.value ? 'Save first: the copy is made from the saved room' : undefined, testid: 'duplicate-room' },
+    {
+        label: 'Shipping labels…',
+        select: () => (labelsOpen.value = true),
+        disabled: dirty.value || !works.value.length,
+        hint: dirty.value ? 'Save first: the labels are made from the saved room' : !works.value.length ? 'Add works first' : 'A Letter page per work in the room',
+        testid: 'room-shipping-labels',
+    },
     { label: 'History', select: () => (historyOpen.value = true), testid: 'room-history' },
 ]);
+const labelsOpen = ref(false);
 
 // ---- Delete / history ----
 const historyOpen = ref(false);
@@ -590,6 +599,12 @@ const setPriceMode = (w: RoomWorkSettings, v: string) => (w.showPrice = v === 'i
             </template>
         </Dialog>
         <HistoryDialog v-if="room" v-model:open="historyOpen" entity="viewing_room" :id="room.id" @restored="load" />
+        <ShippingLabelDialog
+            v-if="room"
+            v-model:open="labelsOpen"
+            :source="{ kind: 'room', roomId: room.id }"
+            :summary="`${works.length} ${works.length === 1 ? 'work' : 'works'} in this room (hidden ones too) · one page each`"
+        />
     </div>
 </template>
 
