@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue';
 import { RouterLink } from 'vue-router';
-import { WORK_LOCATIONS, WORK_STATUSES, workLocation, workStatus, type PersonSummary, type WorkStatus } from '@twelveten/shared';
+import { SHIPPING_LABELS_MAX, WORK_LOCATIONS, WORK_STATUSES, workLocation, workStatus, type PersonSummary, type ShippingLabelSource, type WorkStatus } from '@twelveten/shared';
 import MultiSelect from '@/admin/ui/MultiSelect.vue';
-import { btnPrimary } from '@/admin/ui/buttons';
+import { btnOutline, btnPrimary } from '@/admin/ui/buttons';
 import PersonPicker from './PersonPicker.vue';
 import InventoryTable from './InventoryTable.vue';
+import ShippingLabelDialog from './ShippingLabelDialog.vue';
 import { useListQuery } from './useListQuery';
 
 /** Works across artists, filterable by artist, status (Available and On hold unless chosen otherwise) and location. */
@@ -19,6 +21,14 @@ const location = enumParam('location', workLocation);
 function chooseArtist(p: PersonSummary) {
     setQuery({ artist: p.id, artistName: p.name });
 }
+
+// ---- Shipping labels for every work matching the filters ----
+const total = ref<number | null>(null);
+const labelsOpen = ref(false);
+const labelSource = computed<ShippingLabelSource>(() => ({ kind: 'inventory', artist: artist.value, statuses: statuses.value, location: location.value, q: q.value || null }));
+const labelsHint = computed(() =>
+    !total.value ? 'No works match' : total.value > SHIPPING_LABELS_MAX ? `More than ${SHIPPING_LABELS_MAX} works match; narrow the filters` : `A Letter page for each of the ${total.value} matching works`,
+);
 </script>
 
 <template>
@@ -26,6 +36,9 @@ function chooseArtist(p: PersonSummary) {
         <div class="mb-4 flex flex-wrap items-center gap-3">
             <h1 class="text-xl font-semibold">Inventory</h1>
             <span class="flex-1" />
+            <button type="button" :class="btnOutline" :disabled="!total || total > SHIPPING_LABELS_MAX" :title="labelsHint" data-testid="inventory-shipping-labels" @click="labelsOpen = true">
+                <i class="las la-shipping-fast" aria-hidden="true" /> Shipping labels
+            </button>
             <RouterLink :to="{ name: 'bo-work', params: { id: 'new' }, query: artist ? { artist } : {} }" :class="btnPrimary">+ New work</RouterLink>
         </div>
 
@@ -52,6 +65,7 @@ function chooseArtist(p: PersonSummary) {
             </label>
         </div>
 
-        <InventoryTable :q="q" :artist="artist" :statuses="statuses" :location="location" :page="page" @page="goToPage" />
+        <InventoryTable :q="q" :artist="artist" :statuses="statuses" :location="location" :page="page" @page="goToPage" @total="total = $event" />
+        <ShippingLabelDialog v-model:open="labelsOpen" :source="labelSource" :summary="`${total ?? 0} matching ${total === 1 ? 'work' : 'works'} · one page each`" />
     </div>
 </template>

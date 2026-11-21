@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { watch } from "vue";
 import { RouterLink } from "vue-router";
 import {
   formatPrice,
@@ -20,7 +21,7 @@ const props = defineProps<{
   location: string | null;
   page: number;
 }>();
-const emit = defineEmits<{ page: [page: number] }>();
+const emit = defineEmits<{ page: [page: number]; total: [total: number | null] }>();
 
 const { result, loading, error, reload } = usePagedList(
   () => [props.q, props.artist, props.statuses, props.location, props.page],
@@ -35,6 +36,8 @@ const { result, loading, error, reload } = usePagedList(
     }),
   (page) => emit("page", page),
 );
+// How many works match, for actions on all of them (e.g. shipping labels).
+watch(() => result.value?.total ?? null, (t) => emit("total", t), { immediate: true });
 </script>
 
 <template>

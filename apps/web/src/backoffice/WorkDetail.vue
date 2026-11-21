@@ -32,6 +32,7 @@ import { boApi } from './api';
 import { useUnsavedGuard } from './guard';
 import { dateTime, locationLabel, money, statusLabel } from './format';
 import PersonPicker from './PersonPicker.vue';
+import ShippingLabelDialog from './ShippingLabelDialog.vue';
 import StatusBadge from './StatusBadge.vue';
 import ArtImage from '@/components/ArtImage.vue';
 
@@ -328,6 +329,7 @@ const artistLink = computed(() => {
 /** On hold for a buyer and saved: ready to invoice. */
 const canInvoice = computed(() => Boolean(work.value && !isNew.value && !formDirty.value && work.value.status === 'on_hold' && work.value.buyer));
 const invoicing = ref(false);
+const labelOpen = ref(false);
 async function createInvoice() {
     if (!work.value?.buyer) return;
     invoicing.value = true;
@@ -362,6 +364,9 @@ async function createInvoice() {
             <StatusBadge v-if="work" :status="work.status" />
             <span class="flex-1" />
             <span v-if="dirty" class="text-xs text-amber-700">● Unsaved changes</span>
+            <button v-if="!isNew" type="button" :class="btnGhost" :disabled="formDirty" :title="formDirty ? 'Save first: the label is made from the saved work' : ''" data-testid="work-shipping-label" @click="labelOpen = true">
+                <i class="las la-shipping-fast" aria-hidden="true" /> Shipping label
+            </button>
             <button v-if="!isNew" type="button" :class="btnGhost" @click="revisionsOpen = true">Versions</button>
             <button type="submit" :class="btnPrimary" :disabled="(!dirty && !isNew) || saving" title="Save (Ctrl+S)">{{ saving ? 'Saving…' : isNew ? 'Save work' : 'Save' }}</button>
         </div>
@@ -515,6 +520,7 @@ async function createInvoice() {
             </template>
         </Dialog>
         <HistoryDialog v-if="work" v-model:open="revisionsOpen" entity="work" :id="work.id" @restored="onRestored" />
+        <ShippingLabelDialog v-if="work" v-model:open="labelOpen" :source="{ kind: 'works', workIds: [work.id] }" summary="One page for this work" />
         <Dialog v-model:open="confirmDelete" title="Delete this work?" description="Its images and price history are removed. Slides that showed it stay on their exhibitions, unlinked.">
             <template #footer>
                 <button type="button" :class="btnOutline" @click="confirmDelete = false">Cancel</button>

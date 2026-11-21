@@ -151,6 +151,20 @@ test('an admin creates a room from the inventory', async ({ page }) => {
     await expect(page.getByTestId('bio-background').getByLabel(`Bio page colour for ${ARTIST}`)).toHaveValue('#203040');
     await page.getByTestId('generate-room-pdf').click();
     await expect(page.getByTestId('room-pdf-status')).toContainText('Generated');
+
+    // Shipping labels for the room's works: a typed destination, the gallery's return address by default.
+    await page.getByRole('button', { name: 'Room settings' }).click();
+    await page.getByTestId('room-shipping-labels').click();
+    const labels = page.getByRole('dialog', { name: 'Shipping labels' });
+    await expect(labels.getByTestId('label-make')).toBeDisabled();
+    await expect(labels.getByTestId('label-return-gallery')).toBeChecked();
+    await labels.getByLabel('Ship to').fill('Avery Sample\n100 Example Street\nTulsa, OK 74103');
+    await labels.getByTestId('label-return-other').check();
+    await expect(labels.getByTestId('label-make')).toBeDisabled();
+    await labels.getByLabel('Other return address').fill('Studio\n1 Back Lane');
+    await labels.getByTestId('label-make').click();
+    await expect(labels.getByTestId('label-download')).toHaveAttribute('download', `Shipping labels - ${TITLE}.pdf`);
+    await expect(labels.getByTestId('label-open')).toHaveAttribute('href', /^blob:/);
 });
 
 test('a visitor enters through the gate and the browser is remembered', async ({ browser }) => {

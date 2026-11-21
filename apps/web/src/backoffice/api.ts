@@ -45,8 +45,9 @@ import type {
     RoomPdfStatus,
     VisitorDashboard,
     InquirySummary,
+    ShippingLabelsInput,
 } from '@twelveten/shared';
-import { adminSend as send, qs } from '@/api/client';
+import { adminSend as send, adminSendBlob, qs } from '@/api/client';
 
 /** Back-office (people, profiles, addresses, inventory, invoices) API client. Admin-only endpoints. */
 
@@ -154,6 +155,8 @@ export const boApi = {
     putRoomWorks: (id: string, input: RoomWorksPut) => send<ViewingRoom>('PUT', `/rooms/${id}/works`, input),
     putRoomArtists: (id: string, input: RoomArtistsPut) => send<ViewingRoom>('PUT', `/rooms/${id}/artists`, input),
     roomPdfUrl: (id: string) => `/api/admin/rooms/${id}/room.pdf`,
+    /** Shipping labels PDF (a POST: the addresses stay out of URLs). */
+    shippingLabels: (input: ShippingLabelsInput) => adminSendBlob('POST', '/shipping-labels.pdf', input),
     roomPdf: (id: string) => send<RoomPdfStatus | null>('GET', `/rooms/${id}/pdf`),
     generateRoomPdf: (id: string) => send<RoomPdfStatus>('POST', `/rooms/${id}/pdf`),
     removeRoomPdf: (id: string) => send<void>('DELETE', `/rooms/${id}/pdf`),

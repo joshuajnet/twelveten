@@ -2,14 +2,13 @@ import { createHash, randomUUID } from 'node:crypto';
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { sql } from 'kysely';
-import sharp from 'sharp';
-import { derivedUrl, htmlToText, isDerivable, slugify, type ImageCrop, type RoomPdfStatus } from '@twelveten/shared';
+import { htmlToText, slugify, type ImageCrop, type RoomPdfStatus } from '@twelveten/shared';
 import type { DB } from '../db/index.ts';
 import type { ViewingRoomRow } from '../db/types.ts';
 import { config } from '../config.ts';
 import { getSettings } from '../invoices/queries.ts';
 import { HttpError } from '../routes/admin/errors.ts';
-import { readMedia } from '../storage/mediaRead.ts';
+import { readImage, toJpeg } from '../lib/pdfImages.ts';
 import type { Storage } from '../storage/uploads.ts';
 import { pdfResponse } from '../routes/admin/util.ts';
 import { publicRoom } from './queries.ts';
@@ -87,61 +86,6 @@ export function roomPdfHash(m: RoomPdfModel): string {
         .update(JSON.stringify({ v: ROOM_PDF_LAYOUT_VERSION, m }))
         .digest('hex')
         .slice(0, 32);
-}
-
-/** Width and height as displayed (EXIF orientations 5–8 swap them). */
-async function orientedSize(buf: Buffer): Promise<{ width: number; height: number } | null> {
-    try {
-        const m = await sharp(buf).metadata();
-        if (!m.width || !m.height) return null;
-        return (m.orientation ?? 1) >= 5 ? { width: m.height, height: m.width } : { width: m.width, height: m.height };
-    } catch {
-        return null;
-    }
-}
-
-/**
- * Image bytes with at least `need(size)` pixels where possible: the 2400px display copy when it
- * is big enough (fast to decode), else the zoom copy, else the original; the largest found otherwise.
- */
-async function readImage(storage: Storage | undefined, url: string, need: (size: { width: number; height: number }) => { width: number; height: number }) {
-    const candidates = isDerivable(url) ? [derivedUrl(url, 'w2400.webp'), derivedUrl(url, 'zoom.jpg'), url] : [url];
-    let best: { buf: Buffer; size: { width: number; height: number } } | null = null;
-    for (const candidate of candidates) {
-        const buf = await readMedia(storage, candidate);
-        const size = buf ? await orientedSize(buf) : null;
-        if (!buf || !size) continue;
-        if (!best || size.width > best.size.width) best = { buf, size };
-        const want = need(size);
-        if (size.width >= want.width && size.height >= want.height) break;
-    }
-    return best;
-}
-
-/** The crop in pixels of an image of this (oriented) size, kept inside it. */
-function cropPixels(crop: ImageCrop, size: { width: number; height: number }) {
-    const left = Math.min(size.width - 1, Math.max(0, Math.round(crop.x * size.width)));
-    const top = Math.min(size.height - 1, Math.max(0, Math.round(crop.y * size.height)));
-    return {
-        left,
-        top,
-        width: Math.max(1, Math.min(size.width - left, Math.round(crop.w * size.width))),
-        height: Math.max(1, Math.min(size.height - top, Math.round(crop.h * size.height))),
-    };
-}
-
-async function toJpeg(input: Buffer, size: { width: number; height: number; fit: 'inside' | 'cover' }, crop?: { crop: ImageCrop; source: { width: number; height: number } }) {
-    let img = sharp(input, { limitInputPixels: 200_000_000 });
-    // Orient first so the crop applies to the image as displayed.
-    if (crop) img = sharp(await img.rotate().toBuffer(), { limitInputPixels: 200_000_000 }).extract(cropPixels(crop.crop, crop.source));
-    else img = img.rotate();
-    const { data, info } = await img
-        .flatten({ background: '#ffffff' })
-        .resize({ ...size, withoutEnlargement: size.fit === 'inside' })
-        .toColourspace('srgb')
-        .jpeg({ quality: 82, progressive: true })
-        .toBuffer({ resolveWithObject: true });
-    return { data, width: info.width, height: info.height };
 }
 
 /**

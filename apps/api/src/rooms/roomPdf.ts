@@ -193,10 +193,8 @@ export function workImagePlacement(w: RoomPdfWork, width: number, height: number
     return { landscape: false, ...fit(width, height, { x: 0, y: 0, w: PAGE_W - CAPTION_COL_MIN, h: PAGE_H }, { x: 'start', y: 'center' }) };
 }
 
-/** Print resolution images are prepared for. */
-export const IMAGE_DPI = 250;
-/** Pixel size for drawing at `pt` points wide/high at `IMAGE_DPI`. */
-export const pixelsFor = (pt: number) => Math.ceil((pt / 72) * IMAGE_DPI);
+/** Print resolution images are prepared for (shared with other PDFs). */
+export { IMAGE_DPI, pixelsFor } from '../lib/pdfImages.ts';
 
 /** Portrait and square works: image from the left edge, gallery name top right, caption bottom right. */
 function portraitPage(m: RoomPdfModel, w: RoomPdfWork, img: { data: Buffer; width: number; height: number } | undefined): Content[] {
